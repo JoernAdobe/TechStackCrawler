@@ -6,7 +6,7 @@ services:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-techstack_root}
       - MYSQL_DATABASE=${DB_NAME:-techstack_crawler}
       - MYSQL_USER=${DB_USER:-techstack}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-techstack}
     volumes:
       - techstack_mariadb_data:/var/lib/mysql
     restart: unless-stopped
@@ -39,7 +39,7 @@ services:
       - DB_HOST=mariadb
       - DB_PORT=3306
       - DB_USER=${DB_USER:-techstack}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-techstack}
       - DB_NAME=${DB_NAME:-techstack_crawler}
     restart: unless-stopped
 

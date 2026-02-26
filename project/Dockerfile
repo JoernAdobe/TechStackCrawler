@@ -12,6 +12,7 @@ RUN npm run build --workspace=client
 FROM node:20-alpine AS server-build
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY tsconfig.base.json ./
 COPY client/package.json client/
 COPY server/package.json server/
 RUN npm ci --workspace=server
