@@ -23,7 +23,7 @@ export default function Header() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-ts-text-secondary px-3 py-1 rounded-full border border-ts-border bg-ts-surface-light">
-            Powered by Claude
+            Powered by JAVELYN
           </span>
         </div>
       </div>
