@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Private keys - NIEMALS committen!
+*.pem
+*.key
+BattleMindAI*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.claude/
+.idea/
+.vscode/

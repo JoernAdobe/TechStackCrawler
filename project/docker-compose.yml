@@ -1,0 +1,13 @@
+services:
+  techstack:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      - BEDROCK_MODEL=${BEDROCK_MODEL:-us.anthropic.claude-sonnet-4-6}
+      - NODE_ENV=production
+      - PORT=3001
+    restart: unless-stopped
