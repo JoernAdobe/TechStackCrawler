@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { AnalysisResult } from '../types/analysis';
 import ResultsTable from './ResultsTable';
 import DownloadButton from './DownloadButton';
@@ -12,24 +12,36 @@ interface AnalysisSummary {
 
 export default function PastAnalyses({
   onSelectNew,
+  refreshTrigger = 0,
 }: {
   onSelectNew: () => void;
+  refreshTrigger?: number;
 }) {
   const [summaries, setSummaries] = useState<AnalysisSummary[]>([]);
   const [selected, setSelected] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetch('/api/analyses')
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed'))))
+  const fetchAnalyses = useCallback(() => {
+    setLoading(true);
+    setError('');
+    fetch('/api/analyses', { cache: 'no-store' })
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) return data;
+        throw new Error(data.detail || data.error || 'Failed');
+      })
       .then(setSummaries)
-      .catch(() => setError('Analysen konnten nicht geladen werden.'))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Analysen konnten nicht geladen werden.'))
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    fetchAnalyses();
+  }, [fetchAnalyses, refreshTrigger]);
+
   const loadAnalysis = (id: number) => {
-    fetch(`/api/analyses/${id}`)
+    fetch(`/api/analyses/${id}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setSelected)
       .catch(() => setError('Analyse konnte nicht geladen werden.'));
@@ -78,16 +90,26 @@ export default function PastAnalyses({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-lg font-semibold text-ts-text-primary">
           Bestehende Analysen
         </h3>
-        <button
-          onClick={onSelectNew}
-          className="text-sm text-ts-accent hover:text-ts-accent-light font-medium"
-        >
-          + Neue Analyse
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchAnalyses}
+            disabled={loading}
+            className="text-sm text-ts-text-secondary hover:text-ts-text-primary font-medium p-1"
+            title="Liste aktualisieren"
+          >
+            ↻
+          </button>
+          <button
+            onClick={onSelectNew}
+            className="text-sm text-ts-accent hover:text-ts-accent-light font-medium"
+          >
+            + Neue Analyse
+          </button>
+        </div>
       </div>
       <ul className="divide-y divide-ts-border rounded-xl border border-ts-border bg-ts-surface-card overflow-hidden">
         {summaries.map((s) => (

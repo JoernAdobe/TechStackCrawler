@@ -63,10 +63,10 @@ export function generateMarkdown(result: AnalysisResult): string {
 
 export function downloadMarkdown(result: AnalysisResult) {
   const md = generateMarkdown(result);
-  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
+  // Data-URL statt Blob – funktioniert auch über HTTP (kein "insecure blob" Fehler)
+  const dataUrl = 'data:text/markdown;charset=utf-8,' + encodeURIComponent(md);
   const a = document.createElement('a');
-  a.href = url;
+  a.href = dataUrl;
 
   try {
     const hostname = new URL(result.url).hostname.replace(/\./g, '-');
@@ -78,5 +78,4 @@ export function downloadMarkdown(result: AnalysisResult) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }

@@ -3,6 +3,7 @@ import path from 'path';
 import { config } from '../config.js';
 import type { DbHandle } from './types.js';
 import { createMysqlHandle } from './mysql.js';
+import { toMysqlDatetime } from './analyses.js';
 
 let db: DbHandle | null = null;
 
@@ -77,6 +78,13 @@ export async function initDb(): Promise<void> {
           INDEX idx_url (url(255))
         )
       `);
+      try {
+        await p.execute(
+          `ALTER TABLE analyses ADD COLUMN IF NOT EXISTS created_at DATETIME DEFAULT CURRENT_TIMESTAMP`,
+        );
+      } catch {
+        // MariaDB < 10.5 oder MySQL – Spalte existiert evtl. bereits
+      }
       await p.execute(`
         CREATE TABLE IF NOT EXISTS audio_cache (
           id INT AUTO_INCREMENT PRIMARY KEY,
@@ -102,9 +110,10 @@ export async function initDb(): Promise<void> {
             created_at?: string;
           }>;
           for (const r of data) {
+            const analyzedAt = toMysqlDatetime(r.analyzed_at || r.created_at || new Date().toISOString());
             await p.execute(
               'INSERT INTO analyses (url, result_json, analyzed_at) VALUES (?, ?, ?)',
-              [r.url, r.result_json, r.analyzed_at || r.created_at || new Date().toISOString()],
+              [r.url, r.result_json, analyzedAt],
             );
           }
           console.log(`Migration: ${data.length} Analysen aus techstack_local_export.json importiert`);

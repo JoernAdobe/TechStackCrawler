@@ -21,9 +21,7 @@ services:
     container_name: ${CONTAINER_PREFIX:-techstack-}techstack
     ports:
       - "${HOST_PORT:-8516}:3001"
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
+    # Kein custom dns: – Docker-Standard nutzt Host-DNS + interne Auflösung (mariadb)
     depends_on:
       mariadb:
         condition: service_healthy

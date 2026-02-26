@@ -20,6 +20,7 @@ export async function listAnalysesRoute(_req: Request, res: Response) {
   }
 
   try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     const limit = Math.min(
       parseInt(String(_req.query.limit || 50), 10) || 50,
       100,
@@ -34,7 +35,7 @@ export async function listAnalysesRoute(_req: Request, res: Response) {
       })),
     );
   } catch (error) {
-    const err = error as NodeJS.ErrnoException;
+    const err = error as NodeJS.ErrnoException & { code?: string; errno?: number };
     const isDbUnavailable =
       err.code === 'ECONNREFUSED' ||
       err.code === 'ECONNRESET' ||
@@ -45,8 +46,18 @@ export async function listAnalysesRoute(_req: Request, res: Response) {
       res.json([]);
       return;
     }
+    // ER_BAD_FIELD_ERROR = unbekannte Spalte (z.B. created_at fehlt in alter Tabelle)
+    if (err.code === 'ER_BAD_FIELD_ERROR' || err.errno === 1054) {
+      console.warn('List analyses: DB-Schema veraltet, Migration ausführen');
+      res.json([]);
+      return;
+    }
+    const msg = error instanceof Error ? error.message : String(error);
     console.error('List analyses error:', error);
-    res.status(500).json({ error: 'Failed to list analyses' });
+    res.status(500).json({
+      error: 'Failed to list analyses',
+      detail: msg,
+    });
   }
 }
 

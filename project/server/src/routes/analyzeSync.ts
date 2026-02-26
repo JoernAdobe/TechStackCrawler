@@ -67,8 +67,13 @@ function toUserFriendlyError(raw: string): string {
   if (raw.includes('ERR_CONNECTION_REFUSED') || raw.includes('ECONNREFUSED')) {
     return 'Verbindung abgelehnt – die Website ist möglicherweise nicht erreichbar.';
   }
-  if (raw.includes('ERR_CONNECTION_TIMED_OUT') || raw.includes('ETIMEDOUT')) {
-    return 'Zeitüberschreitung – die Website antwortet nicht.';
+  if (
+    raw.includes('ERR_CONNECTION_TIMED_OUT') ||
+    raw.includes('ETIMEDOUT') ||
+    raw.includes('Navigation timeout') ||
+    raw.includes('timeout') && raw.includes('exceeded')
+  ) {
+    return 'Zeitüberschreitung – die Website antwortet nicht oder lädt zu langsam.';
   }
   if (raw.includes('ERR_SSL') || raw.includes('CERT')) {
     return 'SSL-/Zertifikatsfehler – die Website hat ein ungültiges Zertifikat.';

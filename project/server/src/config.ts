@@ -16,7 +16,7 @@ export const config = {
   },
   puppeteer: {
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    timeout: parseInt(process.env.SCRAPE_TIMEOUT || '30000', 10),
+    timeout: parseInt(process.env.SCRAPE_TIMEOUT || '60000', 10),
   },
   elevenlabs: {
     apiKey: process.env.ELEVENLABS_API_KEY || '',

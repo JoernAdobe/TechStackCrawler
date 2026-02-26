@@ -18,6 +18,7 @@ function App() {
   const [errorMessage, setErrorMessage] = useState('');
   const welcomePlayedRef = useRef(false);
   const [userInteracted, setUserInteracted] = useState(false);
+  const [analysesRefreshTrigger, setAnalysesRefreshTrigger] = useState(0);
   const { playStatic } = useStaticAudio();
 
   useEffect(() => {
@@ -47,6 +48,7 @@ function App() {
     (result: AnalysisResult) => {
       setResults(result);
       setState('results');
+      setAnalysesRefreshTrigger((t) => t + 1);
       playStatic('analysis-complete');
     },
     [playStatic],
@@ -97,7 +99,7 @@ function App() {
         <div className="max-w-4xl mx-auto px-6 py-8 space-y-12">
           <UrlInput onSubmit={handleSubmit} />
           <section className="border-t border-ts-border pt-12">
-            <PastAnalyses onSelectNew={() => {}} />
+            <PastAnalyses onSelectNew={() => {}} refreshTrigger={analysesRefreshTrigger} />
           </section>
         </div>
       )}
