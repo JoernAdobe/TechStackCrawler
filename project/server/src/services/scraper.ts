@@ -95,6 +95,10 @@ export async function scrapePage(
       5000,
     );
 
+    // Cookie-Banner akzeptieren, damit Marketing-Cookies geladen werden
+    const { acceptCookieBanner } = await import('./cookieBanner.js');
+    await acceptCookieBanner(page, onProgress);
+
     onProgress?.('Extracting page content…');
     const pageData = await page.evaluate(() => {
       // Meta tags

@@ -1,3 +1,5 @@
+import path from 'path';
+
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -22,6 +24,12 @@ export const config = {
     modelId: process.env.ELEVENLABS_MODEL || 'eleven_v3',
   },
   database: {
+    /** SQLite für lokal (Default in development wenn keine MariaDB-Credentials) */
+    useSqlite:
+      process.env.DB_TYPE === 'sqlite' ||
+      !!process.env.DB_PATH ||
+      (process.env.NODE_ENV !== 'production' && !process.env.DB_PASSWORD),
+    sqlitePath: process.env.DB_PATH || path.join(process.cwd(), 'data', 'techstack.db'),
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306', 10),
     user: process.env.DB_USER || 'techstack',

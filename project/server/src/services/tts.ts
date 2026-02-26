@@ -12,6 +12,15 @@ let client: ElevenLabsClient | null = null;
 /** In-Memory-Cache wenn DB nicht verfügbar – spart API-Kosten auch ohne MariaDB */
 const memoryCache = new Map<string, Buffer>();
 
+let lastDbWarn = 0;
+function warnDbUnavailable(msg: string) {
+  const now = Date.now();
+  if (now - lastDbWarn > 60_000) {
+    lastDbWarn = now;
+    console.warn(msg);
+  }
+}
+
 function getClient(): ElevenLabsClient | null {
   if (!config.elevenlabs.apiKey || !config.elevenlabs.voiceId) {
     return null;
@@ -43,7 +52,12 @@ export async function textToSpeech(text: string): Promise<Buffer | null> {
         return cached;
       }
     } catch (err) {
-      console.error('Audio cache read error:', err);
+      const e = err as NodeJS.ErrnoException;
+      if (e.code === 'ECONNREFUSED' || e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT') {
+        warnDbUnavailable('Audio cache: DB nicht erreichbar (MariaDB mit make docker-up starten)');
+      } else {
+        console.error('Audio cache read error:', err);
+      }
     }
   }
 
@@ -81,7 +95,12 @@ export async function textToSpeech(text: string): Promise<Buffer | null> {
         try {
           await saveCachedAudio(pool, text, voiceId, modelId, audio);
         } catch (err) {
-          console.error('Audio cache write error:', err);
+          const e = err as NodeJS.ErrnoException;
+          if (e.code === 'ECONNREFUSED' || e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT') {
+            warnDbUnavailable('Audio cache: DB nicht erreichbar (MariaDB mit make docker-up starten)');
+          } else {
+            console.error('Audio cache write error:', err);
+          }
         }
       }
     }

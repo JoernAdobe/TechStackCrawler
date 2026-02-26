@@ -18,6 +18,11 @@ export function buildUseCaseDiscoveryPrompt(analysis: AnalysisResult): string {
 
   return `You are an enterprise marketing technology consultant. Based on the technology stack analysis and website context below, derive the TOP 10 most relevant use cases for this organization. Each use case should be actionable, specific to their industry/context, and show how Adobe technology can address it.
 
+CRITICAL – WRITE FOR NON-TECHNICAL READERS:
+- Your audience: executives, marketing managers, business stakeholders who are NOT developers or IT experts.
+- Use plain, everyday language. Avoid jargon. If you must use a technical term, explain it briefly.
+- Keep titles and descriptions short and clear. Focus on business impact (revenue, efficiency, customer experience).
+
 ## Website & Analysis Context
 - **URL:** ${analysis.url}
 - **Executive Summary:** ${analysis.summary}
@@ -32,11 +37,11 @@ ${pageExcerpt}
 ## Your Task
 
 Generate exactly 10 use cases. For each use case provide:
-1. **title** – Short, compelling title (e.g. "Personalized Product Recommendations")
-2. **description** – 2–3 sentences describing the use case and why it matters for this site
+1. **title** – Short, compelling title in plain language (e.g. "Personalized Product Recommendations")
+2. **description** – 2–3 sentences in plain language: what it is, why it matters for this site. No jargon.
 3. **adobeProducts** – Array of 1–3 Adobe products that best address this use case (e.g. ["Adobe Target", "Adobe Real-Time CDP"])
-4. **businessValue** – One sentence on the business impact (revenue, conversion, efficiency)
-5. **implementationHint** (optional) – Brief tip on how to get started
+4. **businessValue** – One sentence on the business impact in plain language (e.g. "Can increase sales by showing the right products to the right customers")
+5. **implementationHint** (optional) – Brief tip in plain language on how to get started
 
 ## Adobe Product Reference
 - CMS: Adobe Experience Manager (AEM)
@@ -57,7 +62,7 @@ Generate exactly 10 use cases. For each use case provide:
 Respond with ONLY a raw JSON object (no code fences, no markdown):
 
 {
-  "summary": "A 2–3 sentence overview of the top opportunities for this organization.",
+  "summary": "A 2–3 sentence overview in plain language of the top opportunities for this organization. No jargon.",
   "useCases": [
     {
       "rank": 1,
@@ -75,5 +80,6 @@ Rules:
 - Be specific to the site's industry and tech stack – avoid generic use cases.
 - Prioritize use cases where Adobe has a clear advantage over their current stack.
 - All text in English.
+- PLAIN LANGUAGE: Write for non-technical readers. No jargon. Short sentences. Focus on business impact.
 - Output ONLY the JSON object, nothing else.`;
 }

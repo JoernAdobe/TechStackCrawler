@@ -1,18 +1,8 @@
-import dotenv from 'dotenv';
+import './load-env.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// .env aus project/ laden (funktioniert bei npm run dev aus project/)
-const envPaths = [
-  path.join(__dirname, '../../.env'),
-  path.join(process.cwd(), '.env'),
-  path.join(process.cwd(), '../.env'),
-];
-for (const p of envPaths) {
-  const r = dotenv.config({ path: p });
-  if (!r.error) break;
-}
 
 // Bedrock API-Key: aus Secrets Manager ODER .env (Fallback)
 const secretName = process.env.BEDROCK_SECRET_NAME;
@@ -34,7 +24,7 @@ import { useCaseDiscoveryRoute } from './routes/useCaseDiscovery.js';
 import { ttsRoute } from './routes/tts.js';
 import { isTtsAvailable } from './services/tts.js';
 import { listAnalysesRoute, getAnalysisRoute } from './routes/analyses.js';
-import { initDb } from './db/index.js';
+import { initDb, getPool } from './db/index.js';
 import { config } from './config.js';
 
 const app = express();
@@ -57,6 +47,18 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Bedrock-Status (Diagnose bei 403/Key-Problemen)
+app.get('/api/bedrock-status', (_req, res) => {
+  const hasKey = !!config.bedrock.apiKey;
+  const hasIam = !!(config.bedrock.awsAccessKeyId && config.bedrock.awsSecretAccessKey);
+  res.json({
+    auth: hasKey ? 'api-key' : hasIam ? 'iam' : 'none',
+    keyPrefix: hasKey ? config.bedrock.apiKey.slice(0, 12) + '...' : null,
+    endpoint: config.bedrock.endpoint || '(default)',
+    model: config.bedrock.model,
+  });
+});
+
 // Serve frontend in production
 if (config.nodeEnv === 'production') {
   const clientDist = path.join(__dirname, '../../client/dist');
@@ -71,6 +73,14 @@ const server = app.listen(config.port, host, () => {
   console.log(`TechStack Analyzer server running on port ${config.port}`);
   console.log(`Environment: ${config.nodeEnv}`);
   console.log(`Bedrock model: ${config.bedrock.model}`);
+  const keyStatus = config.bedrock.apiKey
+    ? `OK (${config.bedrock.apiKey.slice(0, 12)}...)`
+    : config.bedrock.awsAccessKeyId
+      ? 'IAM (AWS_ACCESS_KEY_ID)'
+      : 'FEHLT – BEDROCK_API_KEY oder IAM in .env setzen';
+  console.log(`Bedrock Auth: ${keyStatus}`);
+  const db = getPool();
+  console.log(`Datenbank: ${db ? (db.dialect === 'sqlite' ? 'SQLite' : 'MariaDB') : 'keine'}`);
 });
 
 async function shutdown() {

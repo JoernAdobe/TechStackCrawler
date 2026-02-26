@@ -81,20 +81,20 @@ async function testElevenLabs(): Promise<TestResult> {
   }
 }
 
-async function testMariaDB(): Promise<TestResult> {
-  const pool = getPool();
-  if (!pool) {
-    return { ok: false, message: 'Nicht konfiguriert', detail: 'DB_PASSWORD fehlt – DB deaktiviert' };
+async function testDatabase(): Promise<TestResult> {
+  const db = getPool();
+  if (!db) {
+    return { ok: false, message: 'Nicht konfiguriert', detail: 'DB_PATH (SQLite) oder DB_PASSWORD (MariaDB) fehlt' };
   }
 
   try {
-    const conn = await pool.getConnection();
-    await conn.query('SELECT 1');
-    conn.release();
-    return { ok: true, message: 'OK – Verbindung erfolgreich' };
+    await db.execute('SELECT 1');
+    const dbType = db.dialect === 'sqlite' ? 'SQLite' : 'MariaDB';
+    return { ok: true, message: `OK – ${dbType} Verbindung erfolgreich` };
   } catch (e) {
     const msg = (e as Error).message;
-    if (msg.includes('ECONNREFUSED')) {
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code === 'ECONNREFUSED' || msg.includes('ECONNREFUSED')) {
       return { ok: false, message: 'MariaDB nicht erreichbar', detail: 'Läuft MariaDB? (z.B. make docker-up)' };
     }
     return { ok: false, message: 'Verbindungsfehler', detail: msg };
@@ -130,10 +130,10 @@ async function main() {
   console.log(`   ${results.elevenlabs.ok ? '✓' : '✗'} ${results.elevenlabs.message}`);
   if (results.elevenlabs.detail) console.log(`   → ${results.elevenlabs.detail}`);
 
-  console.log('\n3. MariaDB...');
-  results.mariadb = await testMariaDB();
-  console.log(`   ${results.mariadb.ok ? '✓' : '✗'} ${results.mariadb.message}`);
-  if (results.mariadb.detail) console.log(`   → ${results.mariadb.detail}`);
+  console.log('\n3. Datenbank (SQLite/MariaDB)...');
+  results.database = await testDatabase();
+  console.log(`   ${results.database.ok ? '✓' : '✗'} ${results.database.message}`);
+  if (results.database.detail) console.log(`   → ${results.database.detail}`);
 
   console.log('\n4. Puppeteer (Chromium)...');
   results.puppeteer = await testPuppeteer();

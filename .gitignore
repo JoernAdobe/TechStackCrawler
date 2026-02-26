@@ -19,6 +19,11 @@ BattleMindAI*
 .DS_Store
 Thumbs.db
 
+# SQLite (lokal)
+**/data/*.db
+**/data/*.db-wal
+**/data/*.db-shm
+
 # Deploy
 .deploy.tar.gz
 

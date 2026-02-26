@@ -25,6 +25,75 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
         const useSync = true;
         const endpoint = useSync ? '/api/analyze-sync' : '/api/analyze';
 
+        if (useSync) {
+          // Sofort erste Meldung – sonst bleibt "Live updates" während des Wartens leer
+          onProgress({
+            phase: 'scraping',
+            message: 'Analyse startet…',
+            timestamp: Date.now(),
+          });
+
+          const placeholders: Array<{ phase: ProgressEvent['phase']; message: string }> = [
+            { phase: 'scraping', message: 'Website wird geladen…' },
+            { phase: 'scraping', message: 'Seite wird analysiert…' },
+            { phase: 'detecting', message: 'Technologien werden erkannt…' },
+            { phase: 'analyzing', message: 'KI analysiert den Tech-Stack…' },
+            { phase: 'analyzing', message: 'Zusammenfassung wird erstellt…' },
+            { phase: 'analyzing', message: 'Fast fertig…' },
+          ];
+          let placeholderIndex = 0;
+          const intervalId = setInterval(() => {
+            if (placeholderIndex < placeholders.length) {
+              onProgress({
+                ...placeholders[placeholderIndex],
+                timestamp: Date.now(),
+              });
+              placeholderIndex++;
+            }
+          }, 5000);
+
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url }),
+              signal: controller.signal,
+            });
+
+            if (!response.ok) {
+              const err = await response.json().catch(() => ({ error: 'Request failed' }));
+              throw new Error(err.error || `HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.ok && data.result) {
+              ((data.progress as Array<{ phase?: string; message: string } | string>) || []).forEach(
+                (p) => {
+                  const ev =
+                    typeof p === 'string'
+                      ? { phase: 'scraping' as const, message: p }
+                      : {
+                          phase: (p.phase || 'scraping') as ProgressEvent['phase'],
+                          message: p.message,
+                        };
+                  onProgress({ ...ev, timestamp: Date.now() });
+                },
+              );
+              onProgress({
+                phase: 'complete',
+                message: 'Fertig!',
+                timestamp: Date.now(),
+              });
+              onComplete(data.result as import('../types/analysis').AnalysisResult);
+            } else {
+              onError(data.error || 'No result');
+            }
+          } finally {
+            clearInterval(intervalId);
+          }
+          return;
+        }
+
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -35,29 +104,6 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
         if (!response.ok) {
           const err = await response.json().catch(() => ({ error: 'Request failed' }));
           throw new Error(err.error || `HTTP ${response.status}`);
-        }
-
-        if (useSync) {
-          const data = await response.json();
-          if (data.ok && data.result) {
-            onProgress({
-              phase: 'scraping',
-              message: 'Analyse läuft…',
-              timestamp: Date.now(),
-            });
-            (data.progress as string[]).forEach((msg) =>
-              onProgress({ phase: 'scraping', message: msg, timestamp: Date.now() }),
-            );
-            onProgress({
-              phase: 'complete',
-              message: 'Fertig!',
-              timestamp: Date.now(),
-            });
-            onComplete(data.result as import('../types/analysis').AnalysisResult);
-          } else {
-            onError(data.error || 'No result');
-          }
-          return;
         }
 
         const reader = response.body!.getReader();

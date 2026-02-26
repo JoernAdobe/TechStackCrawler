@@ -51,6 +51,14 @@ export default function AnalysisProgress({
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
       <div className="w-full max-w-xl">
+        {/* Deutlicher "Läuft noch"-Hinweis */}
+        <div className="mb-6 flex items-center justify-center gap-3 rounded-xl border border-ts-accent/40 bg-ts-accent/10 px-4 py-3">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-ts-accent/30 border-t-ts-accent" />
+          <span className="text-sm font-medium text-ts-text-primary">
+            Analyse läuft… Bitte warten Sie.
+          </span>
+        </div>
+
         {/* Progress bar */}
         <div className="mb-10">
           <div className="flex justify-between mb-3">
@@ -72,30 +80,34 @@ export default function AnalysisProgress({
           </div>
           <div className="h-1.5 bg-ts-surface-card rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-adobe-red to-ts-accent rounded-full transition-all duration-700 ease-out"
+              className="h-full bg-gradient-to-r from-adobe-red to-ts-accent rounded-full transition-all duration-700 ease-out animate-pulse"
               style={{
-                width: `${((currentIndex + 1) / phases.length) * 100}%`,
+                width: `${Math.min(95, ((currentIndex + 0.5) / phases.length) * 100)}%`,
               }}
             />
           </div>
-          <div className="mt-1 text-right text-xs text-ts-text-secondary">
-            Elapsed: {formatTime(elapsed)}
+          <div className="mt-1 flex justify-between text-xs text-ts-text-secondary">
+            <span className="text-ts-accent">Noch nicht fertig</span>
+            <span>Elapsed: {formatTime(elapsed)}</span>
           </div>
         </div>
 
-        {/* Animated pulse */}
-        <div className="flex justify-center mb-8">
+        {/* Animated pulse – deutlich "läuft noch" */}
+        <div className="flex flex-col items-center justify-center mb-8">
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-adobe-red/20 to-ts-accent/20 flex items-center justify-center animate-pulse">
               <span className="text-3xl">{phaseIcons[currentPhase]}</span>
             </div>
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-adobe-red/10 to-ts-accent/10 animate-ping" />
           </div>
+          <p className="mt-2 text-xs font-medium text-ts-accent animate-pulse">
+            Verarbeitung…
+          </p>
         </div>
 
         {/* Event log */}
         <p className="text-xs text-ts-text-secondary mb-2">
-          Live updates from the analysis
+          Live updates (läuft noch)
         </p>
         <div className="bg-ts-surface-card rounded-xl border border-ts-border p-4 max-h-64 overflow-y-auto">
           {events.map((event, i) => {
@@ -105,6 +117,7 @@ export default function AnalysisProgress({
                 ? (event.data.technologies as string[])
                 : null;
 
+            const isLast = i === events.length - 1;
             return (
             <div
               key={i}
@@ -114,8 +127,12 @@ export default function AnalysisProgress({
                   : 'text-ts-text-primary'
               } ${i > 0 ? 'border-t border-ts-border/30' : ''}`}
             >
-              <span className="text-sm mt-0.5 shrink-0">
-                {phaseIcons[event.phase]}
+              <span className="text-sm mt-0.5 shrink-0 flex items-center justify-center w-6">
+                {isLast ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-ts-accent/30 border-t-ts-accent" />
+                ) : (
+                  phaseIcons[event.phase]
+                )}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm">{event.message}</p>

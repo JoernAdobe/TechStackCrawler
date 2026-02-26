@@ -13,12 +13,14 @@
     "@aws-sdk/client-iam": "^3.998.0",
     "@aws-sdk/client-secrets-manager": "^3.998.0",
     "@elevenlabs/elevenlabs-js": "^2.36.0",
+    "better-sqlite3": "^12.6.2",
     "dotenv": "^17.3.1",
     "express": "^4.21.0",
     "mysql2": "^3.18.1",
     "puppeteer": "^24.2.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",

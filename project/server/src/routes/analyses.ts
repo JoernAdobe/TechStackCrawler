@@ -2,6 +2,16 @@ import type { Request, Response } from 'express';
 import { getPool } from '../db/index.js';
 import { listAnalyses, getAnalysisById } from '../db/analyses.js';
 
+let lastDbWarn = 0;
+const DB_WARN_INTERVAL_MS = 60_000;
+function warnDbUnavailable(msg: string) {
+  const now = Date.now();
+  if (now - lastDbWarn > DB_WARN_INTERVAL_MS) {
+    lastDbWarn = now;
+    console.warn(msg);
+  }
+}
+
 export async function listAnalysesRoute(_req: Request, res: Response) {
   const pool = getPool();
   if (!pool) {
@@ -24,6 +34,17 @@ export async function listAnalysesRoute(_req: Request, res: Response) {
       })),
     );
   } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    const isDbUnavailable =
+      err.code === 'ECONNREFUSED' ||
+      err.code === 'ECONNRESET' ||
+      err.code === 'ETIMEDOUT' ||
+      (err.message && /ECONNREFUSED|ECONNRESET|ETIMEDOUT/i.test(err.message));
+    if (isDbUnavailable) {
+      warnDbUnavailable('List analyses: DB nicht erreichbar, leere Liste (MariaDB mit make docker-up starten)');
+      res.json([]);
+      return;
+    }
     console.error('List analyses error:', error);
     res.status(500).json({ error: 'Failed to list analyses' });
   }
@@ -51,6 +72,16 @@ export async function getAnalysisRoute(req: Request, res: Response) {
     }
     res.json(result);
   } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    const isDbUnavailable =
+      err.code === 'ECONNREFUSED' ||
+      err.code === 'ECONNRESET' ||
+      err.code === 'ETIMEDOUT' ||
+      (err.message && /ECONNREFUSED|ECONNRESET|ETIMEDOUT/i.test(err.message));
+    if (isDbUnavailable) {
+      res.status(503).json({ error: 'Database not available. Set DB_PASSWORD and run MariaDB.' });
+      return;
+    }
     console.error('Get analysis error:', error);
     res.status(500).json({ error: 'Failed to get analysis' });
   }

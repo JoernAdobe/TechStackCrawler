@@ -1,44 +1,44 @@
-import type { Pool } from 'mysql2/promise';
+import type { DbHandle } from './types.js';
 import type { AnalysisResult } from '../types/analysis.js';
 
 export async function saveAnalysis(
-  pool: Pool,
+  db: DbHandle,
   result: AnalysisResult,
 ): Promise<number> {
-  const [resultSet] = await pool.execute(
+  const { insertId } = await db.execute(
     `INSERT INTO analyses (url, result_json, analyzed_at) VALUES (?, ?, ?)`,
     [result.url, JSON.stringify(result), result.analyzedAt],
   );
-  return (resultSet as { insertId: number }).insertId;
+  return insertId ?? 0;
 }
 
 export interface AnalysisRow {
   id: number;
   url: string;
   result_json: string;
-  analyzed_at: Date;
-  created_at: Date;
+  analyzed_at: Date | string;
+  created_at: Date | string;
 }
 
 export async function listAnalyses(
-  pool: Pool,
+  db: DbHandle,
   limit = 50,
 ): Promise<AnalysisRow[]> {
-  const [rows] = await pool.execute(
+  const { rows } = await db.execute(
     `SELECT id, url, result_json, analyzed_at, created_at 
      FROM analyses 
      ORDER BY analyzed_at DESC 
      LIMIT ?`,
     [limit],
   );
-  return (Array.isArray(rows) ? rows : []) as unknown as AnalysisRow[];
+  return (Array.isArray(rows) ? rows : []) as AnalysisRow[];
 }
 
 export async function getAnalysisById(
-  pool: Pool,
+  db: DbHandle,
   id: number,
 ): Promise<AnalysisResult | null> {
-  const [rows] = await pool.execute(
+  const { rows } = await db.execute(
     `SELECT id, url, result_json, analyzed_at, created_at 
      FROM analyses WHERE id = ?`,
     [id],
