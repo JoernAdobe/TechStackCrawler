@@ -14,7 +14,9 @@
     "start": "npm run start --workspace=server",
     "test:connections": "cd server && npx dotenv -e ../.env -- tsx src/test-connections.ts",
     "rotate-bedrock-key": "npx dotenv -e .env -- tsx scripts/rotate-bedrock-key.ts",
-    "test-bedrock-key": "npx dotenv -e .env -- tsx scripts/test-bedrock-key.ts"
+    "test-bedrock-key": "npx dotenv -e .env -- tsx scripts/test-bedrock-key.ts",
+    "export-for-deploy": "npx dotenv -e .env -- tsx scripts/export-local-analyses.ts",
+    "generate-static-audio": "npx dotenv -e .env -- tsx scripts/generate-static-audio.ts"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

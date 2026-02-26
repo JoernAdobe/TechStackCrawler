@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+techstack_local_export.json
 *.local
 .DS_Store
 Thumbs.db

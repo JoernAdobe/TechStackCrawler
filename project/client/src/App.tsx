@@ -8,14 +8,8 @@ import DownloadButton from './components/DownloadButton';
 import PastAnalyses from './components/PastAnalyses';
 import { useAnalysis } from './hooks/useAnalysis';
 import { useUseCaseDiscovery } from './hooks/useUseCaseDiscovery';
-import { useTts } from './hooks/useTts';
+import { useStaticAudio } from './hooks/useStaticAudio';
 import type { AnalysisResult, ProgressEvent, AppState } from './types/analysis';
-
-// Eleven v3 Audio Tags: [warmly], [happily], [excited], [whispers], [sighs], etc.
-const WELCOME_MESSAGE =
-  "[warmly] Welcome! I'm Javlyn, and I'm here to help you with your research. [excited] Enter a URL to analyze any website's technology stack.";
-const ANALYSIS_COMPLETE_MESSAGE =
-  "[happily] Your analysis is complete. I've identified the technologies and opportunities for you. [warmly] Take a look at the results.";
 
 function App() {
   const [state, setState] = useState<AppState>('idle');
@@ -23,14 +17,27 @@ function App() {
   const [progress, setProgress] = useState<ProgressEvent[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const welcomePlayedRef = useRef(false);
-  const { playTts, ttsAvailable } = useTts();
+  const [userInteracted, setUserInteracted] = useState(false);
+  const { playStatic } = useStaticAudio();
 
   useEffect(() => {
-    if (state === 'idle' && ttsAvailable && !welcomePlayedRef.current) {
+    const handler = () => setUserInteracted(true);
+    document.addEventListener('click', handler, { once: true });
+    document.addEventListener('keydown', handler, { once: true });
+    document.addEventListener('touchstart', handler, { once: true });
+    return () => {
+      document.removeEventListener('click', handler);
+      document.removeEventListener('keydown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (userInteracted && state === 'idle' && !welcomePlayedRef.current) {
       welcomePlayedRef.current = true;
-      playTts(WELCOME_MESSAGE);
+      playStatic('welcome');
     }
-  }, [state, ttsAvailable, playTts]);
+  }, [userInteracted, state, playStatic]);
 
   const handleProgress = useCallback((event: ProgressEvent) => {
     setProgress((prev) => [...prev, event]);
@@ -40,9 +47,9 @@ function App() {
     (result: AnalysisResult) => {
       setResults(result);
       setState('results');
-      playTts(ANALYSIS_COMPLETE_MESSAGE);
+      playStatic('analysis-complete');
     },
-    [playTts],
+    [playStatic],
   );
 
   const handleError = useCallback((message: string) => {

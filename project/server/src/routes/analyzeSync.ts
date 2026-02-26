@@ -53,8 +53,28 @@ export async function analyzeSyncRoute(req: Request, res: Response) {
       res.status(500).json({ error: 'No result', progress: collector.getProgress() });
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Analysis error:', message);
+    const raw = error instanceof Error ? error.message : 'Unknown error';
+    const message = toUserFriendlyError(raw);
+    console.error('Analysis error:', raw);
     res.status(500).json({ error: message, progress: collector.getProgress() });
   }
+}
+
+function toUserFriendlyError(raw: string): string {
+  if (raw.includes('ERR_NAME_NOT_RESOLVED')) {
+    return 'Domain konnte nicht aufgelöst werden. Prüfe die URL oder ob die Seite erreichbar ist.';
+  }
+  if (raw.includes('ERR_CONNECTION_REFUSED') || raw.includes('ECONNREFUSED')) {
+    return 'Verbindung abgelehnt – die Website ist möglicherweise nicht erreichbar.';
+  }
+  if (raw.includes('ERR_CONNECTION_TIMED_OUT') || raw.includes('ETIMEDOUT')) {
+    return 'Zeitüberschreitung – die Website antwortet nicht.';
+  }
+  if (raw.includes('ERR_SSL') || raw.includes('CERT')) {
+    return 'SSL-/Zertifikatsfehler – die Website hat ein ungültiges Zertifikat.';
+  }
+  if (raw.includes('net::')) {
+    return 'Netzwerkfehler beim Laden der Website. Bitte URL prüfen und erneut versuchen.';
+  }
+  return raw.length > 120 ? raw.substring(0, 120) + '…' : raw;
 }

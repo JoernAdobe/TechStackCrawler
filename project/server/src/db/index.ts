@@ -1,6 +1,7 @@
+import { existsSync, readFileSync } from 'fs';
+import path from 'path';
 import { config } from '../config.js';
 import type { DbHandle } from './types.js';
-import { createSqliteHandle } from './sqlite.js';
 import { createMysqlHandle } from './mysql.js';
 
 let db: DbHandle | null = null;
@@ -12,8 +13,7 @@ export function getPool(): DbHandle | null {
   const dbPath = config.database.sqlitePath;
 
   if (useSqlite) {
-    db = createSqliteHandle(dbPath);
-    return db;
+    return db; // Wird von initDb gesetzt (dynamischer Import)
   }
 
   if (config.database.password) {
@@ -31,6 +31,14 @@ export function getPool(): DbHandle | null {
 }
 
 export async function initDb(): Promise<void> {
+  const useSqlite = config.database.useSqlite;
+  const dbPath = config.database.sqlitePath;
+
+  if (useSqlite) {
+    const { createSqliteHandle } = await import('./sqlite.js');
+    db = createSqliteHandle(dbPath);
+  }
+
   const p = getPool();
   if (!p) return;
 
@@ -78,6 +86,30 @@ export async function initDb(): Promise<void> {
           INDEX idx_text_hash (text_hash)
         )
       `);
+    }
+
+    // Migration: Lokale SQLite-Exporte in MariaDB importieren (falls DB leer)
+    if (p.dialect === 'mysql') {
+      const exportPath = path.join(process.cwd(), 'techstack_local_export.json');
+      if (existsSync(exportPath)) {
+        const { rows } = await p.execute('SELECT COUNT(*) as c FROM analyses');
+        const count = (rows[0] as { c: number })?.c ?? 0;
+        if (count === 0) {
+          const data = JSON.parse(readFileSync(exportPath, 'utf8')) as Array<{
+            url: string;
+            result_json: string;
+            analyzed_at?: string;
+            created_at?: string;
+          }>;
+          for (const r of data) {
+            await p.execute(
+              'INSERT INTO analyses (url, result_json, analyzed_at) VALUES (?, ?, ?)',
+              [r.url, r.result_json, r.analyzed_at || r.created_at || new Date().toISOString()],
+            );
+          }
+          console.log(`Migration: ${data.length} Analysen aus techstack_local_export.json importiert`);
+        }
+      }
     }
   } catch (err) {
     console.error('DB init error:', err);

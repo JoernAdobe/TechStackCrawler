@@ -8,14 +8,14 @@ RUN npm ci --workspace=client
 COPY client/ client/
 RUN npm run build --workspace=client
 
-# Stage 2: Build the server
+# Stage 2: Build the server (ohne better-sqlite3 – Production nutzt MariaDB)
 FROM node:20-alpine AS server-build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY tsconfig.base.json ./
 COPY client/package.json client/
 COPY server/package.json server/
-RUN npm ci --workspace=server
+RUN npm ci --workspace=server --omit=optional
 COPY server/ server/
 COPY shared/ shared/
 RUN npm run build --workspace=server
@@ -23,7 +23,7 @@ RUN npm run build --workspace=server
 # Stage 3: Production runtime with Chromium
 FROM node:20-slim AS production
 
-# Install Chromium and fonts
+# Install Chromium und Fonts
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-ipafont-gothic \
@@ -43,7 +43,7 @@ WORKDIR /app
 COPY --from=server-build /app/package.json /app/package-lock.json ./
 COPY --from=server-build /app/server/package.json server/
 COPY --from=server-build /app/client/package.json client/
-RUN npm ci --workspace=server --omit=dev
+RUN npm ci --workspace=server --omit=dev --omit=optional
 
 COPY --from=server-build /app/server/dist server/dist/
 
