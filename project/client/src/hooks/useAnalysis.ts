@@ -21,7 +21,11 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
       setIsRunning(true);
 
       try {
-        const response = await fetch('/api/analyze', {
+        // Sync-Endpoint als Fallback – SSE hat Verbindungsprobleme mit manchen Proxies
+        const useSync = true;
+        const endpoint = useSync ? '/api/analyze-sync' : '/api/analyze';
+
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
@@ -31,6 +35,29 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
         if (!response.ok) {
           const err = await response.json().catch(() => ({ error: 'Request failed' }));
           throw new Error(err.error || `HTTP ${response.status}`);
+        }
+
+        if (useSync) {
+          const data = await response.json();
+          if (data.ok && data.result) {
+            onProgress({
+              phase: 'scraping',
+              message: 'Analyse läuft…',
+              timestamp: Date.now(),
+            });
+            (data.progress as string[]).forEach((msg) =>
+              onProgress({ phase: 'scraping', message: msg, timestamp: Date.now() }),
+            );
+            onProgress({
+              phase: 'complete',
+              message: 'Fertig!',
+              timestamp: Date.now(),
+            });
+            onComplete(data.result as import('../types/analysis').AnalysisResult);
+          } else {
+            onError(data.error || 'No result');
+          }
+          return;
         }
 
         const reader = response.body!.getReader();

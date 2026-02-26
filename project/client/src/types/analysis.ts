@@ -19,6 +19,21 @@ export interface AnalysisResult {
   summary: string;
   categories: CategoryResult[];
   rawDetections: DetectedTechnology[];
+  pageContentExcerpt?: string;
+}
+
+export interface UseCaseItem {
+  rank: number;
+  title: string;
+  description: string;
+  adobeProducts: string[];
+  businessValue: string;
+  implementationHint?: string;
+}
+
+export interface UseCaseDiscoveryResult {
+  useCases: UseCaseItem[];
+  summary: string;
 }
 
 export interface ProgressEvent {

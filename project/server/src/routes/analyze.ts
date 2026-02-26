@@ -20,9 +20,7 @@ export async function analyzeRoute(req: Request, res: Response) {
   const sse = new SSEWriter(res);
 
   // Handle client disconnect
-  req.on('close', () => {
-    sse.close();
-  });
+  req.on('close', () => sse.close());
 
   try {
     await analyzeUrl(sanitizedUrl, sse);

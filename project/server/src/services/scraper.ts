@@ -33,11 +33,43 @@ async function getBrowser(): Promise<Browser> {
   return browser;
 }
 
-export async function scrapePage(url: string): Promise<ScrapedData> {
-  const b = await getBrowser();
+export type ScrapeProgressCallback = (message: string) => void;
+
+/** Runs a long-running promise while sending progress every intervalMs. */
+async function withHeartbeat<T>(
+  promise: Promise<T>,
+  onProgress: ScrapeProgressCallback,
+  messageFn: (elapsedSec: number) => string,
+  intervalMs = 5000,
+): Promise<T> {
+  const start = Date.now();
+  const beat = setInterval(() => {
+    const elapsedSec = Math.round((Date.now() - start) / 1000);
+    onProgress(messageFn(elapsedSec));
+  }, intervalMs);
+  try {
+    return await promise;
+  } finally {
+    clearInterval(beat);
+  }
+}
+
+export async function scrapePage(
+  url: string,
+  onProgress?: ScrapeProgressCallback,
+): Promise<ScrapedData> {
+  onProgress?.('Starting browser…');
+  const b = await withHeartbeat(
+    getBrowser(),
+    (m) => onProgress?.(m),
+    (s) => `Launching browser… (${s}s)`,
+    5000,
+  );
+  onProgress?.('Browser ready, opening page…');
   const page = await b.newPage();
 
   try {
+    onProgress?.('Loading page (this may take 15–30 seconds for large sites)…');
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     );
@@ -53,11 +85,17 @@ export async function scrapePage(url: string): Promise<ScrapedData> {
       }
     });
 
-    await page.goto(url, {
-      waitUntil: 'networkidle2',
-      timeout: config.puppeteer.timeout,
-    });
+    await withHeartbeat(
+      page.goto(url, {
+        waitUntil: 'domcontentloaded',
+        timeout: config.puppeteer.timeout,
+      }),
+      (m) => onProgress?.(m),
+      (s) => `Still loading page… (${s}s)`,
+      5000,
+    );
 
+    onProgress?.('Extracting page content…');
     const pageData = await page.evaluate(() => {
       // Meta tags
       const meta: Record<string, string[]> = {};

@@ -1,8 +1,20 @@
+import { useState, useEffect } from 'react';
 import type { ProgressEvent } from '../types/analysis';
 
 interface AnalysisProgressProps {
   events: ProgressEvent[];
   onCancel: () => void;
+}
+
+function useElapsedTime(isActive: boolean) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!isActive) return;
+    const start = Date.now();
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [isActive]);
+  return elapsed;
 }
 
 const phaseIcons: Record<string, string> = {
@@ -28,6 +40,13 @@ export default function AnalysisProgress({
   const currentPhase = events[events.length - 1]?.phase || 'scraping';
   const phases = ['scraping', 'detecting', 'analyzing'];
   const currentIndex = phases.indexOf(currentPhase);
+  const elapsed = useElapsedTime(true);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
@@ -59,6 +78,9 @@ export default function AnalysisProgress({
               }}
             />
           </div>
+          <div className="mt-1 text-right text-xs text-ts-text-secondary">
+            Elapsed: {formatTime(elapsed)}
+          </div>
         </div>
 
         {/* Animated pulse */}
@@ -72,6 +94,9 @@ export default function AnalysisProgress({
         </div>
 
         {/* Event log */}
+        <p className="text-xs text-ts-text-secondary mb-2">
+          Live updates from the analysis
+        </p>
         <div className="bg-ts-surface-card rounded-xl border border-ts-border p-4 max-h-64 overflow-y-auto">
           {events.map((event, i) => {
             const techs =

@@ -19,6 +19,9 @@ BattleMindAI*
 .DS_Store
 Thumbs.db
 
+# Deploy
+.deploy.tar.gz
+
 # IDE / Editor
 .claude/
 .idea/

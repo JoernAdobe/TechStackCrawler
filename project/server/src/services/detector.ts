@@ -243,13 +243,22 @@ const simpleRules: SimpleRule[] = [
   },
 ];
 
+export type DetectProgressCallback = (message: string) => void;
+
 export async function detectTechnologies(
   scraped: ScrapedData,
+  onProgress?: DetectProgressCallback,
 ): Promise<DetectedTech[]> {
   const results: DetectedTech[] = [];
+  const total = simpleRules.length;
+  let checked = 0;
 
   // Built-in simple detection
   for (const rule of simpleRules) {
+    checked++;
+    if (onProgress && checked % 8 === 0) {
+      onProgress(`Checking patterns… ${checked}/${total}`);
+    }
     try {
       if (rule.check(scraped)) {
         results.push({
@@ -264,7 +273,7 @@ export async function detectTechnologies(
     }
   }
 
-  // Custom enterprise martech detection
+  onProgress?.('Running custom enterprise detection…');
   const customResults = customDetect(scraped);
 
   // Merge and deduplicate

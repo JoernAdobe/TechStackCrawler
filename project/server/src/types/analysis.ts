@@ -19,6 +19,22 @@ export interface AnalysisResult {
   summary: string;
   categories: CategoryResult[];
   rawDetections: DetectedTechnology[];
+  /** Truncated page content for Use Case Discovery (max ~12k chars) */
+  pageContentExcerpt?: string;
+}
+
+export interface UseCaseItem {
+  rank: number;
+  title: string;
+  description: string;
+  adobeProducts: string[];
+  businessValue: string;
+  implementationHint?: string;
+}
+
+export interface UseCaseDiscoveryResult {
+  useCases: UseCaseItem[];
+  summary: string;
 }
 
 export interface ProgressEvent {

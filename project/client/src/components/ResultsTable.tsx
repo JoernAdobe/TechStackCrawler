@@ -65,6 +65,29 @@ export default function ResultsTable({ results }: ResultsTableProps) {
         {results.categories.map((cat, i) => (
           <ResultCard key={cat.category} result={cat} index={i} />
         ))}
+        {/* Zusätzliche Karten für rawDetections, die in keiner AI-Kategorie vorkommen */}
+        {results.rawDetections
+          .filter(
+            (tech) =>
+              !results.categories.some(
+                (cat) =>
+                  cat.currentTechnology
+                    .toLowerCase()
+                    .includes(tech.name.toLowerCase()),
+              ),
+          )
+          .map((tech, i) => (
+            <ResultCard
+              key={`raw-${tech.name}`}
+              result={{
+                category: tech.name,
+                currentTechnology: tech.version ? `${tech.name} ${tech.version}` : tech.name,
+                challengesAndPainPoints: 'Siehe Executive Summary.',
+                adobeOpportunity: 'Automatisch erkannt – siehe Executive Summary für Kontext.',
+              }}
+              index={results.categories.length + i}
+            />
+          ))}
       </div>
 
       {/* Raw Detections */}

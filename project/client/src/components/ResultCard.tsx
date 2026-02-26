@@ -17,6 +17,9 @@ const categoryIcons: Record<string, string> = {
   CRM: '🤝',
   'ESP/Marketing Automation': '📧',
   EDW: '🗄️',
+  'Tag Management': '🏷️',
+  Advertising: '📢',
+  'Customer Support': '💬',
   Other: '🔧',
 };
 

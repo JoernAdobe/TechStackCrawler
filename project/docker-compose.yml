@@ -1,13 +1,47 @@
 services:
+  mariadb:
+    image: mariadb:11
+    container_name: ${CONTAINER_PREFIX:-techstack-}mariadb
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-techstack_root}
+      - MYSQL_DATABASE=${DB_NAME:-techstack_crawler}
+      - MYSQL_USER=${DB_USER:-techstack}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - techstack_mariadb_data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   techstack:
     build: .
+    container_name: ${CONTAINER_PREFIX:-techstack-}techstack
     ports:
-      - "3001:3001"
+      - "${HOST_PORT:-8516}:3001"
+    depends_on:
+      mariadb:
+        condition: service_healthy
     environment:
+      - BEDROCK_API_KEY=${BEDROCK_API_KEY}
+      - BEDROCK_ENDPOINT=${BEDROCK_ENDPOINT:-https://bedrock-runtime.us-west-2.amazonaws.com}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION:-us-west-2}
       - BEDROCK_MODEL=${BEDROCK_MODEL:-us.anthropic.claude-sonnet-4-6}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID}
+      - ELEVENLABS_MODEL=${ELEVENLABS_MODEL:-eleven_v3}
       - NODE_ENV=production
       - PORT=3001
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-techstack}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-techstack_crawler}
     restart: unless-stopped
+
+volumes:
+  techstack_mariadb_data:

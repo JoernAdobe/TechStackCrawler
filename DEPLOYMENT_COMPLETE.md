@@ -308,6 +308,7 @@ Bei neuer Domain/Port: `APP_BASE_URL` in `.env` setzen. Die CORS-Origins in `bac
 | 8513 | RFP Tool (Standard) |
 | 8514 | Projekt 2 |
 | 8515 | Projekt 3 |
+| 8516 | TechStackCrawler |
 | … | … |
 
 ---

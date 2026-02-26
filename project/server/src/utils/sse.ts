@@ -11,6 +11,13 @@ export class SSEWriter {
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
     });
+    res.flushHeaders();
+  }
+
+  private flush() {
+    if (typeof (this.res as unknown as { flush?: () => void }).flush === 'function') {
+      (this.res as unknown as { flush: () => void }).flush();
+    }
   }
 
   sendProgress(
@@ -21,11 +28,13 @@ export class SSEWriter {
     if (this.closed) return;
     const event: ProgressEvent = { phase, message, data, timestamp: Date.now() };
     this.res.write(`event: progress\ndata: ${JSON.stringify(event)}\n\n`);
+    this.flush();
   }
 
   sendResult(result: AnalysisResult) {
     if (this.closed) return;
     this.res.write(`event: result\ndata: ${JSON.stringify(result)}\n\n`);
+    this.flush();
   }
 
   sendError(message: string) {
@@ -33,6 +42,7 @@ export class SSEWriter {
     this.res.write(
       `event: error\ndata: ${JSON.stringify({ message, timestamp: Date.now() })}\n\n`,
     );
+    this.flush();
   }
 
   close() {

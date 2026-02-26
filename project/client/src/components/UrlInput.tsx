@@ -17,7 +17,7 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+    <div className="flex flex-col items-center justify-center min-h-[40vh] px-6">
       {/* Hero section */}
       <div className="text-center mb-12 max-w-2xl">
         <h2 className="text-5xl font-bold mb-4 bg-gradient-to-r from-white via-text-primary to-text-secondary bg-clip-text text-transparent">
