@@ -1,5 +1,14 @@
+import { useState, useEffect } from 'react';
 import type { AnalysisResult, UseCaseItem } from '../types/analysis';
 import SpotlightCard from './SpotlightCard';
+
+const PROGRESS_STEPS = [
+  'Fetching sitemap…',
+  'Analyzing page structure…',
+  'Identifying interesting URLs…',
+  'AI is generating use cases…',
+  'Almost done…',
+];
 
 interface UseCaseDiscoveryProps {
   analysis: AnalysisResult;
@@ -17,6 +26,18 @@ export default function UseCaseDiscovery({
   error,
 }: UseCaseDiscoveryProps) {
   const displayResult = result ?? analysis.useCaseDiscovery;
+  const [progressStep, setProgressStep] = useState(0);
+
+  useEffect(() => {
+    if (!loading) {
+      setProgressStep(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setProgressStep((prev) => (prev + 1) % PROGRESS_STEPS.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   return (
     <section className="px-6 py-8 max-w-7xl mx-auto">
@@ -49,11 +70,27 @@ export default function UseCaseDiscovery({
 
         {/* Loading state */}
         {loading && (
-          <div className="p-8 flex flex-col items-center justify-center gap-4">
+          <div className="p-8 flex flex-col items-center justify-center gap-6">
             <div className="w-10 h-10 border-2 border-ts-accent border-t-transparent rounded-full animate-spin" />
-            <p className="text-ts-text-secondary">
-              Claude is analyzing your stack and generating use cases…
-            </p>
+            <div className="text-center space-y-2">
+              <p className="text-ts-text-primary font-medium">
+                {PROGRESS_STEPS[progressStep]}
+              </p>
+              <p className="text-xs text-ts-text-secondary">
+                Step {progressStep + 1} of {PROGRESS_STEPS.length} – this may take
+                a minute
+              </p>
+            </div>
+            <div className="flex gap-1.5">
+              {PROGRESS_STEPS.map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                    i === progressStep ? 'bg-ts-accent' : 'bg-ts-border'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         )}
 
