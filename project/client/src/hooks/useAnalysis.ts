@@ -29,17 +29,17 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
           // Sofort erste Meldung – sonst bleibt "Live updates" während des Wartens leer
           onProgress({
             phase: 'scraping',
-            message: 'Analyse startet…',
+            message: 'Analysis starting…',
             timestamp: Date.now(),
           });
 
           const placeholders: Array<{ phase: ProgressEvent['phase']; message: string }> = [
-            { phase: 'scraping', message: 'Website wird geladen…' },
-            { phase: 'scraping', message: 'Seite wird analysiert…' },
-            { phase: 'detecting', message: 'Technologien werden erkannt…' },
-            { phase: 'analyzing', message: 'KI analysiert den Tech-Stack…' },
-            { phase: 'analyzing', message: 'Zusammenfassung wird erstellt…' },
-            { phase: 'analyzing', message: 'Fast fertig…' },
+            { phase: 'scraping', message: 'Fetching website…' },
+            { phase: 'scraping', message: 'Page is being analyzed…' },
+            { phase: 'detecting', message: 'Detecting technologies…' },
+            { phase: 'analyzing', message: 'AI is analyzing the tech stack…' },
+            { phase: 'analyzing', message: 'Creating summary…' },
+            { phase: 'analyzing', message: 'Almost done…' },
           ];
           let placeholderIndex = 0;
           const intervalId = setInterval(() => {
@@ -81,7 +81,7 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
               );
               onProgress({
                 phase: 'complete',
-                message: 'Fertig!',
+                message: 'Done!',
                 timestamp: Date.now(),
               });
               onComplete(data.result as import('../types/analysis').AnalysisResult);

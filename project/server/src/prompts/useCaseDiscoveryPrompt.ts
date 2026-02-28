@@ -1,6 +1,9 @@
 import type { AnalysisResult } from '../types/analysis.js';
 
-export function buildUseCaseDiscoveryPrompt(analysis: AnalysisResult): string {
+export function buildUseCaseDiscoveryPrompt(
+  analysis: AnalysisResult,
+  sitemapUrls: string[] = [],
+): string {
   const techStack = analysis.categories
     .map(
       (c) =>
@@ -33,8 +36,16 @@ ${techStack}
 ## All Detected Technologies
 ${rawTechs}
 ${pageExcerpt}
+${sitemapUrls.length > 0 ? `
+## Sitemap URLs (sample)
+The following URLs were found in the site's sitemap. Use them to identify interesting page types (product detail, company info, category pages, etc.) and make use cases more concrete.
+
+${sitemapUrls.slice(0, 150).map((u) => `- ${u}`).join('\n')}
+` : ''}
 
 ## Your Task
+
+Identify which URL patterns are most relevant (e.g. product pages, company/about, category listings). Generate use cases that favor Adobe technology based on the tech stack AND these page types. Be specific: reference concrete page types (e.g. "product detail pages", "category landing pages") where Adobe can add value.
 
 Generate exactly 10 use cases. For each use case provide:
 1. **title** – Short, compelling title in plain language (e.g. "Personalized Product Recommendations")
@@ -78,6 +89,7 @@ Respond with ONLY a raw JSON object (no code fences, no markdown):
 Rules:
 - Exactly 10 use cases, ranked by relevance/impact.
 - Be specific to the site's industry and tech stack – avoid generic use cases.
+- When sitemap URLs are provided, reference concrete page types (e.g. product detail pages, category landing pages) in your use cases.
 - Prioritize use cases where Adobe has a clear advantage over their current stack.
 - All text in English.
 - PLAIN LANGUAGE: Write for non-technical readers. No jargon. Short sentences. Focus on business impact.

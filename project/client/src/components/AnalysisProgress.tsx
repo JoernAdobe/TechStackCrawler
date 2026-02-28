@@ -55,7 +55,7 @@ export default function AnalysisProgress({
         <div className="mb-6 flex items-center justify-center gap-3 rounded-xl border border-ts-accent/40 bg-ts-accent/10 px-4 py-3">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-ts-accent/30 border-t-ts-accent" />
           <span className="text-sm font-medium text-ts-text-primary">
-            Analyse läuft… Bitte warten Sie.
+            Analysis in progress… Please wait.
           </span>
         </div>
 
@@ -87,7 +87,7 @@ export default function AnalysisProgress({
             />
           </div>
           <div className="mt-1 flex justify-between text-xs text-ts-text-secondary">
-            <span className="text-ts-accent">Noch nicht fertig</span>
+            <span className="text-ts-accent">Not finished yet</span>
             <span>Elapsed: {formatTime(elapsed)}</span>
           </div>
         </div>
@@ -101,13 +101,13 @@ export default function AnalysisProgress({
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-adobe-red/10 to-ts-accent/10 animate-ping" />
           </div>
           <p className="mt-2 text-xs font-medium text-ts-accent animate-pulse">
-            Verarbeitung…
+            Processing…
           </p>
         </div>
 
         {/* Event log */}
         <p className="text-xs text-ts-text-secondary mb-2">
-          Live updates (läuft noch)
+          Live updates (in progress)
         </p>
         <div className="bg-ts-surface-card rounded-xl border border-ts-border p-4 max-h-64 overflow-y-auto">
           {events.map((event, i) => {

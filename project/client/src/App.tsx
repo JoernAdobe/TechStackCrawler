@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import UrlInput from './components/UrlInput';
 import AnalysisProgress from './components/AnalysisProgress';
 import ResultsTable from './components/ResultsTable';
@@ -141,6 +142,8 @@ function App() {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   );
 }

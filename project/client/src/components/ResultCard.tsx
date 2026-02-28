@@ -30,10 +30,10 @@ export default function ResultCard({ result }: ResultCardProps) {
 
   return (
     <SpotlightCard
-      className="bg-ts-surface-card rounded-xl border border-ts-border hover:border-ts-accent/30 transition-all duration-300"
+      className="bg-ts-surface-card rounded-xl border border-ts-border hover:border-ts-accent/30 transition-all duration-300 p-5 min-w-0"
       spotlightColor="rgba(99, 102, 241, 0.15)"
     >
-      <div className="p-5">
+      <div className="w-full min-w-0">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">

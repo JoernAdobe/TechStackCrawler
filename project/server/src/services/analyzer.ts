@@ -73,7 +73,8 @@ export async function analyzeUrl(url: string, sse: SSEWriter): Promise<void> {
   const pool = getPool();
   if (pool) {
     try {
-      await saveAnalysis(pool, result);
+      const id = await saveAnalysis(pool, result);
+      if (id) result.id = id;
     } catch (err) {
       console.error('Failed to save analysis to DB:', err);
     }

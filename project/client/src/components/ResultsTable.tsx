@@ -1,5 +1,6 @@
 import type { AnalysisResult } from '../types/analysis';
 import ResultCard from './ResultCard';
+import AdobeOpportunityCharts from './AdobeOpportunityCharts';
 
 interface ResultsTableProps {
   results: AnalysisResult;
@@ -61,7 +62,7 @@ export default function ResultsTable({ results }: ResultsTableProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full min-w-0">
         {results.categories.map((cat, i) => (
           <ResultCard key={cat.category} result={cat} index={i} />
         ))}
@@ -82,8 +83,8 @@ export default function ResultsTable({ results }: ResultsTableProps) {
               result={{
                 category: tech.name,
                 currentTechnology: tech.version ? `${tech.name} ${tech.version}` : tech.name,
-                challengesAndPainPoints: 'Siehe Executive Summary.',
-                adobeOpportunity: 'Automatisch erkannt – siehe Executive Summary für Kontext.',
+                challengesAndPainPoints: 'See Executive Summary.',
+                adobeOpportunity: 'Auto-detected – see Executive Summary for context.',
               }}
               index={results.categories.length + i}
             />
@@ -117,6 +118,7 @@ export default function ResultsTable({ results }: ResultsTableProps) {
               </span>
             ))}
           </div>
+          <AdobeOpportunityCharts results={results} />
         </div>
       )}
     </div>

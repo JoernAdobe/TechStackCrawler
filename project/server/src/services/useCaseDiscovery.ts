@@ -1,6 +1,7 @@
 import AnthropicBedrock from '@anthropic-ai/bedrock-sdk';
 import { config } from '../config.js';
 import { buildUseCaseDiscoveryPrompt } from '../prompts/useCaseDiscoveryPrompt.js';
+import { fetchSitemapUrls } from './sitemap.js';
 import type { AnalysisResult, UseCaseDiscoveryResult } from '../types/analysis.js';
 
 const useApiKey = config.bedrock.apiKey && config.bedrock.endpoint;
@@ -23,17 +24,23 @@ const client = new AnthropicBedrock(
       }) as never,
 );
 
+export interface DiscoverUseCasesResult {
+  result: UseCaseDiscoveryResult;
+  sitemapUrls: string[];
+}
+
 export async function discoverUseCases(
   analysis: AnalysisResult,
-): Promise<UseCaseDiscoveryResult> {
+): Promise<DiscoverUseCasesResult> {
   const useMock =
     process.env.USE_MOCK_AI === '1' || process.env.BEDROCK_SKIP_SIMULATE === '1';
 
   if (useMock) {
-    return getMockUseCases(analysis);
+    return { result: getMockUseCases(analysis), sitemapUrls: [] };
   }
 
-  const userPrompt = buildUseCaseDiscoveryPrompt(analysis);
+  const sitemapUrls = await fetchSitemapUrls(analysis.url);
+  const userPrompt = buildUseCaseDiscoveryPrompt(analysis, sitemapUrls);
 
   try {
     const response = await client.messages.create({
@@ -60,7 +67,7 @@ export async function discoverUseCases(
       throw new Error('Invalid use case response structure');
     }
 
-    return parsed;
+    return { result: parsed, sitemapUrls };
   } catch (e) {
     const msg = (e as Error).message;
     if (

@@ -1,13 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AnalysisResult } from '../types/analysis';
 import ResultsTable from './ResultsTable';
+import UseCaseDiscovery from './UseCaseDiscovery';
 import DownloadButton from './DownloadButton';
+import { useUseCaseDiscovery } from '../hooks/useUseCaseDiscovery';
 
 interface AnalysisSummary {
   id: number;
   url: string;
   analyzedAt: string;
   createdAt: string;
+}
+
+function getDomain(url: string): string {
+  try {
+    const u = new URL(url);
+    let host = u.hostname;
+    if (host.startsWith('www.')) host = host.slice(4);
+    return host || url;
+  } catch {
+    return url;
+  }
 }
 
 export default function PastAnalyses({
@@ -21,6 +34,12 @@ export default function PastAnalyses({
   const [selected, setSelected] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const {
+    discover: discoverUseCases,
+    loading: useCaseLoading,
+    result: useCaseResult,
+    error: useCaseError,
+  } = useUseCaseDiscovery();
 
   const fetchAnalyses = useCallback(() => {
     setLoading(true);
@@ -32,7 +51,7 @@ export default function PastAnalyses({
         throw new Error(data.detail || data.error || 'Failed');
       })
       .then(setSummaries)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Analysen konnten nicht geladen werden.'))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load analyses.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -44,14 +63,14 @@ export default function PastAnalyses({
     fetch(`/api/analyses/${id}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setSelected)
-      .catch(() => setError('Analyse konnte nicht geladen werden.'));
+      .catch(() => setError('Failed to load analysis.'));
   };
 
   if (loading) {
     return (
       <div className="flex justify-center py-12">
         <div className="animate-pulse text-ts-text-secondary">
-          Lade Analysen…
+          Loading analyses…
         </div>
       </div>
     );
@@ -67,15 +86,25 @@ export default function PastAnalyses({
 
   if (selected) {
     return (
-      <div className="space-y-4">
-        <button
-          onClick={() => setSelected(null)}
-          className="text-ts-accent hover:text-ts-accent-light text-sm font-medium"
-        >
-          ← Zurück zur Liste
-        </button>
-        <ResultsTable results={selected} />
-        <DownloadButton results={selected} onReset={() => setSelected(null)} />
+      <div className="w-screen relative left-1/2 -ml-[50vw]">
+        <div className="max-w-7xl mx-auto px-6 space-y-4">
+          <button
+            onClick={() => setSelected(null)}
+            className="text-ts-accent hover:text-ts-accent-light text-sm font-medium"
+          >
+            ← Back to list
+          </button>
+          <ResultsTable results={selected} />
+          <UseCaseDiscovery
+            analysis={selected}
+            onDiscover={() => discoverUseCases(selected)}
+            loading={useCaseLoading}
+            result={useCaseResult}
+            error={useCaseError}
+          />
+          <DownloadButton results={selected} onReset={() => setSelected(null)} />
+          <div className="h-20" />
+        </div>
       </div>
     );
   }
@@ -83,7 +112,7 @@ export default function PastAnalyses({
   if (summaries.length === 0) {
     return (
       <div className="text-center py-8 text-ts-text-secondary text-sm">
-        Noch keine Analysen vorhanden.
+        No analyses yet.
       </div>
     );
   }
@@ -92,14 +121,14 @@ export default function PastAnalyses({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-lg font-semibold text-ts-text-primary">
-          Bestehende Analysen
+          Past Analyses
         </h3>
         <div className="flex gap-2">
           <button
             onClick={fetchAnalyses}
             disabled={loading}
             className="text-sm text-ts-text-secondary hover:text-ts-text-primary font-medium p-1"
-            title="Liste aktualisieren"
+            title="Refresh list"
           >
             ↻
           </button>
@@ -107,27 +136,26 @@ export default function PastAnalyses({
             onClick={onSelectNew}
             className="text-sm text-ts-accent hover:text-ts-accent-light font-medium"
           >
-            + Neue Analyse
+            + New Analysis
           </button>
         </div>
       </div>
-      <ul className="divide-y divide-ts-border rounded-xl border border-ts-border bg-ts-surface-card overflow-hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {summaries.map((s) => (
-          <li key={s.id}>
-            <button
-              onClick={() => loadAnalysis(s.id)}
-              className="w-full px-4 py-3 text-left hover:bg-ts-surface-hover transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"
-            >
-              <span className="text-ts-text-primary truncate font-medium">
-                {s.url}
-              </span>
-              <span className="text-ts-text-secondary text-sm">
-                {new Date(s.analyzedAt).toLocaleString('de-DE')}
-              </span>
-            </button>
-          </li>
+          <button
+            key={s.id}
+            onClick={() => loadAnalysis(s.id)}
+            className="group text-left p-4 rounded-xl border border-ts-border bg-ts-surface-card hover:bg-ts-surface-hover hover:border-ts-border/80 transition-all"
+          >
+            <span className="block text-ts-text-primary font-semibold truncate">
+              {getDomain(s.url)}
+            </span>
+            <span className="block text-ts-text-secondary text-sm mt-1">
+              {new Date(s.analyzedAt).toLocaleString('de-DE')}
+            </span>
+          </button>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

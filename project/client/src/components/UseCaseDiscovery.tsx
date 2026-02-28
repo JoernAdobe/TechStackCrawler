@@ -10,12 +10,14 @@ interface UseCaseDiscoveryProps {
 }
 
 export default function UseCaseDiscovery({
-  analysis: _analysis,
+  analysis,
   onDiscover,
   loading,
   result,
   error,
 }: UseCaseDiscoveryProps) {
+  const displayResult = result ?? analysis.useCaseDiscovery;
+
   return (
     <section className="px-6 py-8 max-w-7xl mx-auto">
       <div className="mb-8 bg-ts-surface-card rounded-2xl border border-ts-border overflow-hidden">
@@ -33,7 +35,7 @@ export default function UseCaseDiscovery({
                 stack and site context – with Adobe solutions for each.
               </p>
             </div>
-            {!result && !loading && (
+            {!displayResult && !loading && (
               <button
                 onClick={onDiscover}
                 disabled={loading}
@@ -70,15 +72,15 @@ export default function UseCaseDiscovery({
         )}
 
         {/* Results */}
-        {result && !loading && (
+        {displayResult && !loading && (
           <div className="p-6 space-y-6">
-            {result.summary && (
+            {displayResult.summary && (
               <p className="text-ts-text-secondary leading-relaxed">
-                {result.summary}
+                {displayResult.summary}
               </p>
             )}
             <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-              {result.useCases.map((uc) => (
+              {displayResult.useCases.map((uc) => (
                 <UseCaseCard key={uc.rank} useCase={uc} />
               ))}
             </div>
@@ -86,7 +88,7 @@ export default function UseCaseDiscovery({
         )}
 
         {/* Empty state - show CTA when no result yet */}
-        {!result && !loading && !error && (
+        {!displayResult && !loading && !error && (
           <div className="p-8 text-center">
             <p className="text-ts-text-secondary text-sm">
               Click &quot;Discover Use Cases&quot; to generate AI-powered

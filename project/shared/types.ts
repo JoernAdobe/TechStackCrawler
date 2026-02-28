@@ -14,12 +14,15 @@ export interface CategoryResult {
 }
 
 export interface AnalysisResult {
+  id?: number;
   url: string;
   analyzedAt: string;
   summary: string;
   categories: CategoryResult[];
   rawDetections: DetectedTechnology[];
   pageContentExcerpt?: string;
+  useCaseDiscovery?: UseCaseDiscoveryResult;
+  sitemapUrls?: string[];
 }
 
 export interface UseCaseItem {

@@ -44,7 +44,11 @@ app.get('/api/analyses/:id', getAnalysisRoute);
 
 // Health check
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    commit: process.env.GIT_COMMIT || '—',
+  });
 });
 
 // Bedrock-Status (Diagnose bei 403/Key-Problemen)

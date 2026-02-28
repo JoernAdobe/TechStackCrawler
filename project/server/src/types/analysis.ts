@@ -14,6 +14,7 @@ export interface CategoryResult {
 }
 
 export interface AnalysisResult {
+  id?: number;
   url: string;
   analyzedAt: string;
   summary: string;
@@ -21,6 +22,8 @@ export interface AnalysisResult {
   rawDetections: DetectedTechnology[];
   /** Truncated page content for Use Case Discovery (max ~12k chars) */
   pageContentExcerpt?: string;
+  useCaseDiscovery?: UseCaseDiscoveryResult;
+  sitemapUrls?: string[];
 }
 
 export interface UseCaseItem {

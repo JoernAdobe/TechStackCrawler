@@ -1,5 +1,7 @@
 # Stage 1: Build the frontend
 FROM node:20-alpine AS client-build
+ARG GIT_COMMIT=unknown
+ENV VITE_GIT_COMMIT=$GIT_COMMIT
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY client/package.json client/
@@ -22,6 +24,9 @@ RUN npm run build --workspace=server
 
 # Stage 3: Production runtime with Chromium
 FROM node:20-slim AS production
+
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=$GIT_COMMIT
 
 # Install Chromium und Fonts
 RUN apt-get update && apt-get install -y \

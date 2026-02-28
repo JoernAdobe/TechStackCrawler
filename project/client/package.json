@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "sh -c 'export VITE_GIT_COMMIT=\"${VITE_GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)}\"; tsc -b && vite build'",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -18,7 +18,9 @@
     "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tailwind-merge": "^3.5.0"
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.5.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

@@ -17,7 +17,10 @@ services:
       retries: 5
 
   techstack:
-    build: .
+    build:
+      context: .
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     container_name: ${CONTAINER_PREFIX:-techstack-}techstack
     ports:
       - "${HOST_PORT:-8516}:3001"

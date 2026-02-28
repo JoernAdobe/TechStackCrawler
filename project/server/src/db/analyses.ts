@@ -67,5 +67,23 @@ export async function getAnalysisById(
   );
   const row = (Array.isArray(rows) ? rows[0] : null) as AnalysisRow | null;
   if (!row) return null;
-  return JSON.parse(row.result_json) as AnalysisResult;
+  const result = JSON.parse(row.result_json) as AnalysisResult;
+  result.id = row.id;
+  return result;
+}
+
+export async function updateAnalysis(
+  db: DbHandle,
+  id: number,
+  updates: Partial<Pick<AnalysisResult, 'useCaseDiscovery' | 'sitemapUrls'>>,
+): Promise<boolean> {
+  const current = await getAnalysisById(db, id);
+  if (!current) return false;
+  const { id: _omit, ...rest } = current;
+  const merged = { ...rest, ...updates };
+  await db.execute(`UPDATE analyses SET result_json = ? WHERE id = ?`, [
+    JSON.stringify(merged),
+    id,
+  ]);
+  return true;
 }
