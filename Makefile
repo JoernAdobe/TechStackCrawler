@@ -75,11 +75,18 @@ deploy:
 	echo ">>> Exportiere lokale Analysen für Migration..."; \
 	(cd $$ROOT_DIR/$(PROJECT_DIR) && npm run export-for-deploy 2>/dev/null) || true; \
 	echo ">>> Baue Docker-Image lokal (Server braucht keinen Docker-Hub-Zugriff)..."; \
-	(cd $$ROOT_DIR/$(PROJECT_DIR) && GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose build) || { echo "Fehler: Docker-Build fehlgeschlagen"; exit 1; }; \
+	echo ">>> Plattform: linux/amd64 (für x86-Server, auch beim Bau auf Apple Silicon)"; \
+	(cd $$ROOT_DIR/$(PROJECT_DIR) && DOCKER_DEFAULT_PLATFORM=linux/amd64 GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose build) || { \
+	  echo ""; \
+	  echo ">>> Docker-Build fehlgeschlagen. Ist Docker Desktop gestartet?"; \
+	  echo ">>> Ohne laufenden Docker kann das Image nicht lokal gebaut werden."; \
+	  echo ">>> Alternative: DEPLOY_SKIP_LOCAL_BUILD=1 make deploy (baut auf dem Server – braucht dort Docker-Hub-Zugriff)."; \
+	  exit 1; \
+	}; \
 	echo ">>> Exportiere TechStack-Image als Tar..."; \
 	(cd $$ROOT_DIR/$(PROJECT_DIR) && docker save techstack-app -o $$ROOT_DIR/.deploy-techstack.tar) || { echo "Fehler: Image-Export fehlgeschlagen"; exit 1; }; \
 	echo ">>> Erstelle Deploy-Archiv..."; \
-	(cd $$ROOT_DIR/$(PROJECT_DIR) && tar --exclude=node_modules --exclude=client/dist --exclude=server/dist --exclude=.env -czf $$ROOT_DIR/.deploy.tar.gz .) || { echo "Fehler: Archiv konnte nicht erstellt werden"; exit 1; }; \
+	(cd $$ROOT_DIR/$(PROJECT_DIR) && COPYFILE_DISABLE=1 tar --exclude=node_modules --exclude=client/dist --exclude=server/dist --exclude=.env -czf $$ROOT_DIR/.deploy.tar.gz .) || { echo "Fehler: Archiv konnte nicht erstellt werden"; exit 1; }; \
 	echo ">>> Kopiere auf Server..."; \
 	scp $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY" || true) $$([ -n "$$SSH_KEY" ] && echo "-o IdentitiesOnly=yes" || true) $$ROOT_DIR/.deploy.tar.gz $$ROOT_DIR/.deploy-techstack.tar "$$SSH_HOST:/tmp/" || { echo "Fehler: SCP fehlgeschlagen"; exit 1; }; \
 	rm -f $$ROOT_DIR/.deploy.tar.gz $$ROOT_DIR/.deploy-techstack.tar; \
