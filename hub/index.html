@@ -426,24 +426,5 @@
     </div>
   </div>
 
-  <script>
-    // Live health checks
-    const tools = [
-      { url: 'http://10.42.71.232:8516/api/health', card: '.card-techstack' },
-      { url: 'http://10.42.71.232:8513/api/health', card: '.card-rfp' },
-    ];
-
-    tools.forEach(({ url, card }) => {
-      const el = document.querySelector(card + ' .status');
-      if (!el) return;
-      fetch(url, { mode: 'no-cors' })
-        .then(() => {
-          el.innerHTML = '<span class="status-dot"></span> Online';
-        })
-        .catch(() => {
-          el.innerHTML = '<span class="status-dot" style="background:#f59e0b;animation:none"></span> <span style="color:#f59e0b">Checking...</span>';
-        });
-    });
-  </script>
 </body>
 </html>
