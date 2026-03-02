@@ -238,11 +238,11 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
             <p className="text-xs text-ts-text-secondary mb-3">
               Categories using Adobe vs. categories using competitors
             </p>
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" height={140}>
               <BarChart
                 data={data.adobeVsCompetitor}
                 layout="vertical"
-                margin={{ top: 0, right: 20, left: 0, bottom: 0 }}
+                margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
               >
                 <defs>
                   <linearGradient id="adobeBarGrad" x1="0" y1="0" x2="1" y2="0">
@@ -255,13 +255,13 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={TS_TEXT_SECONDARY} opacity={0.15} />
-                <XAxis type="number" stroke={TS_TEXT_SECONDARY} fontSize={12} />
+                <XAxis type="number" stroke={TS_TEXT_SECONDARY} fontSize={12} allowDecimals={false} />
                 <YAxis
                   type="category"
                   dataKey="name"
                   stroke={TS_TEXT_SECONDARY}
                   fontSize={12}
-                  width={80}
+                  width={100}
                 />
                 <Tooltip
                   contentStyle={{
@@ -272,7 +272,7 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                   }}
                   labelStyle={{ color: '#f0f0f5' }}
                 />
-                <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={28}>
                   {data.adobeVsCompetitor.map((_, i) => (
                     <Cell key={i} fill={i === 0 ? 'url(#adobeBarGrad)' : 'url(#compBarGrad)'} />
                   ))}
@@ -288,28 +288,32 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
             <h4 className="text-sm font-medium text-ts-text-secondary mb-4">
               Category Status
             </h4>
-            <ResponsiveContainer width="100%" height={Math.max(200, data.categoryStatus.length * 36)}>
-              <BarChart
-                data={data.categoryStatus}
-                layout="vertical"
-                margin={{ top: 0, right: 20, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={TS_TEXT_SECONDARY} opacity={0.15} />
-                <XAxis type="number" stroke={TS_TEXT_SECONDARY} fontSize={12} domain={[0, 1]} hide />
-                <YAxis
-                  type="category"
-                  dataKey="category"
-                  stroke={TS_TEXT_SECONDARY}
-                  fontSize={12}
-                  width={120}
-                />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24}>
-                  {data.categoryStatus.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {data.categoryStatus.map((entry) => (
+                <div
+                  key={entry.category}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-ts-surface-light/50 border border-ts-border/50"
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: entry.fill }}
+                  />
+                  <span className="text-sm text-ts-text-primary truncate flex-1">
+                    {entry.category}
+                  </span>
+                  <span
+                    className="text-xs font-medium shrink-0"
+                    style={{ color: entry.fill }}
+                  >
+                    {entry.status === 'adobe'
+                      ? 'Adobe'
+                      : entry.status === 'opportunity'
+                        ? 'Opportunity'
+                        : 'Competitor'}
+                  </span>
+                </div>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-4 mt-4 text-xs text-ts-text-secondary">
               <span className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-ts-success" />
