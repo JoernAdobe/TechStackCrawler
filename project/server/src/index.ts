@@ -33,7 +33,9 @@ import { config } from './config.js';
 const app = express();
 
 app.use(helmet({
-  contentSecurityPolicy: config.nodeEnv === 'production',
+  contentSecurityPolicy: config.nodeEnv === 'production'
+    ? { directives: { ...helmet.contentSecurityPolicy.getDefaultDirectives(), 'upgrade-insecure-requests': null } }
+    : false,
   hsts: false,
 }));
 app.use(
