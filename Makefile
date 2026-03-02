@@ -107,12 +107,21 @@ deploy:
 	echo ""; \
 	echo ">>> Deploy abgeschlossen."; \
 	echo ">>> App-URL: $$DEPLOY_URL"; \
+	echo ">>> Lokaler Commit: $$GIT_COMMIT"; \
 	echo ""; \
 	echo ">>> Teste Frontend-Erreichbarkeit..."; \
 	sleep 5; \
-	if curl -ksf -o /dev/null -w "   HTTP %{http_code} – erreichbar\n" "$$DEPLOY_URL/api/health" 2>/dev/null; then \
+	HEALTH=$$(curl -ksf "$$DEPLOY_URL/api/health" 2>/dev/null); \
+	if [ -n "$$HEALTH" ]; then \
+		REMOTE_COMMIT=$$(echo "$$HEALTH" | grep -o '"commit":"[^"]*"' | cut -d'"' -f4); \
 		echo ">>> Frontend: $$DEPLOY_URL"; \
 		echo ">>> Health-Check: OK"; \
+		echo ">>> Server-Commit: $$REMOTE_COMMIT"; \
+		if [ "$$GIT_COMMIT" = "$$REMOTE_COMMIT" ]; then \
+			echo ">>> Commit-Check: OK (lokal = server)"; \
+		else \
+			echo ">>> Commit-Check: MISMATCH (lokal=$$GIT_COMMIT, server=$$REMOTE_COMMIT)"; \
+		fi; \
 	else \
 		echo ">>> Frontend: $$DEPLOY_URL"; \
 		echo ">>> Health-Check: noch nicht bereit (Container startet evtl. noch)"; \
