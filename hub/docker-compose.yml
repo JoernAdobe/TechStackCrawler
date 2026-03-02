@@ -1,0 +1,10 @@
+services:
+  hub:
+    image: caddy:2-alpine
+    container_name: adobe-tools-hub
+    ports:
+      - "${HOST_PORT:-8510}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./index.html:/srv/index.html:ro
+    restart: unless-stopped

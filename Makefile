@@ -2,7 +2,7 @@
 # Verwendung: make start | stop | deploy | ...
 
 PROJECT_DIR := project
-.PHONY: start stop deploy install build dev-start dev-stop docker-up docker-down docker-build
+.PHONY: start stop deploy deploy-hub install build dev-start dev-stop docker-up docker-down docker-build
 
 # Standard-Ziel
 .DEFAULT_GOAL := help
@@ -17,6 +17,7 @@ help:
 	@echo "  make docker-up   - Mit Docker starten"
 	@echo "  make docker-down - Docker-Container stoppen"
 	@echo "  make deploy     - Auf Server deployen (Docker)"
+	@echo "  make deploy-hub - Hub-Seite deployen (Adobe AI Tools)"
 	@echo ""
 
 # Abhängigkeiten installieren
@@ -125,4 +126,39 @@ deploy:
 	else \
 		echo ">>> Frontend: $$DEPLOY_URL"; \
 		echo ">>> Health-Check: noch nicht bereit (Container startet evtl. noch)"; \
+	fi
+
+# Deploy Hub Page (Adobe AI Tools landing page)
+HUB_DIR := hub
+HUB_REMOTE_DIR := /opt/adobe-tools-hub
+HUB_PORT := 8510
+
+deploy-hub:
+	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
+	ROOT_DIR=$$(pwd); \
+	if [ -z "$$SSH_HOST" ]; then \
+		echo "Fehler: SSH_HOST muss gesetzt sein (in .env.deploy oder als Argument)"; \
+		exit 1; \
+	fi; \
+	echo ">>> Adobe AI Tools Hub Deploy (Port $(HUB_PORT))"; \
+	echo ">>> Kopiere Hub-Dateien auf Server..."; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "mkdir -p $(HUB_REMOTE_DIR)"; \
+	scp $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) \
+		$$ROOT_DIR/$(HUB_DIR)/index.html \
+		$$ROOT_DIR/$(HUB_DIR)/Caddyfile \
+		$$ROOT_DIR/$(HUB_DIR)/docker-compose.yml \
+		"$$SSH_HOST:$(HUB_REMOTE_DIR)/"; \
+	echo ">>> Starte Container auf Server..."; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" \
+		"cd $(HUB_REMOTE_DIR) && HOST_PORT=$(HUB_PORT) docker compose pull && HOST_PORT=$(HUB_PORT) docker compose up -d"; \
+	DEPLOY_HOST=$${SSH_HOST#*@}; \
+	DEPLOY_URL="http://$$DEPLOY_HOST:$(HUB_PORT)"; \
+	echo ""; \
+	echo ">>> Deploy abgeschlossen."; \
+	echo ">>> Hub-URL: $$DEPLOY_URL"; \
+	sleep 3; \
+	if curl -ksf -o /dev/null -w "   HTTP %{http_code}\n" "$$DEPLOY_URL" 2>/dev/null; then \
+		echo ">>> Status: OK"; \
+	else \
+		echo ">>> Status: noch nicht bereit"; \
 	fi

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adobe AI Tools</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23EB1000'%3E%3Cpath d='M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm6.232 0L24 22.624V1.376z'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-light: #1a1a28;
+      --border: #2a2a3e;
+      --text: #f0f0f5;
+      --text-secondary: #8888a0;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --adobe-red: #EB1000;
+      --success: #22c55e;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      opacity: 0.03;
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,0.5) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.5) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    .bg-glow-1 {
+      position: fixed;
+      top: 10%;
+      left: 20%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+      z-index: 0;
+      animation: float 20s ease-in-out infinite;
+    }
+
+    .bg-glow-2 {
+      position: fixed;
+      bottom: 10%;
+      right: 15%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(235,16,0,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+      z-index: 0;
+      animation: float 25s ease-in-out infinite reverse;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -20px) scale(1.05); }
+      66% { transform: translate(-20px, 15px) scale(0.95); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 80px 24px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* Logo */
+    .logo {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--adobe-red), #c00);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 32px;
+      box-shadow: 0 0 40px rgba(235,16,0,0.2);
+      animation: fadeInUp 0.6s ease-out both;
+    }
+
+    .logo svg {
+      width: 32px;
+      height: 32px;
+      fill: white;
+    }
+
+    /* Title */
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      animation: fadeInUp 0.6s ease-out 0.1s both;
+    }
+
+    h1 .gradient {
+      background: linear-gradient(135deg, var(--text) 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h1 .highlight {
+      background: linear-gradient(135deg, var(--accent-light) 0%, var(--adobe-red) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      text-align: center;
+      max-width: 520px;
+      line-height: 1.6;
+      margin-bottom: 64px;
+      animation: fadeInUp 0.6s ease-out 0.2s both;
+    }
+
+    /* Cards */
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+      animation: fadeInUp 0.6s ease-out 0.3s both;
+    }
+
+    @media (max-width: 640px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      padding: 1px;
+      background: linear-gradient(135deg, transparent 40%, var(--accent) 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .card:hover::before { opacity: 1; }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: transparent;
+      box-shadow:
+        0 20px 40px rgba(0,0,0,0.3),
+        0 0 60px rgba(99,102,241,0.06);
+    }
+
+    .card-glow {
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      width: 120px;
+      height: 120px;
+      border-radius: 0 20px 0 0;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+
+    .card:hover .card-glow { opacity: 1; }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .card-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin-bottom: 20px;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .card-tag {
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      background: var(--surface-light);
+    }
+
+    .card-arrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: gap 0.3s ease;
+    }
+
+    .card:hover .card-arrow { gap: 12px; }
+
+    .card-arrow svg {
+      width: 16px;
+      height: 16px;
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover .card-arrow svg { transform: translateX(2px); }
+
+    /* Card 1: TechStack */
+    .card-techstack .card-icon {
+      background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(99,102,241,0.05));
+    }
+    .card-techstack .card-icon svg { stroke: var(--accent-light); }
+    .card-techstack .card-glow {
+      background: radial-gradient(circle at top right, rgba(99,102,241,0.08), transparent 70%);
+    }
+    .card-techstack .card-arrow { color: var(--accent-light); }
+    .card-techstack:hover { border-color: rgba(99,102,241,0.3); }
+
+    /* Card 2: RFP */
+    .card-rfp .card-icon {
+      background: linear-gradient(135deg, rgba(235,16,0,0.2), rgba(235,16,0,0.05));
+    }
+    .card-rfp .card-icon svg { stroke: var(--adobe-red); }
+    .card-rfp .card-glow {
+      background: radial-gradient(circle at top right, rgba(235,16,0,0.08), transparent 70%);
+    }
+    .card-rfp .card-arrow { color: var(--adobe-red); }
+    .card-rfp:hover { border-color: rgba(235,16,0,0.3); }
+
+    /* Status indicators */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--success);
+      margin-bottom: 20px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 80px;
+      text-align: center;
+      animation: fadeInUp 0.6s ease-out 0.4s both;
+    }
+
+    .footer p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .footer .adobe-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      opacity: 0.6;
+    }
+
+    .footer .adobe-badge svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--adobe-red);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <div class="container">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm6.232 0L24 22.624V1.376z"/></svg>
+    </div>
+
+    <h1>
+      <span class="gradient">Adobe</span> <span class="highlight">AI Tools</span>
+    </h1>
+    <p class="subtitle">
+      Internal AI-powered tools for sales enablement — built with AWS Bedrock and Claude.
+    </p>
+
+    <div class="cards">
+      <!-- TechStack Analyzer -->
+      <a href="http://10.42.71.232:8516/" class="card card-techstack">
+        <div class="card-glow"></div>
+        <div class="card-icon">
+          <svg fill="none" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5a17.92 17.92 0 0 1-8.716-2.247m0 0A8.966 8.966 0 0 1 3 12c0-1.264.26-2.466.732-3.558"/>
+          </svg>
+        </div>
+        <h2>TechStack Analyzer</h2>
+        <p>Analyze any website's technology stack, identify Adobe opportunities, and generate AI-powered use case recommendations.</p>
+        <div class="card-tags">
+          <span class="card-tag">Tech Detection</span>
+          <span class="card-tag">AI Analysis</span>
+          <span class="card-tag">Use Cases</span>
+        </div>
+        <div class="status">
+          <span class="status-dot"></span>
+          Online
+        </div>
+        <div class="card-arrow">
+          Open Tool
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
+        </div>
+      </a>
+
+      <!-- RFP Automation Suite -->
+      <a href="http://10.42.71.232:8513/" class="card card-rfp">
+        <div class="card-glow"></div>
+        <div class="card-icon">
+          <svg fill="none" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+          </svg>
+        </div>
+        <h2>RFP Automation Suite</h2>
+        <p>AI-powered RFP processing — upload Excel questionnaires, configure prompts, and let Claude generate accurate, context-aware responses.</p>
+        <div class="card-tags">
+          <span class="card-tag">Excel Workflow</span>
+          <span class="card-tag">AI Responses</span>
+          <span class="card-tag">Verification</span>
+        </div>
+        <div class="status">
+          <span class="status-dot"></span>
+          Online
+        </div>
+        <div class="card-arrow">
+          Open Tool
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
+        </div>
+      </a>
+    </div>
+
+    <div class="footer">
+      <p>Powered by AWS Bedrock &middot; Claude</p>
+      <div class="adobe-badge">
+        <svg viewBox="0 0 24 24"><path d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm6.232 0L24 22.624V1.376z"/></svg>
+        Adobe Internal Tools
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Live health checks
+    const tools = [
+      { url: 'http://10.42.71.232:8516/api/health', card: '.card-techstack' },
+      { url: 'http://10.42.71.232:8513/api/health', card: '.card-rfp' },
+    ];
+
+    tools.forEach(({ url, card }) => {
+      const el = document.querySelector(card + ' .status');
+      if (!el) return;
+      fetch(url, { mode: 'no-cors' })
+        .then(() => {
+          el.innerHTML = '<span class="status-dot"></span> Online';
+        })
+        .catch(() => {
+          el.innerHTML = '<span class="status-dot" style="background:#f59e0b;animation:none"></span> <span style="color:#f59e0b">Checking...</span>';
+        });
+    });
+  </script>
+</body>
+</html>
