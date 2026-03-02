@@ -5,7 +5,6 @@ import { Lightbulb } from 'lucide-react';
 import type { AnalysisResult, UseCaseItem } from '../types/analysis';
 import SpotlightCard from './SpotlightCard';
 import { Badge } from './ui/badge';
-import LetterGlitch from './LetterGlitch';
 
 gsap.registerPlugin(useGSAP);
 
@@ -42,8 +41,10 @@ export default function UseCaseDiscovery({
       return;
     }
     const interval = setInterval(() => {
-      setProgressStep((prev) => (prev + 1) % PROGRESS_STEPS.length);
-    }, 3000);
+      setProgressStep((prev) =>
+        prev < PROGRESS_STEPS.length - 1 ? prev + 1 : prev,
+      );
+    }, 4000);
     return () => clearInterval(interval);
   }, [loading]);
 
@@ -89,35 +90,30 @@ export default function UseCaseDiscovery({
           </div>
         </div>
 
-        {/* Loading state with glitch */}
+        {/* Loading state */}
         {loading && (
-          <div className="relative p-8 flex flex-col items-center justify-center gap-6 overflow-hidden">
-            <div className="absolute inset-0 opacity-[0.04]">
-              <LetterGlitch
-                glitchColors={['#1a1a2e', '#6366f1', '#EB1000']}
-                glitchSpeed={80}
-                centerVignette={true}
-                outerVignette={true}
-                smooth={true}
-                characters="USE CASE DISCOVERY AI ANALYSIS ADOBE"
-              />
-            </div>
-            <div className="relative w-12 h-12 border-2 border-ts-accent border-t-transparent rounded-full animate-spin" />
-            <div className="relative text-center space-y-2">
+          <div className="p-8 flex flex-col items-center justify-center gap-6">
+            <div className="w-12 h-12 border-2 border-ts-accent border-t-transparent rounded-full animate-spin" />
+            <div className="text-center space-y-2">
               <p className="text-ts-text-primary font-medium">
                 {PROGRESS_STEPS[progressStep]}
               </p>
               <p className="text-xs text-ts-text-secondary">
-                Pruefe Seite {progressStep + 1} von {PROGRESS_STEPS.length} --
+                Schritt {progressStep + 1} von {PROGRESS_STEPS.length} --
                 mehrere Seiten werden beruecksichtigt, kann eine Minute dauern
               </p>
             </div>
-            <div className="relative flex gap-2">
+            {/* Progress dots — only moves forward */}
+            <div className="flex gap-2">
               {PROGRESS_STEPS.map((_, i) => (
                 <span
                   key={i}
-                  className={`h-2 rounded-full transition-all duration-500 ${
-                    i === progressStep ? 'bg-ts-accent w-6' : i < progressStep ? 'bg-ts-accent/40 w-2' : 'bg-ts-border w-2'
+                  className={`h-2 rounded-full transition-all duration-700 ease-out ${
+                    i === progressStep
+                      ? 'bg-ts-accent w-6'
+                      : i < progressStep
+                        ? 'bg-ts-accent/50 w-2'
+                        : 'bg-ts-border w-2'
                   }`}
                 />
               ))}
