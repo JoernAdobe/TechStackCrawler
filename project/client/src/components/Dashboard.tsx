@@ -52,7 +52,7 @@ const PIE_COLORS = [
 ];
 
 function formatCurrency(val: number): string {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);
 }
 
 function formatWeekLabel(week: string): string {
@@ -157,23 +157,23 @@ export default function Dashboard({ token, onLogout }: Props) {
               <h2 className="text-2xl md:text-3xl font-bold">
                 {formatCurrency(stats.estimatedCostSaved)}
               </h2>
-              <p className="text-ts-text-secondary mt-1">geschaetzter Wert der eingesparten Arbeit</p>
+              <p className="text-ts-text-secondary mt-1">estimated value of saved work</p>
               <p className="text-xs text-ts-text-secondary mt-2">
-                Basierend auf {stats.estimatedHoursSaved}h manuellem Aufwand × {formatCurrency(150)}/h Berater-Stundensatz
+                Based on {stats.estimatedHoursSaved}h manual effort × {formatCurrency(150)}/h consultant hourly rate
               </p>
             </div>
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
                 <div className="text-2xl font-bold text-ts-success">{speedFactor}×</div>
-                <div className="text-xs text-ts-text-secondary mt-0.5">schneller als manuell</div>
+                <div className="text-xs text-ts-text-secondary mt-0.5">faster than manual</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-ts-accent">{stats.estimatedHoursSaved}h</div>
-                <div className="text-xs text-ts-text-secondary mt-0.5">Stunden eingespart</div>
+                <div className="text-xs text-ts-text-secondary mt-0.5">hours saved</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-ts-warning">{stats.daysSinceFirstUse}</div>
-                <div className="text-xs text-ts-text-secondary mt-0.5">Tage im Einsatz</div>
+                <div className="text-xs text-ts-text-secondary mt-0.5">days in use</div>
               </div>
             </div>
           </div>
@@ -181,17 +181,17 @@ export default function Dashboard({ token, onLogout }: Props) {
 
         {/* KPI Cards */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <KpiCard label="Analysen gesamt" value={stats.totalAnalyses} />
+          <KpiCard label="Total analyses" value={stats.totalAnalyses} />
           <KpiCard label="Unique Domains" value={stats.uniqueDomains} />
           <KpiCard label="Adobe Opportunities" value={stats.adobeOpportunities} color="text-adobe-red" />
           <KpiCard label="Use-Case Discoveries" value={stats.useCaseDiscoveries} color="text-ts-accent" />
-          <KpiCard label="Ø Tech/Analyse" value={stats.avgTechPerAnalysis} />
-          <KpiCard label="Tech insgesamt erkannt" value={stats.totalTechDetected} />
-          <KpiCard label="Ø Analysen/Woche" value={avgAnalysesPerWeek} />
+          <KpiCard label="Avg tech/analysis" value={stats.avgTechPerAnalysis} />
+          <KpiCard label="Total tech detected" value={stats.totalTechDetected} />
+          <KpiCard label="Avg analyses/week" value={avgAnalysesPerWeek} />
           <KpiCard
-            label="Tool-Zeit vs. manuell"
+            label="Tool time vs. manual"
             value={`${totalToolMinutes} min`}
-            sub={`statt ${Math.round(totalManualMinutes / 60)}h`}
+            sub={`instead of ${Math.round(totalManualMinutes / 60)}h`}
             color="text-ts-success"
           />
         </section>
@@ -201,7 +201,7 @@ export default function Dashboard({ token, onLogout }: Props) {
           {/* Analyses Over Time */}
           <div className="rounded-xl border border-ts-border bg-ts-surface-card p-5">
             <h3 className="text-sm font-semibold mb-4 text-ts-text-secondary uppercase tracking-wider">
-              Analysen pro Woche
+              Analyses per week
             </h3>
             {stats.analysesPerWeek.length > 0 ? (
               <ResponsiveContainer width="100%" height={260}>
@@ -217,20 +217,20 @@ export default function Dashboard({ token, onLogout }: Props) {
                   <YAxis allowDecimals={false} tick={{ fill: '#8888a0', fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 8, fontSize: 12 }}
-                    labelFormatter={(l) => `Woche ${l}`}
+                    labelFormatter={(l) => `Week ${l}`}
                   />
-                  <Area type="monotone" dataKey="count" stroke="#6366f1" fill="url(#areaGrad)" strokeWidth={2} name="Analysen" />
+                  <Area type="monotone" dataKey="count" stroke="#6366f1" fill="url(#areaGrad)" strokeWidth={2} name="Analyses" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-ts-text-secondary text-sm py-12 text-center">Noch keine Daten</p>
+              <p className="text-ts-text-secondary text-sm py-12 text-center">No data yet</p>
             )}
           </div>
 
           {/* Top Technologies */}
           <div className="rounded-xl border border-ts-border bg-ts-surface-card p-5">
             <h3 className="text-sm font-semibold mb-4 text-ts-text-secondary uppercase tracking-wider">
-              Meist erkannte Technologien
+              Most detected technologies
             </h3>
             {stats.topTechnologies.length > 0 ? (
               <ResponsiveContainer width="100%" height={260}>
@@ -241,11 +241,11 @@ export default function Dashboard({ token, onLogout }: Props) {
                   <Tooltip
                     contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 8, fontSize: 12 }}
                   />
-                  <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]} name="Vorkommen" />
+                  <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]} name="Occurrences" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-ts-text-secondary text-sm py-12 text-center">Noch keine Daten</p>
+              <p className="text-ts-text-secondary text-sm py-12 text-center">No data yet</p>
             )}
           </div>
         </section>
@@ -255,7 +255,7 @@ export default function Dashboard({ token, onLogout }: Props) {
           {/* Category Breakdown */}
           <div className="rounded-xl border border-ts-border bg-ts-surface-card p-5">
             <h3 className="text-sm font-semibold mb-4 text-ts-text-secondary uppercase tracking-wider">
-              Technologie-Kategorien
+              Technology categories
             </h3>
             {stats.categoryBreakdown.length > 0 ? (
               <div className="flex items-center gap-4">
@@ -294,38 +294,38 @@ export default function Dashboard({ token, onLogout }: Props) {
                 </div>
               </div>
             ) : (
-              <p className="text-ts-text-secondary text-sm py-12 text-center">Noch keine Daten</p>
+              <p className="text-ts-text-secondary text-sm py-12 text-center">No data yet</p>
             )}
           </div>
 
           {/* Time Savings Breakdown */}
           <div className="rounded-xl border border-ts-border bg-ts-surface-card p-5">
             <h3 className="text-sm font-semibold mb-4 text-ts-text-secondary uppercase tracking-wider">
-              Zeitersparnis-Rechnung
+              Time savings breakdown
             </h3>
             <div className="space-y-4 text-sm">
               <div className="flex justify-between items-center py-2 border-b border-ts-border/50">
-                <span className="text-ts-text-secondary">Manueller Aufwand pro Analyse</span>
-                <span className="font-medium">~3.5 Stunden</span>
+                <span className="text-ts-text-secondary">Manual effort per analysis</span>
+                <span className="font-medium">~3.5 hours</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-ts-border/50">
-                <span className="text-ts-text-secondary">Tool-Dauer pro Analyse</span>
-                <span className="font-medium text-ts-success">~2 Minuten</span>
+                <span className="text-ts-text-secondary">Tool duration per analysis</span>
+                <span className="font-medium text-ts-success">~2 minutes</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-ts-border/50">
-                <span className="text-ts-text-secondary">Analysen durchgefuehrt</span>
+                <span className="text-ts-text-secondary">Analyses performed</span>
                 <span className="font-medium">{stats.totalAnalyses}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-ts-border/50">
-                <span className="text-ts-text-secondary">Gesamtzeit manuell</span>
+                <span className="text-ts-text-secondary">Total time manual</span>
                 <span className="font-medium text-red-400">{Math.round(totalManualMinutes / 60)}h</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-ts-border/50">
-                <span className="text-ts-text-secondary">Gesamtzeit mit Tool</span>
+                <span className="text-ts-text-secondary">Total time with tool</span>
                 <span className="font-medium text-ts-success">{totalToolMinutes} min</span>
               </div>
               <div className="flex justify-between items-center py-3 bg-ts-surface-light rounded-lg px-3 -mx-1">
-                <span className="font-semibold">Netto-Zeitersparnis</span>
+                <span className="font-semibold">Net time savings</span>
                 <span className="font-bold text-ts-success text-base">
                   {stats.estimatedHoursSaved}h ({formatCurrency(stats.estimatedCostSaved)})
                 </span>
@@ -336,11 +336,11 @@ export default function Dashboard({ token, onLogout }: Props) {
 
         {/* Footer info */}
         <p className="text-center text-xs text-ts-text-secondary pb-4">
-          Erste Analyse: {stats.firstAnalysisDate
-            ? new Date(stats.firstAnalysisDate).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })
+          First analysis: {stats.firstAnalysisDate
+            ? new Date(stats.firstAnalysisDate).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
             : '—'}
           {' · '}
-          Daten werden live aus der Datenbank berechnet
+          Data is calculated live from the database
         </p>
       </div>
     </div>
@@ -356,7 +356,7 @@ function KpiCard({ label, value, sub, color }: {
   return (
     <div className="rounded-xl border border-ts-border bg-ts-surface-card p-4">
       <div className={`text-2xl font-bold ${color ?? 'text-ts-text-primary'}`}>
-        {typeof value === 'number' ? value.toLocaleString('de-DE') : value}
+        {typeof value === 'number' ? value.toLocaleString('en-US') : value}
       </div>
       {sub && <div className="text-xs text-ts-text-secondary mt-0.5">{sub}</div>}
       <div className="text-xs text-ts-text-secondary mt-1">{label}</div>

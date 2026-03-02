@@ -138,9 +138,9 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
       {/* Feature highlights */}
       <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 fill-mode-both">
         {[
-          { icon: Zap, color: 'ts-accent', title: 'Instant Detection', desc: 'Erkennung in Sekunden' },
-          { icon: Sparkles, color: 'ts-accent', title: 'AI-Powered', desc: 'Claude analysiert den Stack' },
-          { icon: Lightbulb, color: 'adobe-red', title: 'Adobe Opportunities', desc: 'Use-Case-Empfehlungen' },
+          { icon: Zap, color: 'ts-accent', title: 'Instant Detection', desc: 'Detection in seconds' },
+          { icon: Sparkles, color: 'ts-accent', title: 'AI-Powered', desc: 'Claude analyzes the stack' },
+          { icon: Lightbulb, color: 'adobe-red', title: 'Adobe Opportunities', desc: 'Use case recommendations' },
         ].map(({ icon: Icon, color, title, desc }) => (
           <div
             key={title}

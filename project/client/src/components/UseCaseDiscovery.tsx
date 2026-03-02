@@ -9,11 +9,11 @@ import { Badge } from './ui/badge';
 gsap.registerPlugin(useGSAP);
 
 const PROGRESS_STEPS = [
-  'Sitemap wird geladen...',
-  'Seitenstruktur wird analysiert...',
-  'Relevante URLs werden ausgewertet...',
-  'Use Cases werden generiert...',
-  'Abschluss...',
+  'Loading sitemap...',
+  'Analyzing page structure...',
+  'Evaluating relevant URLs...',
+  'Generating use cases...',
+  'Finishing...',
 ];
 
 interface UseCaseDiscoveryProps {
@@ -99,8 +99,8 @@ export default function UseCaseDiscovery({
                 {PROGRESS_STEPS[progressStep]}
               </p>
               <p className="text-xs text-ts-text-secondary">
-                Schritt {progressStep + 1} von {PROGRESS_STEPS.length} --
-                mehrere Seiten werden beruecksichtigt, kann eine Minute dauern
+                Step {progressStep + 1} of {PROGRESS_STEPS.length} —
+                multiple pages are considered, this may take a minute
               </p>
             </div>
             {/* Progress dots — only moves forward */}

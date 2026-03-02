@@ -196,7 +196,7 @@ export default function PastAnalyses({
                     {getDomain(s.url)}
                   </span>
                   <span className="block text-ts-text-secondary text-xs mt-0.5">
-                    {new Date(s.analyzedAt).toLocaleString('de-DE')}
+                    {new Date(s.analyzedAt).toLocaleString('en-US')}
                   </span>
                 </div>
                 <Globe className="w-4 h-4 text-ts-text-secondary/40 shrink-0" />
