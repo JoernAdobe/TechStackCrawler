@@ -20,7 +20,7 @@ services:
     image: caddy:2-alpine
     container_name: ${CONTAINER_PREFIX:-techstack-}caddy
     ports:
-      - "${HOST_PORT:-8516}:443"
+      - "${HOST_PORT:-8516}:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
