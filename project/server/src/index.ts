@@ -34,7 +34,13 @@ const app = express();
 
 app.use(helmet({
   contentSecurityPolicy: config.nodeEnv === 'production'
-    ? { directives: { ...helmet.contentSecurityPolicy.getDefaultDirectives(), 'upgrade-insecure-requests': null } }
+    ? {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          'img-src': ["'self'", 'data:', 'https://www.google.com'],
+          'upgrade-insecure-requests': null,
+        },
+      }
     : false,
   hsts: false,
 }));

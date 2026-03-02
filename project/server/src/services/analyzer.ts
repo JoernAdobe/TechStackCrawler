@@ -59,6 +59,7 @@ export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void
   // Phase 4: Compile and send results
   const result: AnalysisResult = {
     url: scraped.finalUrl,
+    requestedUrl: url !== scraped.finalUrl ? url : undefined,
     analyzedAt: new Date().toISOString(),
     summary: aiResult.summary,
     categories: aiResult.categories,

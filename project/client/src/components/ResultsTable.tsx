@@ -67,7 +67,7 @@ export default function ResultsTable({ results }: ResultsTableProps) {
         <p className="text-ts-text-secondary leading-relaxed">
           {results.summary}
         </p>
-        <div className="mt-4 flex items-center gap-4 text-xs text-ts-text-secondary">
+        <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-ts-text-secondary">
           <span>
             URL:{' '}
             <a
@@ -79,6 +79,11 @@ export default function ResultsTable({ results }: ResultsTableProps) {
               {results.url}
             </a>
           </span>
+          {results.requestedUrl && (
+            <span className="text-ts-warning">
+              Redirected from {results.requestedUrl}
+            </span>
+          )}
           <span>
             Analyzed:{' '}
             {new Date(results.analyzedAt).toLocaleDateString('en-US', {

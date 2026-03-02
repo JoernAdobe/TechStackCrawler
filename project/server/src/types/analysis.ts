@@ -21,6 +21,7 @@ export interface CategoryResult {
 export interface AnalysisResult {
   id?: number;
   url: string;
+  requestedUrl?: string;
   analyzedAt: string;
   summary: string;
   categories: CategoryResult[];
