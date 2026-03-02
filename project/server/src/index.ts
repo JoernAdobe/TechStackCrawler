@@ -32,7 +32,10 @@ import { config } from './config.js';
 
 const app = express();
 
-app.use(helmet({ contentSecurityPolicy: config.nodeEnv === 'production' }));
+app.use(helmet({
+  contentSecurityPolicy: config.nodeEnv === 'production',
+  hsts: false,
+}));
 app.use(
   cors({
     origin: config.nodeEnv === 'production'
