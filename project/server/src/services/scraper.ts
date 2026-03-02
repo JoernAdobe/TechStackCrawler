@@ -15,10 +15,15 @@ export interface ScrapedData {
 }
 
 let browser: Browser | null = null;
+let browserPromise: Promise<Browser> | null = null;
 
 async function getBrowser(): Promise<Browser> {
-  if (!browser || !browser.isConnected()) {
-    browser = await puppeteer.launch({
+  if (browser?.isConnected()) return browser;
+
+  if (browserPromise) return browserPromise;
+
+  browserPromise = puppeteer
+    .launch({
       headless: true,
       args: [
         '--no-sandbox',
@@ -28,9 +33,18 @@ async function getBrowser(): Promise<Browser> {
         '--disable-software-rasterizer',
       ],
       executablePath: config.puppeteer.executablePath,
+    })
+    .then((b) => {
+      browser = b;
+      browserPromise = null;
+      return b;
+    })
+    .catch((err) => {
+      browserPromise = null;
+      throw err;
     });
-  }
-  return browser;
+
+  return browserPromise;
 }
 
 export type ScrapeProgressCallback = (message: string) => void;

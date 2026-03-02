@@ -1,4 +1,3 @@
-import { SSEWriter } from '../utils/sse.js';
 import { scrapePage } from './scraper.js';
 import { detectTechnologies } from './detector.js';
 import { analyzeWithAI } from './ai.js';
@@ -6,8 +5,14 @@ import { getPool } from '../db/index.js';
 import { saveAnalysis } from '../db/analyses.js';
 import type { AnalysisResult } from '../types/analysis.js';
 
-export async function analyzeUrl(url: string, sse: SSEWriter): Promise<void> {
-  // Phase 1: Scrape
+export interface AnalysisWriter {
+  sendProgress(phase: string, message: string, data?: Record<string, unknown>): void;
+  sendResult(result: AnalysisResult): void;
+  sendError(message: string): void;
+  close(): void;
+}
+
+export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void> {
   sse.sendProgress('scraping', `Fetching ${url}…`);
 
   const scraped = await scrapePage(url, (msg) =>

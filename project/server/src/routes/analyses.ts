@@ -52,12 +52,8 @@ export async function listAnalysesRoute(_req: Request, res: Response) {
       res.json([]);
       return;
     }
-    const msg = error instanceof Error ? error.message : String(error);
     console.error('List analyses error:', error);
-    res.status(500).json({
-      error: 'Failed to list analyses',
-      detail: msg,
-    });
+    res.status(500).json({ error: 'Failed to list analyses' });
   }
 }
 

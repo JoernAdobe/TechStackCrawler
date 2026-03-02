@@ -24,8 +24,13 @@ make deploy
 
 ## Nach dem Deploy
 
-- **App:** `http://10.42.71.232:8516`
-- **Container:** `techstack-techstack` (Präfix vermeidet Konflikte mit RFP Tool etc.)
+- **App:** `https://10.42.71.232:8516` (selbst-signiertes Zertifikat via Caddy)
+- **Container:** `techstack-caddy` (Reverse Proxy), `techstack-techstack` (App), `techstack-mariadb` (DB)
+- **Hinweis:** Beim ersten Zugriff muss die Browser-Zertifikatswarnung einmalig bestätigt werden.
+- **Optional:** Root-CA exportieren und auf Team-Rechnern installieren, um die Warnung zu eliminieren:
+  ```bash
+  docker cp techstack-caddy:/data/caddy/pki/authorities/local/root.crt .
+  ```
 
 ## MariaDB & Backup
 

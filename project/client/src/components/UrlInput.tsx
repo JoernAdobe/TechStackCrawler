@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Zap, Sparkles, Lightbulb } from 'lucide-react';
+import LetterGlitch from './LetterGlitch';
 
 interface UrlInputProps {
   onSubmit: (url: string) => void;
@@ -18,7 +19,31 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-[40vh] px-6 overflow-hidden">
+    <div className="relative flex flex-col items-center justify-center min-h-[50vh] px-6 overflow-hidden">
+      {/* LetterGlitch – only peeks through at edges */}
+      <div className="absolute inset-0 -z-20 opacity-[0.04]">
+        <LetterGlitch
+          glitchColors={['#1a1a2e', '#6366f1', '#EB1000']}
+          glitchSpeed={100}
+          centerVignette={true}
+          outerVignette={true}
+          smooth={true}
+          characters="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>/{}[]()#@!$%"
+        />
+      </div>
+      {/* Heavy center fade keeps text area clean */}
+      <div
+        className="absolute inset-0 -z-[15] pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse at center, rgba(10,10,15,0.97) 25%, rgba(10,10,15,0.7) 60%, transparent 100%)',
+        }}
+      />
+
+      {/* Floating gradient orbs */}
+      <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-ts-accent/10 blur-[100px] animate-float -z-10" />
+      <div className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full bg-adobe-red/10 blur-[80px] animate-float-delayed -z-10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-ts-accent/5 blur-[120px] -z-10" />
+
       {/* Grid background */}
       <div
         className="absolute inset-0 -z-10 opacity-[0.03]"
@@ -37,14 +62,14 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
         }}
       />
 
-      {/* Hero section */}
+      {/* Hero section — plain text with CSS animations, no SplitText */}
       <div className="text-center mb-12 max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <h2 className="text-5xl font-bold mb-4 bg-gradient-to-r from-white via-white/90 to-ts-text-secondary bg-clip-text text-transparent leading-tight">
-          Analyze Any Website's
+        <h2 className="text-5xl font-bold bg-gradient-to-r from-white via-white/90 to-ts-text-secondary bg-clip-text text-transparent leading-tight">
+          Analyze Any Website&apos;s
           <br />
           Tech Stack
         </h2>
-        <p className="text-ts-text-secondary text-lg leading-relaxed">
+        <p className="text-ts-text-secondary text-lg leading-relaxed mt-6">
           Enter a URL to discover the technology stack, identify challenges, and
           uncover Adobe product opportunities.
         </p>
@@ -82,7 +107,7 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
             <button
               type="submit"
               disabled={disabled || !url.trim()}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-adobe-red to-red-700 text-white font-semibold rounded-xl hover:from-adobe-red-dark hover:to-red-800 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 whitespace-nowrap"
+              className="relative flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-adobe-red to-red-700 text-white font-semibold rounded-xl hover:from-adobe-red-dark hover:to-red-800 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 whitespace-nowrap shadow-glow-red hover:shadow-[0_0_30px_rgba(235,16,0,0.3)]"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -101,7 +126,7 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
             <button
               key={example}
               onClick={() => { setUrl(example); }}
-              className="text-sm text-ts-accent-light hover:text-white hover:bg-ts-accent/30 bg-ts-accent/10 px-4 py-2 rounded-full transition-all duration-200 hover:scale-105 active:scale-100 border border-ts-border/50 hover:border-ts-accent/50"
+              className="text-sm text-ts-accent-light hover:text-white hover:bg-ts-accent/30 bg-ts-accent/10 px-4 py-2 rounded-full transition-all duration-200 hover:scale-105 active:scale-100 border border-ts-border/50 hover:border-ts-accent/50 hover:shadow-glow-accent"
               disabled={disabled}
             >
               {example}
@@ -112,33 +137,24 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
 
       {/* Feature highlights */}
       <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 fill-mode-both">
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-ts-surface-card border border-ts-border">
-          <div className="shrink-0 w-10 h-10 rounded-lg bg-ts-accent/20 flex items-center justify-center">
-            <Zap className="w-5 h-5 text-ts-accent" strokeWidth={2} />
+        {[
+          { icon: Zap, color: 'ts-accent', title: 'Instant Detection', desc: 'Erkennung in Sekunden' },
+          { icon: Sparkles, color: 'ts-accent', title: 'AI-Powered', desc: 'Claude analysiert den Stack' },
+          { icon: Lightbulb, color: 'adobe-red', title: 'Adobe Opportunities', desc: 'Use-Case-Empfehlungen' },
+        ].map(({ icon: Icon, color, title, desc }) => (
+          <div
+            key={title}
+            className="group flex items-start gap-3 p-4 rounded-xl bg-ts-surface-card border border-ts-border hover:border-ts-accent/30 transition-all duration-300 hover:shadow-glow-accent"
+          >
+            <div className={`shrink-0 w-10 h-10 rounded-lg bg-${color}/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+              <Icon className={`w-5 h-5 text-${color}`} strokeWidth={2} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-ts-text-primary text-sm">{title}</h3>
+              <p className="text-ts-text-secondary text-xs mt-0.5">{desc}</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-ts-text-primary text-sm">Instant Detection</h3>
-            <p className="text-ts-text-secondary text-xs mt-0.5">Erkennung in Sekunden</p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-ts-surface-card border border-ts-border">
-          <div className="shrink-0 w-10 h-10 rounded-lg bg-ts-accent/20 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-ts-accent" strokeWidth={2} />
-          </div>
-          <div>
-            <h3 className="font-semibold text-ts-text-primary text-sm">AI-Powered</h3>
-            <p className="text-ts-text-secondary text-xs mt-0.5">Claude analysiert den Stack</p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-ts-surface-card border border-ts-border">
-          <div className="shrink-0 w-10 h-10 rounded-lg bg-adobe-red/20 flex items-center justify-center">
-            <Lightbulb className="w-5 h-5 text-adobe-red" strokeWidth={2} />
-          </div>
-          <div>
-            <h3 className="font-semibold text-ts-text-primary text-sm">Adobe Opportunities</h3>
-            <p className="text-ts-text-secondary text-xs mt-0.5">Use-Case-Empfehlungen</p>
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );

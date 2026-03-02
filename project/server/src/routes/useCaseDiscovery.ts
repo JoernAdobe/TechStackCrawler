@@ -4,15 +4,28 @@ import { updateAnalysis } from '../db/analyses.js';
 import { discoverUseCases } from '../services/useCaseDiscovery.js';
 import type { AnalysisResult } from '../types/analysis.js';
 
-export async function useCaseDiscoveryRoute(req: Request, res: Response) {
-  const analysis = req.body as AnalysisResult;
+function isValidAnalysis(body: unknown): body is AnalysisResult {
+  if (!body || typeof body !== 'object') return false;
+  const obj = body as Record<string, unknown>;
+  return (
+    typeof obj.url === 'string' &&
+    obj.url.length > 0 &&
+    typeof obj.summary === 'string' &&
+    typeof obj.analyzedAt === 'string' &&
+    Array.isArray(obj.categories) &&
+    Array.isArray(obj.rawDetections)
+  );
+}
 
-  if (!analysis || !analysis.url || !Array.isArray(analysis.categories)) {
+export async function useCaseDiscoveryRoute(req: Request, res: Response) {
+  if (!isValidAnalysis(req.body)) {
     res.status(400).json({
-      error: 'Invalid request: analysis result with url and categories required',
+      error: 'Invalid request: analysis result with url, summary, analyzedAt, categories and rawDetections required',
     });
     return;
   }
+
+  const analysis = req.body;
 
   try {
     const { result, sitemapUrls } = await discoverUseCases(analysis);

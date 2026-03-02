@@ -23,5 +23,8 @@ export function createMysqlHandle(config: {
       const insertId = (result as { insertId?: number })?.insertId;
       return { rows, insertId };
     },
+    async close() {
+      await pool.end();
+    },
   };
 }

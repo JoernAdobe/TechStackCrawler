@@ -1,9 +1,4 @@
-import React, { useRef, useState } from 'react';
-
-interface Position {
-  x: number;
-  y: number;
-}
+import React, { useRef, useCallback, useState } from 'react';
 
 interface SpotlightCardProps extends React.PropsWithChildren {
   className?: string;
@@ -16,50 +11,36 @@ const SpotlightCard: React.FC<SpotlightCardProps> = ({
   spotlightColor = 'rgba(255, 255, 255, 0.25)'
 }) => {
   const divRef = useRef<HTMLDivElement>(null);
-  const [isFocused, setIsFocused] = useState<boolean>(false);
-  const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
-  const [opacity, setOpacity] = useState<number>(0);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
-  const handleMouseMove: React.MouseEventHandler<HTMLDivElement> = e => {
-    if (!divRef.current || isFocused) return;
-
+  const handleMouseMove: React.MouseEventHandler<HTMLDivElement> = useCallback((e) => {
+    if (!divRef.current || !overlayRef.current || isFocused) return;
     const rect = divRef.current.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  };
+    overlayRef.current.style.setProperty('--spot-x', `${e.clientX - rect.left}px`);
+    overlayRef.current.style.setProperty('--spot-y', `${e.clientY - rect.top}px`);
+  }, [isFocused]);
 
-  const handleFocus = () => {
-    setIsFocused(true);
-    setOpacity(0.6);
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-    setOpacity(0);
-  };
-
-  const handleMouseEnter = () => {
-    setOpacity(0.6);
-  };
-
-  const handleMouseLeave = () => {
-    setOpacity(0);
-  };
+  const setOverlayOpacity = useCallback((value: number) => {
+    if (overlayRef.current) overlayRef.current.style.opacity = String(value);
+  }, []);
 
   return (
     <div
       ref={divRef}
       onMouseMove={handleMouseMove}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onFocus={() => { setIsFocused(true); setOverlayOpacity(0.6); }}
+      onBlur={() => { setIsFocused(false); setOverlayOpacity(0); }}
+      onMouseEnter={() => setOverlayOpacity(0.6)}
+      onMouseLeave={() => setOverlayOpacity(0)}
       className={`relative rounded-3xl border border-neutral-800 bg-neutral-900 overflow-hidden p-8 ${className}`}
     >
       <div
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 ease-in-out"
+        ref={overlayRef}
+        className="pointer-events-none absolute inset-0 transition-opacity duration-500 ease-in-out"
         style={{
-          opacity,
-          background: `radial-gradient(circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 80%)`
+          opacity: 0,
+          background: `radial-gradient(circle at var(--spot-x, 0px) var(--spot-y, 0px), ${spotlightColor}, transparent 80%)`,
         }}
       />
       {children}

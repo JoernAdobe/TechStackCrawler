@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -6,12 +7,14 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  RadialBarChart,
-  RadialBar,
-  PolarRadiusAxis,
   Cell,
 } from 'recharts';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { BarChart3 } from 'lucide-react';
 import type { AnalysisResult, CategoryResult, DetectedTechnology } from '../types/analysis';
+
+gsap.registerPlugin(useGSAP);
 
 function isEmptyOrNotDetected(val: string): boolean {
   const v = (val ?? '').trim().toLowerCase();
@@ -36,14 +39,12 @@ const TS_TEXT_SECONDARY = '#8888a0';
 function computeChartData(results: AnalysisResult) {
   const totalCategories = results.categories.length;
 
-  // Placement Potential: % of categories where Adobe could be placed (empty or competitor)
   const opportunityCount = results.categories.filter(
     (c) => !isAdobeInCategory(c.currentTechnology),
   ).length;
   const opportunityScore =
     totalCategories > 0 ? Math.round((opportunityCount / totalCategories) * 100) : 0;
 
-  // Adobe vs. Competitors: category-level (not raw detections)
   const adobeCategories = results.categories.filter((c) =>
     isAdobeInCategory(c.currentTechnology),
   ).length;
@@ -96,70 +97,141 @@ function computeChartData(results: AnalysisResult) {
   };
 }
 
+/* ── Custom Animated Gauge ── */
+
+function AnimatedGauge({ score }: { score: number }) {
+  const [animatedScore, setAnimatedScore] = useState(0);
+  const pathRef = useRef<SVGPathElement>(null);
+
+  useEffect(() => {
+    const obj = { val: 0 };
+    gsap.to(obj, {
+      val: score,
+      duration: 1.8,
+      ease: 'power3.out',
+      onUpdate: () => setAnimatedScore(Math.round(obj.val)),
+    });
+  }, [score]);
+
+  const radius = 70;
+  const strokeWidth = 12;
+  const cx = 90;
+  const cy = 90;
+  const startAngle = 180;
+  const endAngle = 0;
+  const sweepRange = startAngle - endAngle;
+  const currentAngle = startAngle - (animatedScore / 100) * sweepRange;
+
+  const polarToCartesian = (angle: number) => {
+    const rad = (angle * Math.PI) / 180;
+    return { x: cx + radius * Math.cos(rad), y: cy - radius * Math.sin(rad) };
+  };
+
+  const start = polarToCartesian(startAngle);
+  const end = polarToCartesian(currentAngle);
+  const largeArc = animatedScore > 50 ? 1 : 0;
+
+  const bgStart = polarToCartesian(startAngle);
+  const bgEnd = polarToCartesian(endAngle);
+
+  return (
+    <svg viewBox="0 0 180 110" className="w-full max-w-[220px] mx-auto">
+      <defs>
+        <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={TS_TEXT_SECONDARY} stopOpacity="0.3" />
+          <stop offset="50%" stopColor={ADOBE_RED} />
+          <stop offset="100%" stopColor={TS_ACCENT} />
+        </linearGradient>
+        <filter id="gaugeGlow">
+          <feGaussianBlur stdDeviation="3" result="glow" />
+          <feMerge>
+            <feMergeNode in="glow" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {/* Background arc */}
+      <path
+        d={`M ${bgStart.x} ${bgStart.y} A ${radius} ${radius} 0 1 1 ${bgEnd.x} ${bgEnd.y}`}
+        fill="none"
+        stroke={TS_TEXT_SECONDARY}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        opacity="0.15"
+      />
+
+      {/* Animated arc */}
+      {animatedScore > 0 && (
+        <path
+          ref={pathRef}
+          d={`M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`}
+          fill="none"
+          stroke="url(#gaugeGradient)"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          filter="url(#gaugeGlow)"
+        />
+      )}
+
+      {/* Score text */}
+      <text x={cx} y={cy - 5} textAnchor="middle" className="fill-ts-text-primary text-2xl font-bold" fontSize="28">
+        {animatedScore}%
+      </text>
+      <text x={cx} y={cy + 14} textAnchor="middle" className="fill-ts-text-secondary text-xs" fontSize="11">
+        Opportunity
+      </text>
+    </svg>
+  );
+}
+
 interface AdobeOpportunityChartsProps {
   results: AnalysisResult;
 }
 
 export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChartsProps) {
   const data = computeChartData(results);
+  const chartsRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!chartsRef.current) return;
+      const cards = chartsRef.current.querySelectorAll('.chart-card');
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.12, ease: 'power3.out' },
+      );
+    },
+    { scope: chartsRef },
+  );
 
   if (!data.hasData) return null;
-
-  const gaugeData = [
-    {
-      name: 'Opportunity',
-      value: data.opportunityScore,
-      fill: data.opportunityScore >= 50 ? ADOBE_RED : TS_TEXT_SECONDARY,
-    },
-  ];
 
   return (
     <div className="mt-8 space-y-6">
       <h3 className="text-lg font-semibold text-ts-text-primary flex items-center gap-2">
-        <span className="text-xl">📊</span>
+        <BarChart3 className="w-5 h-5 text-ts-accent" strokeWidth={1.5} />
         Adobe Opportunity Insights
       </h3>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Adobe Opportunity Score (Gauge) */}
+      <div ref={chartsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Animated Gauge */}
         {data.categoryStatus.length > 0 && (
-          <div className="bg-ts-surface-card rounded-xl border border-ts-border p-6">
+          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6 shadow-glow-accent">
             <h4 className="text-sm font-medium text-ts-text-secondary mb-4">
               Placement Potential
             </h4>
-            <div className="relative flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={180}>
-                <RadialBarChart
-                  innerRadius="60%"
-                  outerRadius="100%"
-                  data={gaugeData}
-                  startAngle={180}
-                  endAngle={0}
-                >
-                  <PolarRadiusAxis domain={[0, 100]} tick={false} />
-                  <RadialBar
-                    background={{ fill: 'rgba(136, 136, 160, 0.2)' }}
-                    dataKey="value"
-                    cornerRadius={8}
-                    label={false}
-                  />
-                </RadialBarChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-2xl font-bold text-ts-text-primary">
-                  {data.opportunityScore}%
-                </span>
-              </div>
-            </div>
-            <p className="text-center text-xs text-ts-text-secondary mt-2">
-              % of categories where Adobe could be placed (empty or competitor)
+            <AnimatedGauge score={data.opportunityScore} />
+            <p className="text-center text-xs text-ts-text-secondary mt-3">
+              % of categories where Adobe could be placed
             </p>
           </div>
         )}
 
         {/* Adobe vs. Competitors */}
         {data.adobeVsCompetitor.some((d) => d.count > 0) && (
-          <div className="bg-ts-surface-card rounded-xl border border-ts-border p-6">
+          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6 hover:shadow-glow-accent transition-shadow duration-300">
             <h4 className="text-sm font-medium text-ts-text-secondary mb-4">
               Adobe vs. Competitors
             </h4>
@@ -172,7 +244,17 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                 layout="vertical"
                 margin={{ top: 0, right: 20, left: 0, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke={TS_TEXT_SECONDARY} opacity={0.3} />
+                <defs>
+                  <linearGradient id="adobeBarGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={ADOBE_RED} stopOpacity={0.8} />
+                    <stop offset="100%" stopColor={ADOBE_RED} />
+                  </linearGradient>
+                  <linearGradient id="compBarGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={TS_ACCENT} stopOpacity={0.8} />
+                    <stop offset="100%" stopColor={TS_ACCENT} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={TS_TEXT_SECONDARY} opacity={0.15} />
                 <XAxis type="number" stroke={TS_TEXT_SECONDARY} fontSize={12} />
                 <YAxis
                   type="category"
@@ -186,12 +268,13 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                     backgroundColor: '#1a1a2e',
                     border: '1px solid #2a2a3e',
                     borderRadius: '8px',
+                    boxShadow: '0 0 20px rgba(99, 102, 241, 0.1)',
                   }}
                   labelStyle={{ color: '#f0f0f5' }}
                 />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                  {data.adobeVsCompetitor.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
+                <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                  {data.adobeVsCompetitor.map((_, i) => (
+                    <Cell key={i} fill={i === 0 ? 'url(#adobeBarGrad)' : 'url(#compBarGrad)'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -201,7 +284,7 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
 
         {/* Category Opportunity Map */}
         {data.categoryStatus.length > 0 && (
-          <div className="bg-ts-surface-card rounded-xl border border-ts-border p-6 lg:col-span-2">
+          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6 lg:col-span-2 hover:shadow-glow-accent transition-shadow duration-300">
             <h4 className="text-sm font-medium text-ts-text-secondary mb-4">
               Category Status
             </h4>
@@ -211,7 +294,7 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                 layout="vertical"
                 margin={{ top: 0, right: 20, left: 0, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke={TS_TEXT_SECONDARY} opacity={0.3} />
+                <CartesianGrid strokeDasharray="3 3" stroke={TS_TEXT_SECONDARY} opacity={0.15} />
                 <XAxis type="number" stroke={TS_TEXT_SECONDARY} fontSize={12} domain={[0, 1]} hide />
                 <YAxis
                   type="category"
@@ -220,7 +303,7 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                   fontSize={12}
                   width={120}
                 />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
+                <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24}>
                   {data.categoryStatus.map((entry, i) => (
                     <Cell key={i} fill={entry.fill} />
                   ))}
@@ -246,7 +329,7 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
 
         {/* Confidence Distribution */}
         {data.confidenceData.some((d) => d.count > 0) && (
-          <div className="bg-ts-surface-card rounded-xl border border-ts-border p-6">
+          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6 hover:shadow-glow-accent transition-shadow duration-300">
             <h4 className="text-sm font-medium text-ts-text-secondary mb-4">
               Detection Confidence
             </h4>
@@ -255,7 +338,21 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                 data={data.confidenceData}
                 margin={{ top: 0, right: 20, left: 0, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke={TS_TEXT_SECONDARY} opacity={0.3} />
+                <defs>
+                  <linearGradient id="confGradSuccess" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={TS_SUCCESS} />
+                    <stop offset="100%" stopColor={TS_SUCCESS} stopOpacity={0.6} />
+                  </linearGradient>
+                  <linearGradient id="confGradAccent" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={TS_ACCENT} />
+                    <stop offset="100%" stopColor={TS_ACCENT} stopOpacity={0.6} />
+                  </linearGradient>
+                  <linearGradient id="confGradWarning" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={TS_WARNING} />
+                    <stop offset="100%" stopColor={TS_WARNING} stopOpacity={0.6} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={TS_TEXT_SECONDARY} opacity={0.15} />
                 <XAxis dataKey="name" stroke={TS_TEXT_SECONDARY} fontSize={12} />
                 <YAxis stroke={TS_TEXT_SECONDARY} fontSize={12} />
                 <Tooltip
@@ -263,11 +360,21 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                     backgroundColor: '#1a1a2e',
                     border: '1px solid #2a2a3e',
                     borderRadius: '8px',
+                    boxShadow: '0 0 20px rgba(99, 102, 241, 0.1)',
                   }}
                 />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {data.confidenceData.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                  {data.confidenceData.map((_, i) => (
+                    <Cell
+                      key={i}
+                      fill={
+                        i === 0
+                          ? 'url(#confGradSuccess)'
+                          : i === 1
+                            ? 'url(#confGradAccent)'
+                            : 'url(#confGradWarning)'
+                      }
+                    />
                   ))}
                 </Bar>
               </BarChart>

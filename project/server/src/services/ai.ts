@@ -1,30 +1,11 @@
-import AnthropicBedrock from '@anthropic-ai/bedrock-sdk';
 import { config } from '../config.js';
+import { getBedrockClient } from './bedrockClient.js';
 import { buildSystemPrompt, buildAnalysisPrompt } from '../prompts/analysisPrompt.js';
 import type { ScrapedData } from './scraper.js';
 import type { DetectedTech } from './customDetectors.js';
 import type { CategoryResult } from '../types/analysis.js';
 
-// API-Key + Endpoint ODER AWS IAM Credentials
-const useApiKey = config.bedrock.apiKey && config.bedrock.endpoint;
-
-const client = new AnthropicBedrock(
-  (useApiKey
-    ? {
-        skipAuth: true,
-        baseURL: config.bedrock.endpoint,
-        defaultHeaders: {
-          Authorization: `Bearer ${config.bedrock.apiKey}`,
-        },
-        awsRegion: config.bedrock.awsRegion,
-      }
-    : {
-        awsAccessKey: config.bedrock.awsAccessKeyId || undefined,
-        awsSecretKey: config.bedrock.awsSecretAccessKey || undefined,
-        awsRegion: config.bedrock.awsRegion,
-        baseURL: config.bedrock.endpoint || undefined,
-      }) as never,
-);
+const client = getBedrockClient();
 
 export interface AIAnalysisResult {
   summary: string;

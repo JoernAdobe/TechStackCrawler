@@ -4,7 +4,7 @@
  */
 import type { Page, Frame } from 'puppeteer';
 import { config } from '../config.js';
-import AnthropicBedrock from '@anthropic-ai/bedrock-sdk';
+import { getBedrockClient } from './bedrockClient.js';
 
 /** Bekannte Selektoren für "Accept all" / "Alle akzeptieren" (häufige CMPs) */
 const ACCEPT_SELECTORS = [
@@ -188,22 +188,7 @@ async function findAcceptButtonWithAI(page: Page): Promise<boolean> {
 
   if (buttonInfo.length === 0) return false;
 
-  const useApiKey = config.bedrock.apiKey && config.bedrock.endpoint;
-  const client = new AnthropicBedrock(
-    (useApiKey
-      ? {
-          skipAuth: true,
-          baseURL: config.bedrock.endpoint,
-          defaultHeaders: { Authorization: `Bearer ${config.bedrock.apiKey}` },
-          awsRegion: config.bedrock.awsRegion,
-        }
-      : {
-          awsAccessKey: config.bedrock.awsAccessKeyId || undefined,
-          awsSecretKey: config.bedrock.awsSecretAccessKey || undefined,
-          awsRegion: config.bedrock.awsRegion,
-          baseURL: config.bedrock.endpoint || undefined,
-        }) as never,
-  );
+  const client = getBedrockClient();
 
   const prompt = `These are buttons/elements from a cookie consent banner. Which one should be clicked to ACCEPT ALL cookies / allow marketing cookies? Reply with ONLY the index number in brackets, e.g. [3]. If none clearly accept, reply [none].
 

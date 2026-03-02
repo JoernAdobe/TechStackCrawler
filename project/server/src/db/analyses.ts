@@ -30,14 +30,14 @@ export async function listAnalyses(
   db: DbHandle,
   limit = 50,
 ): Promise<AnalysisRow[]> {
-  const limitNum = Math.min(Math.max(0, limit), 100);
+  const limitNum = Math.min(Math.max(1, Math.floor(limit)), 100);
   try {
     const { rows } = await db.execute(
       `SELECT id, url, result_json, analyzed_at, created_at 
        FROM analyses 
        ORDER BY analyzed_at DESC 
-       LIMIT ${limitNum}`,
-      [],
+       LIMIT ?`,
+      [limitNum],
     );
     return (Array.isArray(rows) ? rows : []) as AnalysisRow[];
   } catch (err) {
@@ -47,8 +47,8 @@ export async function listAnalyses(
         `SELECT id, url, result_json, analyzed_at, analyzed_at as created_at 
          FROM analyses 
          ORDER BY analyzed_at DESC 
-         LIMIT ${limitNum}`,
-        [],
+         LIMIT ?`,
+        [limitNum],
       );
       return (Array.isArray(rows) ? rows : []) as AnalysisRow[];
     }
@@ -67,9 +67,14 @@ export async function getAnalysisById(
   );
   const row = (Array.isArray(rows) ? rows[0] : null) as AnalysisRow | null;
   if (!row) return null;
-  const result = JSON.parse(row.result_json) as AnalysisResult;
-  result.id = row.id;
-  return result;
+  try {
+    const result = JSON.parse(row.result_json) as AnalysisResult;
+    result.id = row.id;
+    return result;
+  } catch {
+    console.error(`Corrupt JSON in analysis id=${row.id}`);
+    return null;
+  }
 }
 
 export async function updateAnalysis(

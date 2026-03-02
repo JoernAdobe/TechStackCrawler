@@ -1,3 +1,8 @@
+/**
+ * Canonical source: project/shared/types.ts
+ * Keep in sync – or migrate to TypeScript project references.
+ */
+
 export interface DetectedTechnology {
   name: string;
   categories: string[];
@@ -20,7 +25,6 @@ export interface AnalysisResult {
   summary: string;
   categories: CategoryResult[];
   rawDetections: DetectedTechnology[];
-  /** Truncated page content for Use Case Discovery (max ~12k chars) */
   pageContentExcerpt?: string;
   useCaseDiscovery?: UseCaseDiscoveryResult;
   sitemapUrls?: string[];

@@ -19,7 +19,6 @@ COPY client/package.json client/
 COPY server/package.json server/
 RUN npm ci --workspace=server --omit=optional
 COPY server/ server/
-COPY shared/ shared/
 RUN npm run build --workspace=server
 
 # Stage 3: Production runtime with Chromium

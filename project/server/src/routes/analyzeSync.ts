@@ -3,12 +3,15 @@
  * Kein SSE, keine Streaming-Probleme mit Proxies.
  */
 import type { Request, Response } from 'express';
-import { analyzeUrl } from '../services/analyzer.js';
+import { analyzeUrl, type AnalysisWriter } from '../services/analyzer.js';
 import { sanitizeUrl } from '../utils/sanitize.js';
-import type { SSEWriter } from '../utils/sse.js';
 
-/** Minimaler SSEWriter-Ersatz – sammelt nur das Ergebnis */
-function createSyncCollector(): SSEWriter {
+interface SyncCollector extends AnalysisWriter {
+  getResult(): unknown;
+  getProgress(): string[];
+}
+
+function createSyncCollector(): SyncCollector {
   const progress: string[] = [];
   let result: unknown = null;
   return {
@@ -22,7 +25,7 @@ function createSyncCollector(): SSEWriter {
     close() {},
     getResult: () => result,
     getProgress: () => progress,
-  } as unknown as SSEWriter;
+  };
 }
 
 export async function analyzeSyncRoute(req: Request, res: Response) {
@@ -39,10 +42,7 @@ export async function analyzeSyncRoute(req: Request, res: Response) {
     return;
   }
 
-  const collector = createSyncCollector() as SSEWriter & {
-    getResult(): unknown;
-    getProgress(): string[];
-  };
+  const collector = createSyncCollector();
 
   try {
     await analyzeUrl(sanitizedUrl, collector);
@@ -71,7 +71,7 @@ function toUserFriendlyError(raw: string): string {
     raw.includes('ERR_CONNECTION_TIMED_OUT') ||
     raw.includes('ETIMEDOUT') ||
     raw.includes('Navigation timeout') ||
-    raw.includes('timeout') && raw.includes('exceeded')
+    (raw.includes('timeout') && raw.includes('exceeded'))
   ) {
     return 'Zeitüberschreitung – die Website antwortet nicht oder lädt zu langsam.';
   }

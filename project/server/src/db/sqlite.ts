@@ -30,5 +30,8 @@ export function createSqliteHandle(dbPath: string): DbHandle {
       const result = stmt.run(...params);
       return { rows: [], insertId: Number((result as { lastInsertRowid: bigint }).lastInsertRowid) };
     },
+    async close() {
+      database.close();
+    },
   };
 }

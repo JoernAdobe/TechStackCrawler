@@ -14,6 +14,8 @@ export function useUseCaseDiscovery(options: UseUseCaseDiscoveryOptions = {}) {
   const [result, setResult] = useState<UseCaseDiscoveryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const { onComplete, onError } = options;
+
   const discover = useCallback(
     async (analysis: AnalysisResult) => {
       setLoading(true);
@@ -39,18 +41,17 @@ export function useUseCaseDiscovery(options: UseUseCaseDiscoveryOptions = {}) {
 
         const discoveryResult = data.result as UseCaseDiscoveryResult;
         setResult(discoveryResult);
-        options.onComplete?.(discoveryResult);
+        onComplete?.(discoveryResult);
         return discoveryResult;
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Unknown error';
         setError(msg);
-        options.onError?.(msg);
-        throw e;
+        onError?.(msg);
       } finally {
         setLoading(false);
       }
     },
-    [options],
+    [onComplete, onError],
   );
 
   const reset = useCallback(() => {

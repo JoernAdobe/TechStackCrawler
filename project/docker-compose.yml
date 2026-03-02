@@ -16,6 +16,18 @@ services:
       timeout: 5s
       retries: 5
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: ${CONTAINER_PREFIX:-techstack-}caddy
+    ports:
+      - "${HOST_PORT:-8516}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - techstack
+    restart: unless-stopped
+
   techstack:
     image: techstack-app
     build:
@@ -23,9 +35,6 @@ services:
       args:
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
     container_name: ${CONTAINER_PREFIX:-techstack-}techstack
-    ports:
-      - "${HOST_PORT:-8516}:3001"
-    # Kein custom dns: – Docker-Standard nutzt Host-DNS + interne Auflösung (mariadb)
     depends_on:
       mariadb:
         condition: service_healthy
@@ -50,3 +59,4 @@ services:
 
 volumes:
   techstack_mariadb_data:
+  caddy_data:

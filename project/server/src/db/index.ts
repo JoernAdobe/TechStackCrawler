@@ -10,11 +10,8 @@ let db: DbHandle | null = null;
 export function getPool(): DbHandle | null {
   if (db) return db;
 
-  const useSqlite = config.database.useSqlite;
-  const dbPath = config.database.sqlitePath;
-
-  if (useSqlite) {
-    return db; // Wird von initDb gesetzt (dynamischer Import)
+  if (config.database.useSqlite) {
+    return db; // set by initDb via dynamic import
   }
 
   if (config.database.password) {
@@ -29,6 +26,13 @@ export function getPool(): DbHandle | null {
   }
 
   return null;
+}
+
+export async function closeDb(): Promise<void> {
+  if (db?.close) {
+    await db.close();
+  }
+  db = null;
 }
 
 export async function initDb(): Promise<void> {

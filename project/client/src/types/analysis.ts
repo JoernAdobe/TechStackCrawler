@@ -1,3 +1,8 @@
+/**
+ * Canonical source: project/shared/types.ts
+ * Keep in sync – or migrate to TypeScript project references.
+ */
+
 export interface DetectedTechnology {
   name: string;
   categories: string[];

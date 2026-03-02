@@ -103,14 +103,14 @@ deploy:
 	fi; \
 	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY" || true) $$([ -n "$$SSH_KEY" ] && echo "-o IdentitiesOnly=yes" || true) "$$SSH_HOST" "cd $$REMOTE_DIR && tar -xzf /tmp/.deploy.tar.gz && rm -f docker-compose.override.yml && docker load -i /tmp/.deploy-techstack.tar && rm -f /tmp/.deploy-techstack.tar && GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose down 2>/dev/null; GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose up -d && sleep 5 && (sh scripts/deploy-restore-if-empty.sh 2>/dev/null || true) && rm -f /tmp/.deploy.tar.gz"; \
 	DEPLOY_HOST=$${SSH_HOST#*@}; \
-	DEPLOY_URL="http://$$DEPLOY_HOST:$$HOST_PORT"; \
+	DEPLOY_URL="https://$$DEPLOY_HOST:$$HOST_PORT"; \
 	echo ""; \
 	echo ">>> Deploy abgeschlossen."; \
 	echo ">>> App-URL: $$DEPLOY_URL"; \
 	echo ""; \
 	echo ">>> Teste Frontend-Erreichbarkeit..."; \
 	sleep 5; \
-	if curl -sf -o /dev/null -w "   HTTP %{http_code} – erreichbar\n" "$$DEPLOY_URL/api/health" 2>/dev/null; then \
+	if curl -ksf -o /dev/null -w "   HTTP %{http_code} – erreichbar\n" "$$DEPLOY_URL/api/health" 2>/dev/null; then \
 		echo ">>> Frontend: $$DEPLOY_URL"; \
 		echo ">>> Health-Check: OK"; \
 	else \
