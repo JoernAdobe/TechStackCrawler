@@ -31,3 +31,10 @@ Thumbs.db
 .claude/
 .idea/
 .vscode/
+
+# Claude Flow / MCP tooling
+.claude-flow/
+.mcp.json
+
+# Plugins (local)
+connect-apps-plugin/
