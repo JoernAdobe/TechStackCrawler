@@ -36,14 +36,14 @@ export default function DownloadButton({ results, onReset }: DownloadButtonProps
           </button>
           <button
             onClick={() => downloadExcel(results)}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-adobe-red to-red-700 rounded-lg hover:from-adobe-red-dark hover:to-red-800 transition-all hover:shadow-glow-red hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-adobe-red to-adobe-red-dark rounded-lg hover:from-adobe-red-dark hover:to-[#B03522] transition-all hover:shadow-glow-red hover:scale-[1.02] active:scale-[0.98]"
           >
             <FileSpreadsheet className="w-4 h-4" />
             Download Excel
           </button>
           <button
             onClick={() => downloadMarkdown(results)}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-adobe-red to-red-700 rounded-lg hover:from-adobe-red-dark hover:to-red-800 transition-all hover:shadow-glow-red hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-adobe-red to-adobe-red-dark rounded-lg hover:from-adobe-red-dark hover:to-[#B03522] transition-all hover:shadow-glow-red hover:scale-[1.02] active:scale-[0.98]"
           >
             <FileDown className="w-4 h-4" />
             Download Markdown

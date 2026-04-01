@@ -100,7 +100,7 @@ export default function Dashboard({ token, onLogout }: Props) {
     return (
       <div className="min-h-screen bg-ts-surface flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-400 mb-4">{error || 'No data available'}</p>
+          <p className="text-adobe-red mb-4">{error || 'No data available'}</p>
           <button onClick={onLogout} className="text-sm text-ts-accent hover:underline">
             Back to login
           </button>
@@ -125,7 +125,7 @@ export default function Dashboard({ token, onLogout }: Props) {
       <header className="w-full border-b border-ts-border/50 backdrop-blur-sm bg-ts-surface/80 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-adobe-red to-red-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-adobe-red to-adobe-red-dark flex items-center justify-center">
               <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm6.232 0L24 22.624V1.376z" />
               </svg>
@@ -318,7 +318,7 @@ export default function Dashboard({ token, onLogout }: Props) {
               </div>
               <div className="flex justify-between items-center py-2 border-b border-ts-border/50">
                 <span className="text-ts-text-secondary">Total time manual</span>
-                <span className="font-medium text-red-400">{Math.round(totalManualMinutes / 60)}h</span>
+                <span className="font-medium text-adobe-red">{Math.round(totalManualMinutes / 60)}h</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-ts-border/50">
                 <span className="text-ts-text-secondary">Total time with tool</span>

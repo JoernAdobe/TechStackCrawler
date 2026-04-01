@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Globe, RefreshCw, Plus } from 'lucide-react';
+import { RefreshCw, ChevronRight, Clock } from 'lucide-react';
 import type { AnalysisResult } from '../types/analysis';
 import ResultsTable from './ResultsTable';
 import UseCaseDiscovery from './UseCaseDiscovery';
@@ -31,7 +31,17 @@ function getDomain(url: string): string {
 
 function getFaviconUrl(url: string): string {
   const domain = getDomain(url);
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export default function PastAnalyses({
@@ -78,8 +88,8 @@ export default function PastAnalyses({
       const cards = gridRef.current.querySelectorAll(':scope > *');
       gsap.fromTo(
         cards,
-        { opacity: 0, y: 20, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.06, ease: 'power3.out' },
+        { opacity: 0, y: 24, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.1, ease: 'power3.out' },
       );
     },
     { dependencies: [summaries, loading], scope: gridRef },
@@ -92,9 +102,12 @@ export default function PastAnalyses({
       .catch(() => setError('Failed to load analysis.'));
   };
 
+  // Limit to last 3 analyses
+  const recentSummaries = summaries.slice(0, 3);
+
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
+      <div className="flex justify-center py-16">
         <div className="flex items-center gap-3 text-ts-text-secondary">
           <div className="w-5 h-5 border-2 border-ts-accent/30 border-t-ts-accent rounded-full animate-spin" />
           Loading analyses...
@@ -105,7 +118,7 @@ export default function PastAnalyses({
 
   if (error && summaries.length === 0) {
     return (
-      <div className="text-center py-8 text-ts-text-secondary text-sm">
+      <div className="text-center py-16 text-ts-text-secondary text-sm">
         {error}
       </div>
     );
@@ -138,68 +151,74 @@ export default function PastAnalyses({
 
   if (summaries.length === 0) {
     return (
-      <div className="text-center py-8 text-ts-text-secondary text-sm">
-        No analyses yet.
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-ts-surface-card border border-ts-border flex items-center justify-center mb-6">
+          <Clock className="w-7 h-7 text-ts-text-secondary/50" />
+        </div>
+        <h3 className="text-lg font-semibold text-ts-text-primary mb-2">No analyses yet</h3>
+        <p className="text-sm text-ts-text-secondary max-w-sm">
+          Run your first analysis to see results here. Switch to the Analyzer tab to get started.
+        </p>
+        <button
+          onClick={onSelectNew}
+          className="mt-6 px-5 py-2.5 bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-semibold rounded-xl hover:from-adobe-red-dark hover:to-[#B03522] transition-all hover:shadow-glow-red hover:scale-[1.02] active:scale-[0.98] text-sm"
+        >
+          Start Analyzing
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold text-ts-text-primary">
-          Past Analyses
-        </h3>
-        <div className="flex gap-2">
-          <button
-            onClick={fetchAnalyses}
-            disabled={loading}
-            className="flex items-center gap-1.5 text-sm text-ts-text-secondary hover:text-ts-text-primary font-medium p-1.5 rounded-lg hover:bg-ts-surface-card transition-all"
-            title="Refresh list"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={onSelectNew}
-            className="flex items-center gap-1.5 text-sm text-ts-accent hover:text-ts-accent-light font-medium"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New Analysis
-          </button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-ts-text-secondary">
+          Showing the {recentSummaries.length} most recent {recentSummaries.length === 1 ? 'analysis' : 'analyses'}
+        </p>
+        <button
+          onClick={fetchAnalyses}
+          disabled={loading}
+          className="flex items-center gap-1.5 text-sm text-ts-text-secondary hover:text-ts-text-primary font-medium px-3 py-1.5 rounded-lg hover:bg-ts-surface-card border border-transparent hover:border-ts-border transition-all"
+          title="Refresh list"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Refresh
+        </button>
       </div>
-      <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {summaries.map((s) => (
+
+      <div ref={gridRef} className="grid grid-cols-1 gap-4">
+        {recentSummaries.map((s) => (
           <SpotlightCard
             key={s.id}
-            className="bg-ts-surface-card rounded-xl border border-ts-border hover:border-ts-accent/30 transition-all duration-300 cursor-pointer"
-            spotlightColor="rgba(99, 102, 241, 0.12)"
+            className="bg-ts-surface-card rounded-2xl border border-ts-border hover:border-ts-accent/40 transition-all duration-300 cursor-pointer group"
+            spotlightColor="rgba(139, 143, 160, 0.06)"
           >
             <button
               onClick={() => loadAnalysis(s.id)}
-              className="w-full text-left p-4"
+              className="w-full text-left p-6"
             >
-              <div className="flex items-center gap-3">
-                <div className="shrink-0 w-8 h-8 rounded-lg bg-ts-surface-light border border-ts-border flex items-center justify-center overflow-hidden">
+              <div className="flex items-center gap-4">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-ts-surface-light border border-ts-border flex items-center justify-center overflow-hidden">
                   <img
                     src={getFaviconUrl(s.url)}
                     alt=""
-                    className="w-4 h-4"
+                    className="w-7 h-7"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.innerHTML = '<span class="w-4 h-4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-ts-text-secondary"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>';
+                      e.currentTarget.parentElement!.innerHTML = '<span class="flex items-center justify-center w-7 h-7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 text-ts-text-secondary"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>';
                     }}
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="block text-ts-text-primary font-semibold truncate">
+                  <span className="block text-lg font-bold text-ts-text-primary truncate">
                     {getDomain(s.url)}
                   </span>
-                  <span className="block text-ts-text-secondary text-xs mt-0.5">
-                    {new Date(s.analyzedAt).toLocaleString('en-US')}
+                  <span className="flex items-center gap-1.5 text-ts-text-secondary text-sm mt-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    {formatDate(s.analyzedAt)}
                   </span>
                 </div>
-                <Globe className="w-4 h-4 text-ts-text-secondary/40 shrink-0" />
+                <ChevronRight className="w-5 h-5 text-ts-text-secondary/30 group-hover:text-ts-accent group-hover:translate-x-1 transition-all duration-200 shrink-0" />
               </div>
             </button>
           </SpotlightCard>

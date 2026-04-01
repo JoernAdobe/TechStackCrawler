@@ -23,7 +23,7 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
       {/* LetterGlitch – only peeks through at edges */}
       <div className="absolute inset-0 -z-20 opacity-[0.04]">
         <LetterGlitch
-          glitchColors={['#1a1a2e', '#6366f1', '#EB1000']}
+          glitchColors={['#1A1A1E', '#8B8FA0', '#E8503A']}
           glitchSpeed={100}
           centerVignette={true}
           outerVignette={true}
@@ -58,7 +58,7 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
       <div
         className="absolute inset-0 -z-10"
         style={{
-          background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse at center, rgba(139,143,160,0.04) 0%, transparent 70%)',
         }}
       />
 
@@ -78,8 +78,7 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
       {/* Input form */}
       <form onSubmit={handleSubmit} className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 fill-mode-both">
         <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-adobe-red via-ts-accent to-adobe-red rounded-2xl opacity-30 group-hover:opacity-60 group-focus-within:opacity-60 blur transition-opacity duration-500" />
-          <div className="relative flex items-center bg-ts-surface-card rounded-2xl border border-ts-border p-2">
+          <div className="relative flex items-center bg-ts-surface-card rounded-2xl border border-ts-border group-focus-within:border-ts-text-secondary/30 transition-colors duration-300 p-2">
             <div className="pl-4 pr-2 text-ts-text-secondary">
               <svg
                 className="w-5 h-5"
@@ -107,7 +106,7 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
             <button
               type="submit"
               disabled={disabled || !url.trim()}
-              className="relative flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-adobe-red to-red-700 text-white font-semibold rounded-xl hover:from-adobe-red-dark hover:to-red-800 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 whitespace-nowrap shadow-glow-red hover:shadow-[0_0_30px_rgba(235,16,0,0.3)]"
+              className="relative flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-semibold rounded-xl hover:from-adobe-red-dark hover:to-[#B03522] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 whitespace-nowrap shadow-glow-red hover:shadow-[0_0_30px_rgba(232,80,58,0.25)]"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

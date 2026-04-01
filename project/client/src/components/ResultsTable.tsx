@@ -57,14 +57,14 @@ export default function ResultsTable({ results }: ResultsTableProps) {
   return (
     <div className="px-6 py-8 max-w-7xl mx-auto">
       {/* Summary */}
-      <div className="mb-8 gradient-border bg-ts-surface-card rounded-xl p-6">
+      <div className="mb-8 bg-ts-surface-card rounded-xl border border-ts-border p-6">
         <div className="flex items-center gap-2 mb-3">
           <ClipboardList className="w-5 h-5 text-ts-accent" strokeWidth={1.5} />
           <h2 className="text-lg font-semibold text-ts-text-primary">
             Executive Summary
           </h2>
         </div>
-        <p className="text-ts-text-secondary leading-relaxed">
+        <p className="text-ts-text-secondary leading-relaxed text-sm">
           {results.summary}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-ts-text-secondary">
@@ -98,29 +98,29 @@ export default function ResultsTable({ results }: ResultsTableProps) {
       </div>
 
       {/* Stats row */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-4 text-center">
+      <div className="mb-8 grid grid-cols-3 gap-4">
+        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-5 text-center">
           <AnimatedCounter value={results.categories.length} className="text-2xl font-bold text-ts-text-primary" />
           <p className="text-xs text-ts-text-secondary mt-1">Categories</p>
         </div>
-        <div className="bg-ts-surface-card rounded-xl border border-ts-success/20 p-4 text-center">
+        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-5 text-center">
           <AnimatedCounter value={detectedCount} className="text-2xl font-bold text-ts-success" />
           <p className="text-xs text-ts-text-secondary mt-1">Detected</p>
         </div>
-        <div className="bg-ts-surface-card rounded-xl border border-ts-accent/20 p-4 text-center">
+        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-5 text-center">
           <AnimatedCounter value={results.rawDetections.length} className="text-2xl font-bold text-ts-accent-light" />
           <p className="text-xs text-ts-text-secondary mt-1">Technologies</p>
         </div>
       </div>
 
       {/* Category Grid Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-5 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-ts-text-primary">
           Technology Stack Analysis
         </h2>
-        <div className="flex items-center gap-3 text-xs text-ts-text-secondary">
+        <div className="flex items-center gap-4 text-xs text-ts-text-secondary">
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-ts-success animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-ts-success" />
             Detected
           </span>
           <span className="flex items-center gap-1.5">
@@ -176,7 +176,7 @@ export default function ResultsTable({ results }: ResultsTableProps) {
               <Tooltip key={tech.name}>
                 <TooltipTrigger asChild>
                   <span
-                    className="tech-badge inline-flex items-center gap-1.5 text-xs bg-ts-surface-light border border-ts-border px-3 py-1.5 rounded-full text-ts-text-secondary hover:text-ts-text-primary hover:border-ts-accent/30 hover:shadow-glow-accent transition-all duration-200 cursor-default"
+                    className="tech-badge inline-flex items-center gap-1.5 text-xs bg-ts-surface-light border border-ts-border px-3 py-1.5 rounded-full text-ts-text-secondary hover:text-ts-text-primary hover:border-ts-accent/30 transition-all duration-200 cursor-default"
                   >
                     <span className="font-medium text-ts-text-primary">
                       {tech.name}
@@ -201,9 +201,11 @@ export default function ResultsTable({ results }: ResultsTableProps) {
               </Tooltip>
             ))}
           </div>
-          <AdobeOpportunityCharts results={results} />
         </div>
       )}
+
+      {/* Adobe Opportunity Insights — separate section */}
+      <AdobeOpportunityCharts results={results} />
     </div>
   );
 }

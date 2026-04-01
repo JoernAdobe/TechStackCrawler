@@ -39,11 +39,11 @@ const phaseLabels: Record<string, string> = {
 };
 
 const phaseColors: Record<string, string> = {
-  scraping: 'text-blue-400',
+  scraping: 'text-ts-accent-light',
   detecting: 'text-ts-accent-light',
-  analyzing: 'text-amber-400',
+  analyzing: 'text-ts-warning',
   complete: 'text-ts-success',
-  error: 'text-red-400',
+  error: 'text-adobe-red',
 };
 
 export default function AnalysisProgress({
@@ -139,7 +139,7 @@ export default function AnalysisProgress({
               className="h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden"
               style={{
                 width: `${Math.min(95, ((currentIndex + 0.5) / phases.length) * 100)}%`,
-                background: 'linear-gradient(90deg, #EB1000, #6366f1, #EB1000)',
+                background: 'linear-gradient(90deg, #E8503A, #8B8FA0, #E8503A)',
                 backgroundSize: '200% 100%',
                 animation: 'shimmer 2s linear infinite',
               }}

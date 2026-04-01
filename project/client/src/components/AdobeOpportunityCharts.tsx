@@ -30,11 +30,11 @@ function isFilledAndNotAdobe(val: string): boolean {
   return !isEmptyOrNotDetected(val) && !isAdobeInCategory(val);
 }
 
-const ADOBE_RED = '#EB1000';
-const TS_ACCENT = '#6366f1';
-const TS_SUCCESS = '#22c55e';
-const TS_WARNING = '#f59e0b';
-const TS_TEXT_SECONDARY = '#8888a0';
+const ADOBE_RED = '#E8503A';
+const TS_ACCENT = '#8B8FA0';
+const TS_SUCCESS = '#4ADE80';
+const TS_WARNING = '#D4A055';
+const TS_TEXT_SECONDARY = '#7C7C8A';
 
 function computeChartData(results: AnalysisResult) {
   const totalCategories = results.categories.length;
@@ -142,13 +142,6 @@ function AnimatedGauge({ score }: { score: number }) {
           <stop offset="50%" stopColor={ADOBE_RED} />
           <stop offset="100%" stopColor={TS_ACCENT} />
         </linearGradient>
-        <filter id="gaugeGlow">
-          <feGaussianBlur stdDeviation="3" result="glow" />
-          <feMerge>
-            <feMergeNode in="glow" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
 
       {/* Background arc */}
@@ -170,7 +163,6 @@ function AnimatedGauge({ score }: { score: number }) {
           stroke="url(#gaugeGradient)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
-          filter="url(#gaugeGlow)"
         />
       )}
 
@@ -215,10 +207,10 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
         Adobe Opportunity Insights
       </h3>
 
-      <div ref={chartsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div ref={chartsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Animated Gauge */}
         {data.categoryStatus.length > 0 && (
-          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6 shadow-glow-accent">
+          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6">
             <h4 className="text-sm font-medium text-ts-text-secondary mb-4">
               Placement Potential
             </h4>
@@ -231,7 +223,7 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
 
         {/* Adobe vs. Competitors */}
         {data.adobeVsCompetitor.some((d) => d.count > 0) && (
-          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6 hover:shadow-glow-accent transition-shadow duration-300">
+          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6">
             <h4 className="text-sm font-medium text-ts-text-secondary mb-4">
               Adobe vs. Competitors
             </h4>
@@ -265,12 +257,12 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1a1a2e',
-                    border: '1px solid #2a2a3e',
+                    backgroundColor: '#1A1A1E',
+                    border: '1px solid #2A2A2F',
                     borderRadius: '8px',
-                    boxShadow: '0 0 20px rgba(99, 102, 241, 0.1)',
+                    boxShadow: '0 0 20px rgba(139, 143, 160, 0.08)',
                   }}
-                  labelStyle={{ color: '#f0f0f5' }}
+                  labelStyle={{ color: '#EDEDF0' }}
                 />
                 <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={28}>
                   {data.adobeVsCompetitor.map((_, i) => (
@@ -284,7 +276,7 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
 
         {/* Category Opportunity Map */}
         {data.categoryStatus.length > 0 && (
-          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6 lg:col-span-2 hover:shadow-glow-accent transition-shadow duration-300">
+          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6 lg:col-span-2">
             <h4 className="text-sm font-medium text-ts-text-secondary mb-4">
               Category Status
             </h4>
@@ -333,7 +325,7 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
 
         {/* Confidence Distribution */}
         {data.confidenceData.some((d) => d.count > 0) && (
-          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6 hover:shadow-glow-accent transition-shadow duration-300">
+          <div className="chart-card bg-ts-surface-card rounded-xl border border-ts-border p-6">
             <h4 className="text-sm font-medium text-ts-text-secondary mb-4">
               Detection Confidence
             </h4>
@@ -361,10 +353,10 @@ export default function AdobeOpportunityCharts({ results }: AdobeOpportunityChar
                 <YAxis stroke={TS_TEXT_SECONDARY} fontSize={12} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1a1a2e',
-                    border: '1px solid #2a2a3e',
+                    backgroundColor: '#1A1A1E',
+                    border: '1px solid #2A2A2F',
                     borderRadius: '8px',
-                    boxShadow: '0 0 20px rgba(99, 102, 241, 0.1)',
+                    boxShadow: '0 0 20px rgba(139, 143, 160, 0.08)',
                   }}
                 />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>

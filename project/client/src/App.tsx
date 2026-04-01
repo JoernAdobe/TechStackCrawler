@@ -14,7 +14,7 @@ import { TooltipProvider } from './components/ui/tooltip';
 import { useAnalysis } from './hooks/useAnalysis';
 import { useUseCaseDiscovery } from './hooks/useUseCaseDiscovery';
 import { useStaticAudio } from './hooks/useStaticAudio';
-import { XCircle } from 'lucide-react';
+import { XCircle, Search, Clock } from 'lucide-react';
 import type { AnalysisResult, ProgressEvent, AppState } from './types/analysis';
 
 function useHashRoute(): string {
@@ -65,6 +65,7 @@ function Analyzer() {
   const welcomePlayedRef = useRef(false);
   const [userInteracted, setUserInteracted] = useState(false);
   const [analysesRefreshTrigger, setAnalysesRefreshTrigger] = useState(0);
+  const [activeTab, setActiveTab] = useState<'analyzer' | 'history'>('analyzer');
   const { playStatic } = useStaticAudio();
 
   useEffect(() => {
@@ -143,12 +144,43 @@ function Analyzer() {
 
       {state === 'idle' && (
         <AnimatedView key="idle">
-          <div className="max-w-4xl mx-auto px-6 py-8 space-y-12">
-            <UrlInput onSubmit={handleSubmit} />
-            <section className="border-t border-ts-border pt-12">
-              <PastAnalyses onSelectNew={() => {}} refreshTrigger={analysesRefreshTrigger} />
-            </section>
+          {/* Tab Navigation */}
+          <div className="max-w-4xl mx-auto px-6 pt-6">
+            <div className="flex gap-1 border-b border-ts-border">
+              <button
+                onClick={() => setActiveTab('analyzer')}
+                className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold transition-all duration-200 border-b-2 -mb-px ${
+                  activeTab === 'analyzer'
+                    ? 'border-adobe-red text-ts-text-primary'
+                    : 'border-transparent text-ts-text-secondary hover:text-ts-text-primary hover:border-ts-border'
+                }`}
+              >
+                <Search className="w-4 h-4" />
+                Analyzer
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold transition-all duration-200 border-b-2 -mb-px ${
+                  activeTab === 'history'
+                    ? 'border-adobe-red text-ts-text-primary'
+                    : 'border-transparent text-ts-text-secondary hover:text-ts-text-primary hover:border-ts-border'
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                Past Analyses
+              </button>
+            </div>
           </div>
+
+          {activeTab === 'analyzer' ? (
+            <div className="max-w-4xl mx-auto px-6 py-8">
+              <UrlInput onSubmit={handleSubmit} />
+            </div>
+          ) : (
+            <div className="max-w-4xl mx-auto px-6 py-8">
+              <PastAnalyses onSelectNew={() => setActiveTab('analyzer')} refreshTrigger={analysesRefreshTrigger} />
+            </div>
+          )}
         </AnimatedView>
       )}
 
@@ -177,14 +209,14 @@ function Analyzer() {
         <AnimatedView key="error">
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
             <div className="w-full max-w-md text-center">
-              <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-500/10 flex items-center justify-center shadow-glow-red">
-                <XCircle className="w-8 h-8 text-red-400" strokeWidth={1.5} />
+              <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-adobe-red/10 flex items-center justify-center shadow-glow-red">
+                <XCircle className="w-8 h-8 text-adobe-red" strokeWidth={1.5} />
               </div>
               <h2 className="text-xl font-semibold mb-2">Analysis Failed</h2>
               <p className="text-ts-text-secondary mb-6">{errorMessage}</p>
               <button
                 onClick={handleReset}
-                className="px-6 py-3 bg-gradient-to-r from-adobe-red to-red-700 text-white font-semibold rounded-xl hover:from-adobe-red-dark hover:to-red-800 transition-all hover:shadow-glow-red hover:scale-[1.02] active:scale-[0.98]"
+                className="px-6 py-3 bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-semibold rounded-xl hover:from-adobe-red-dark hover:to-[#B03522] transition-all hover:shadow-glow-red hover:scale-[1.02] active:scale-[0.98]"
               >
                 Try Again
               </button>

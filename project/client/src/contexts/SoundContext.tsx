@@ -12,7 +12,7 @@ const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 Jahr
 function getSoundFromCookie(): boolean {
   if (typeof document === 'undefined') return true;
   const match = document.cookie.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]*)`));
-  if (!match) return true;
+  if (!match) return false;
   return match[1] !== '0';
 }
 

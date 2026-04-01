@@ -37,7 +37,7 @@ export default function DashboardLogin({ onLogin }: Props) {
     <div className="min-h-screen bg-ts-surface flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-gradient-to-br from-adobe-red to-red-700 flex items-center justify-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-gradient-to-br from-adobe-red to-adobe-red-dark flex items-center justify-center">
             <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
               <path d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm6.232 0L24 22.624V1.376z" />
             </svg>
@@ -79,13 +79,13 @@ export default function DashboardLogin({ onLogin }: Props) {
           </div>
 
           {error && (
-            <p className="text-red-400 text-sm text-center">{error}</p>
+            <p className="text-adobe-red text-sm text-center">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-gradient-to-r from-adobe-red to-red-700 text-white font-semibold text-sm hover:from-adobe-red-dark hover:to-red-800 transition-all disabled:opacity-50"
+            className="w-full py-2.5 rounded-lg bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-semibold text-sm hover:from-adobe-red-dark hover:to-[#B03522] transition-all disabled:opacity-50"
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>

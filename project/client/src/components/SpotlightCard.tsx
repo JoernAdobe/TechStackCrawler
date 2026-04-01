@@ -33,7 +33,7 @@ const SpotlightCard: React.FC<SpotlightCardProps> = ({
       onBlur={() => { setIsFocused(false); setOverlayOpacity(0); }}
       onMouseEnter={() => setOverlayOpacity(0.6)}
       onMouseLeave={() => setOverlayOpacity(0)}
-      className={`relative rounded-3xl border border-neutral-800 bg-neutral-900 overflow-hidden p-8 ${className}`}
+      className={`relative rounded-3xl border border-ts-border bg-ts-surface-card overflow-hidden p-8 ${className}`}
     >
       <div
         ref={overlayRef}
