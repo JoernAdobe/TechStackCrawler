@@ -30,14 +30,6 @@ const categoryIcons: Record<string, LucideIcon> = {
   Other: Wrench,
 };
 
-/** Extract the first Adobe product name from the opportunity text */
-function extractAdobeProduct(text: string): string | null {
-  const match = text.match(/Adobe\s+[\w\s&-]+(?:Platform|Manager|Optimizer|Commerce|Campaign|CDP|Analytics|Workfront|GenStudio|Marketo|Target|Audience|Firefly|Express|AEM|Journey)/i);
-  if (match) return match[0].trim();
-  const simple = text.match(/Adobe\s+\w+/i);
-  return simple ? simple[0].trim() : null;
-}
-
 /** Extract all unique Adobe product names from opportunity text */
 function extractAllAdobeProducts(text: string): string[] {
   const products: string[] = [];
