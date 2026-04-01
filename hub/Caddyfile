@@ -1,7 +1,3 @@
-{
-	auto_https disable_redirects
-}
-
 :80 {
 	root * /srv
 	file_server
