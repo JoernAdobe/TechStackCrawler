@@ -3,8 +3,7 @@ services:
     image: caddy:2-alpine
     container_name: adobe-tools-hub
     ports:
-      - "${HOST_PORT:-8510}:443"
-      - "${HOST_PORT_HTTP:-8511}:80"
+      - "${HOST_PORT:-8510}:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./index.html:/srv/index.html:ro

@@ -1,8 +1,3 @@
 :80 {
 	reverse_proxy techstack:3001
 }
-
-:443 {
-	tls internal
-	reverse_proxy techstack:3001
-}

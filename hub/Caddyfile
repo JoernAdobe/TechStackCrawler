@@ -2,9 +2,3 @@
 	root * /srv
 	file_server
 }
-
-:443 {
-	tls internal
-	root * /srv
-	file_server
-}
