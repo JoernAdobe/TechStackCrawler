@@ -15,6 +15,8 @@ Enter any URL, and the tool will scrape the site, detect its tech stack (CMS, an
 - **Export** — Download results as Excel (.xlsx) or Markdown (.md)
 - **Text-to-Speech** — Optional ElevenLabs integration for voice-assisted walkthroughs
 - **Rate Limiting** — 5 analysis requests/min, 15 TTS requests/min
+- **MCP Server** — Model Context Protocol endpoint for AI agent integration with bearer token auth
+- **API Token Management** — Create, list, and revoke bearer tokens for MCP access via the admin dashboard
 
 ## Tech Stack
 
@@ -32,10 +34,13 @@ Enter any URL, and the tool will scrape the site, detect its tech stack (CMS, an
 │   Browser    │────▶│  Caddy (:80)                     │
 └─────────────┘     │  reverse_proxy → techstack:3001   │
                     └──────────────┬───────────────────┘
-                                   │
+┌─────────────┐                    │
+│  MCP Agents │────Bearer Token────┤
+└─────────────┘                    │
                     ┌──────────────▼───────────────────┐
                     │  Express Server (:3001)           │
                     │  ├─ Static frontend (prod)        │
+                    │  ├─ /mcp endpoint (MCP protocol)  │
                     │  ├─ Puppeteer (headless Chrome)   │
                     │  ├─ Tech detection engine         │
                     │  ├─ AWS Bedrock (Claude)          │
@@ -175,6 +180,44 @@ Output includes a commit verification:
 | `GET` | `/api/dashboard/stats` | Dashboard statistics (auth required) |
 | `GET` | `/api/health` | Health check (returns commit hash) |
 | `GET` | `/api/bedrock-status` | Bedrock auth status |
+| `POST` | `/api/tokens` | Create API token (dashboard auth) |
+| `GET` | `/api/tokens` | List API tokens (dashboard auth) |
+| `DELETE` | `/api/tokens/:id` | Revoke API token (dashboard auth) |
+| `POST/GET/DELETE` | `/mcp` | MCP protocol endpoint (bearer token) |
+
+## MCP Server (Agent Integration)
+
+The TechStack Analyzer exposes a [Model Context Protocol](https://modelcontextprotocol.io/) endpoint at `/mcp`, allowing AI agents (Claude Desktop, Cursor, custom agents) to use the analyzer programmatically.
+
+### Available MCP Tools
+
+| Tool | Description | Input |
+|------|-------------|-------|
+| `analyze-url` | Analyze a website's technology stack | `{ url: string }` |
+| `list-analyses` | List saved analyses | `{ limit?: number }` |
+| `get-analysis` | Get full analysis details by ID | `{ id: number }` |
+| `use-case-discovery` | Generate Adobe use cases for an analysis | `{ analysisId: number }` |
+
+### Setup
+
+1. Open the admin dashboard at `#/dashboard` and navigate to "MCP API Tokens"
+2. Create a new token and copy it (shown only once)
+3. Configure your MCP client:
+
+```json
+{
+  "mcpServers": {
+    "techstack-analyzer": {
+      "url": "https://your-domain/mcp",
+      "headers": {
+        "Authorization": "Bearer tsa_your-token-here"
+      }
+    }
+  }
+}
+```
+
+Tokens can be revoked at any time through the dashboard. Expired or revoked tokens are rejected with HTTP 401.
 
 ## Available Commands
 

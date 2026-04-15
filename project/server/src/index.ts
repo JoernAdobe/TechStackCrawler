@@ -27,6 +27,9 @@ import { ttsRoute } from './routes/tts.js';
 import { isTtsAvailable } from './services/tts.js';
 import { listAnalysesRoute, getAnalysisRoute } from './routes/analyses.js';
 import { dashboardLogin, dashboardStats, requireDashboardAuth } from './routes/dashboard.js';
+import { createTokenRoute, listTokensRoute, revokeTokenRoute } from './routes/apiTokens.js';
+import { createMcpRoutes } from './mcp/server.js';
+import { requireMcpAuth } from './mcp/auth.js';
 import { initDb, getPool, closeDb } from './db/index.js';
 import { config } from './config.js';
 
@@ -83,6 +86,14 @@ app.get('/api/analyses', listAnalysesRoute);
 app.get('/api/analyses/:id', getAnalysisRoute);
 app.post('/api/dashboard/login', dashboardLogin);
 app.get('/api/dashboard/stats', requireDashboardAuth, dashboardStats);
+
+// Token management API (dashboard-auth protected)
+app.post('/api/tokens', requireDashboardAuth, createTokenRoute);
+app.get('/api/tokens', requireDashboardAuth, listTokensRoute);
+app.delete('/api/tokens/:id', requireDashboardAuth, revokeTokenRoute);
+
+// MCP endpoint (bearer-token protected)
+app.use('/mcp', requireMcpAuth, createMcpRoutes());
 
 // Health check
 app.get('/api/health', (_req, res) => {

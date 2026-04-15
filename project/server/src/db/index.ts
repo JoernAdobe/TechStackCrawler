@@ -70,6 +70,19 @@ export async function initDb(): Promise<void> {
         )
       `);
       await p.execute(`CREATE INDEX IF NOT EXISTS idx_audio_cache_text_hash ON audio_cache(text_hash)`);
+
+      await p.execute(`
+        CREATE TABLE IF NOT EXISTS api_tokens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          token_hash TEXT NOT NULL UNIQUE,
+          created_at TEXT DEFAULT (datetime('now')),
+          expires_at TEXT,
+          last_used_at TEXT,
+          is_active INTEGER DEFAULT 1
+        )
+      `);
+      await p.execute(`CREATE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens(token_hash)`);
     } else {
       await p.execute(`
         CREATE TABLE IF NOT EXISTS analyses (
@@ -96,6 +109,19 @@ export async function initDb(): Promise<void> {
           audio_data LONGBLOB NOT NULL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           INDEX idx_text_hash (text_hash)
+        )
+      `);
+
+      await p.execute(`
+        CREATE TABLE IF NOT EXISTS api_tokens (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          token_hash CHAR(64) NOT NULL UNIQUE,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          expires_at DATETIME,
+          last_used_at DATETIME,
+          is_active TINYINT DEFAULT 1,
+          INDEX idx_token_hash (token_hash)
         )
       `);
     }

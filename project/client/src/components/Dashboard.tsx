@@ -13,6 +13,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import ApiTokenManager from './ApiTokenManager';
 
 interface TechCount {
   name: string;
@@ -333,6 +334,9 @@ export default function Dashboard({ token, onLogout }: Props) {
             </div>
           </div>
         </section>
+
+        {/* API Token Management */}
+        <ApiTokenManager token={token} />
 
         {/* Footer info */}
         <p className="text-center text-xs text-ts-text-secondary pb-4">
