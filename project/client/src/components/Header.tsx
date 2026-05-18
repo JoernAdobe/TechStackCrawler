@@ -1,16 +1,40 @@
+import { useEffect, useState } from 'react';
 import { useSound } from '../contexts/SoundContext';
+
+const BANNER_HEIGHT = 34;
 
 export default function Header() {
   const { soundEnabled, toggleSound } = useSound();
+  const [bannerOffset, setBannerOffset] = useState(() =>
+    typeof document !== 'undefined' && document.getElementById('adobe-hub-banner') ? BANNER_HEIGHT : 0,
+  );
+
+  useEffect(() => {
+    if (document.getElementById('adobe-hub-banner')) {
+      setBannerOffset(BANNER_HEIGHT);
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (document.getElementById('adobe-hub-banner')) {
+        setBannerOffset(BANNER_HEIGHT);
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <header className="w-full backdrop-blur-sm bg-ts-surface/80 sticky top-0 z-50">
+    <header
+      className="w-full backdrop-blur-sm bg-ts-surface/80 sticky z-50"
+      style={{ top: bannerOffset }}
+    >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <img
-            src="https://www.adobe.com/homepage/assets/product-icons/jpg/default.jpg?width=160&format=pjpg&optimize=medium"
+            src="/adobe-logo.png"
             alt="Adobe"
-            className="w-10 h-10 rounded-lg object-contain"
+            className="h-10 rounded-lg object-contain"
           />
           <div>
             <h1 className="text-xl font-bold text-ts-text-primary tracking-tight">
