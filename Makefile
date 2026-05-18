@@ -2,7 +2,7 @@
 # Verwendung: make start | stop | deploy | ...
 
 PROJECT_DIR := project
-.PHONY: start stop deploy deploy-hub install build dev-start dev-stop docker-up docker-down docker-build
+.PHONY: start stop deploy deploy-hub install build dev-start dev-stop docker-up docker-down docker-build logs status tmp-inspect tmp-clean restart server-mem tmp-resize
 
 # Standard-Ziel
 .DEFAULT_GOAL := help
@@ -88,13 +88,13 @@ deploy:
 	  echo ">>> Alternative: DEPLOY_SKIP_LOCAL_BUILD=1 make deploy (baut auf dem Server – braucht dort Docker-Hub-Zugriff)."; \
 	  exit 1; \
 	}; \
-	echo ">>> Exportiere TechStack-Image als Tar..."; \
-	(cd $$ROOT_DIR/$(PROJECT_DIR) && docker save techstack-app -o $$ROOT_DIR/.deploy-techstack.tar) || { echo "Fehler: Image-Export fehlgeschlagen"; exit 1; }; \
 	echo ">>> Erstelle Deploy-Archiv..."; \
 	(cd $$ROOT_DIR/$(PROJECT_DIR) && COPYFILE_DISABLE=1 tar --exclude=node_modules --exclude=client/dist --exclude=server/dist --exclude=.env -czf $$ROOT_DIR/.deploy.tar.gz .) || { echo "Fehler: Archiv konnte nicht erstellt werden"; exit 1; }; \
-	echo ">>> Kopiere auf Server..."; \
-	scp $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY" || true) $$([ -n "$$SSH_KEY" ] && echo "-o IdentitiesOnly=yes" || true) $$ROOT_DIR/.deploy.tar.gz $$ROOT_DIR/.deploy-techstack.tar "$$SSH_HOST:/tmp/" || { echo "Fehler: SCP fehlgeschlagen"; exit 1; }; \
-	rm -f $$ROOT_DIR/.deploy.tar.gz $$ROOT_DIR/.deploy-techstack.tar; \
+	echo ">>> Kopiere Code-Archiv auf Server..."; \
+	scp $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY" || true) $$([ -n "$$SSH_KEY" ] && echo "-o IdentitiesOnly=yes" || true) $$ROOT_DIR/.deploy.tar.gz "$$SSH_HOST:/tmp/" || { echo "Fehler: SCP fehlgeschlagen"; exit 1; }; \
+	rm -f $$ROOT_DIR/.deploy.tar.gz; \
+	echo ">>> Streame Docker-Image auf Server (umgeht /tmp-Limit)..."; \
+	docker save techstack-app | ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "docker load" || { echo "Fehler: Image-Stream fehlgeschlagen"; exit 1; }; \
 	echo ">>> Starte auf Server..."; \
 	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY" || true) $$([ -n "$$SSH_KEY" ] && echo "-o IdentitiesOnly=yes" || true) "$$SSH_HOST" "mkdir -p $$REMOTE_DIR"; \
 	if [ -f "$$ROOT_DIR/$(PROJECT_DIR)/.env" ]; then \
@@ -103,7 +103,7 @@ deploy:
 	else \
 	  echo ">>> Hinweis: Keine project/.env – Server nutzt bestehende $$REMOTE_DIR/.env (oder erstelle sie manuell)."; \
 	fi; \
-	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY" || true) $$([ -n "$$SSH_KEY" ] && echo "-o IdentitiesOnly=yes" || true) "$$SSH_HOST" "cd $$REMOTE_DIR && tar -xzf /tmp/.deploy.tar.gz && rm -f docker-compose.override.yml && docker load -i /tmp/.deploy-techstack.tar && rm -f /tmp/.deploy-techstack.tar && GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT HOST_PORT_HTTP=$$HOST_PORT_HTTP CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose down 2>/dev/null; GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT HOST_PORT_HTTP=$$HOST_PORT_HTTP CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose up -d && sleep 5 && (sh scripts/deploy-restore-if-empty.sh 2>/dev/null || true) && rm -f /tmp/.deploy.tar.gz"; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY" || true) $$([ -n "$$SSH_KEY" ] && echo "-o IdentitiesOnly=yes" || true) "$$SSH_HOST" "cd $$REMOTE_DIR && tar -xzf /tmp/.deploy.tar.gz && rm -f docker-compose.override.yml && GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT HOST_PORT_HTTP=$$HOST_PORT_HTTP CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose down 2>/dev/null; GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT HOST_PORT_HTTP=$$HOST_PORT_HTTP CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose up -d && sleep 5 && (sh scripts/deploy-restore-if-empty.sh 2>/dev/null || true) && rm -f /tmp/.deploy.tar.gz"; \
 	DEPLOY_HOST=$${SSH_HOST#*@}; \
 	DEPLOY_URL="http://$$DEPLOY_HOST:$$HOST_PORT"; \
 	echo ""; \
@@ -128,6 +128,68 @@ deploy:
 		echo ">>> Frontend: $$DEPLOY_URL"; \
 		echo ">>> Health-Check: noch nicht bereit (Container startet evtl. noch)"; \
 	fi
+
+# Server-Diagnose: Container-Status + Logs holen
+status:
+	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
+	ROOT_DIR=$$(pwd); \
+	if [ -z "$$SSH_HOST" ]; then echo "Fehler: SSH_HOST fehlt"; exit 1; fi; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "docker ps -a --filter name=techstack --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'; echo; echo '=== /opt/techstack-crawler/.env ==='; ls -la /opt/techstack-crawler/.env 2>&1; echo; echo '=== mariadb volume ==='; docker volume ls | grep -E 'techstack|VOLUME'"
+
+logs:
+	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
+	ROOT_DIR=$$(pwd); \
+	SERVICE=$${SERVICE:-mariadb}; \
+	LINES=$${LINES:-80}; \
+	if [ -z "$$SSH_HOST" ]; then echo "Fehler: SSH_HOST fehlt"; exit 1; fi; \
+	echo ">>> Logs: techstack-$$SERVICE (letzte $$LINES Zeilen)"; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "docker logs --tail $$LINES techstack-$$SERVICE 2>&1"
+
+# /tmp-Inspektion (Server /tmp ist 512 MB tmpfs, hubblestack belegt ~201 MB davon — nicht löschen!)
+tmp-inspect:
+	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
+	ROOT_DIR=$$(pwd); \
+	if [ -z "$$SSH_HOST" ]; then echo "Fehler: SSH_HOST fehlt"; exit 1; fi; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "df -h /tmp; echo; echo '=== /tmp Inhalt (inkl. hidden) ==='; ls -lah /tmp/ | head -40; echo; echo '=== /tmp gesamt (inkl. hidden) ==='; du -sh /tmp/.[!.]* /tmp/* 2>/dev/null | sort -h | tail -25; echo; echo '=== runc/docker leftovers ==='; ls /tmp/runc-* /tmp/docker-* 2>/dev/null | wc -l"
+
+# RAM- und Mount-Status auf Server
+server-mem:
+	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
+	ROOT_DIR=$$(pwd); \
+	if [ -z "$$SSH_HOST" ]; then echo "Fehler: SSH_HOST fehlt"; exit 1; fi; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "echo '=== free -h ==='; free -h; echo; echo '=== df -h /tmp ==='; df -h /tmp; echo; echo '=== /etc/fstab tmpfs entries ==='; grep -nE '^[^#].*tmpfs' /etc/fstab || echo '(kein tmpfs in fstab, /tmp wird wahrscheinlich systemd-managed via /usr/lib/systemd/system/tmp.mount)'; echo; echo '=== systemd tmp.mount ==='; systemctl cat tmp.mount 2>/dev/null | grep -E 'Options|What|Where' || echo '(no systemd tmp.mount)'"
+
+# /tmp Größe auf SIZE erhöhen (default 2G), persistent via /etc/fstab
+# Benutzung: make tmp-resize SIZE=2G
+# Behält bestehende Mount-Flags (nodev, nosuid, noexec) — ändert NUR die size=.
+tmp-resize:
+	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
+	ROOT_DIR=$$(pwd); \
+	SIZE=$${SIZE:-2G}; \
+	if [ -z "$$SSH_HOST" ]; then echo "Fehler: SSH_HOST fehlt"; exit 1; fi; \
+	echo ">>> Erhöhe /tmp auf $$SIZE (persistent + live remount, behält noexec/nosuid/nodev)..."; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "set -e; echo '--- Pre-Status ---'; df -h /tmp; echo; echo '--- fstab vorher ---'; grep -nE '^[^#].*\s/tmp\s' /etc/fstab; echo; echo '--- fstab Backup ---'; cp -v /etc/fstab /etc/fstab.bak.\$$(date +%Y%m%d_%H%M%S); echo; echo '--- fstab in-place Update (size=*m|g → size=$$SIZE) ---'; sed -i -E '/^tmpfs[[:space:]]+\/tmp[[:space:]]+tmpfs/ s/size=[0-9]+[KkMmGg]?/size=$$SIZE/' /etc/fstab; grep -nE '^[^#].*\s/tmp\s' /etc/fstab; echo; echo '--- systemd daemon-reload (fstab-generator) ---'; systemctl daemon-reload; echo; echo '--- Live remount ---'; mount -o remount,size=$$SIZE /tmp; echo; echo '--- Post-Status ---'; df -h /tmp; mount | grep /tmp"
+restart:
+	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
+	ROOT_DIR=$$(pwd); \
+	REMOTE_DIR=$${REMOTE_DIR:-/opt/techstack-crawler}; \
+	HOST_PORT=$${HOST_PORT:-8516}; \
+	HOST_PORT_HTTP=$${HOST_PORT_HTTP:-$$((HOST_PORT + 1))}; \
+	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+	if [ -z "$$SSH_HOST" ]; then echo "Fehler: SSH_HOST fehlt"; exit 1; fi; \
+	echo ">>> Restart Container auf Server..."; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "cd $$REMOTE_DIR && GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT HOST_PORT_HTTP=$$HOST_PORT_HTTP CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose down; GIT_COMMIT=$$GIT_COMMIT HOST_PORT=$$HOST_PORT HOST_PORT_HTTP=$$HOST_PORT_HTTP CONTAINER_PREFIX=$${CONTAINER_PREFIX:-techstack-} docker compose up -d"; \
+	echo ">>> Warte 15s auf Healthchecks..."; \
+	sleep 15; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "docker ps --filter name=techstack --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+
+# Sicheres /tmp Aufräumen: nur Deploy-Artefakte und runc-leftovers, NICHT hubblestack
+tmp-clean:
+	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
+	ROOT_DIR=$$(pwd); \
+	if [ -z "$$SSH_HOST" ]; then echo "Fehler: SSH_HOST fehlt"; exit 1; fi; \
+	echo ">>> Räume nur Deploy-Artefakte aus /tmp auf (hubblestack bleibt unangetastet)..."; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "df -h /tmp | tail -1; rm -fv /tmp/.deploy.tar.gz /tmp/.deploy-techstack.tar /tmp/.deploy*.tar* 2>/dev/null; rm -fv /tmp/runc-process* 2>/dev/null; df -h /tmp | tail -1"
 
 # Deploy Hub Page (Adobe AI Tools landing page)
 HUB_DIR := hub
