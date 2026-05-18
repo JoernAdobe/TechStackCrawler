@@ -4259,70 +4259,80 @@ const rules: DetectionRule[] = [
   },
 ];
 
+// Per-signal-type confidence bases (server-side signals score higher, HTML regex weakest).
+const SIGNAL_STRENGTH: Record<string, number> = {
+  headers: 88,
+  cookies: 84,
+  scriptSrc: 78,
+  meta: 72,
+  html: 64,
+};
+
 export function customDetect(scraped: ScrapedData): DetectedTech[] {
   const seen = new Set<string>();
   const detected: DetectedTech[] = [];
 
   for (const rule of rules) {
-    // Deduplicate by name (first match wins)
     if (seen.has(rule.name)) continue;
 
-    let matched = false;
+    const signals: string[] = [];
 
-    // Check HTML patterns
-    if (!matched && rule.patterns.html) {
-      matched = rule.patterns.html.some((re) => re.test(scraped.html));
+    if (rule.patterns.html?.some((re) => re.test(scraped.html))) {
+      signals.push('html');
     }
 
-    // Check script source patterns
-    if (!matched && rule.patterns.scriptSrc) {
-      matched = rule.patterns.scriptSrc.some((re) =>
+    if (
+      rule.patterns.scriptSrc?.some((re) =>
         scraped.scriptSrc.some((src) => re.test(src)),
-      );
+      )
+    ) {
+      signals.push('scriptSrc');
     }
 
-    // Check cookie name patterns (exact match or prefix when name ends with _)
-    if (!matched && rule.patterns.cookies) {
+    if (rule.patterns.cookies) {
       const cookieKeys = Object.keys(scraped.cookies);
-      matched = rule.patterns.cookies.some((name) => {
+      const cookieHit = rule.patterns.cookies.some((name) => {
         if (name.endsWith('_')) {
           return cookieKeys.some((k) => k.startsWith(name.slice(0, -1)));
         }
         return name in scraped.cookies;
       });
+      if (cookieHit) signals.push('cookies');
     }
 
-    // Check header patterns
-    if (!matched && rule.patterns.headers) {
+    if (rule.patterns.headers) {
       for (const [header, re] of Object.entries(rule.patterns.headers)) {
         const headerKey = Object.keys(scraped.headers).find(
           (k) => k.toLowerCase() === header.toLowerCase(),
         );
         if (headerKey && scraped.headers[headerKey]?.some((v) => re.test(v))) {
-          matched = true;
+          signals.push('headers');
           break;
         }
       }
     }
 
-    // Check meta tag patterns
-    if (!matched && rule.patterns.meta) {
+    if (rule.patterns.meta) {
       for (const [metaName, re] of Object.entries(rule.patterns.meta)) {
         if (scraped.meta[metaName]?.some((v) => re.test(v))) {
-          matched = true;
+          signals.push('meta');
           break;
         }
       }
     }
 
-    if (matched) {
-      seen.add(rule.name);
-      detected.push({
-        name: rule.name,
-        categories: rule.categories,
-        confidence: 80,
-      });
-    }
+    if (signals.length === 0) continue;
+
+    seen.add(rule.name);
+    const base = Math.max(...signals.map((s) => SIGNAL_STRENGTH[s] ?? 70));
+    const multiSignalBonus = Math.min(7, (signals.length - 1) * 3);
+    const confidence = Math.min(95, base + multiSignalBonus);
+
+    detected.push({
+      name: rule.name,
+      categories: rule.categories,
+      confidence,
+    });
   }
 
   return detected;

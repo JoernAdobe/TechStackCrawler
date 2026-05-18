@@ -101,7 +101,6 @@ function computeChartData(results: AnalysisResult) {
 
 function AnimatedGauge({ score }: { score: number }) {
   const [animatedScore, setAnimatedScore] = useState(0);
-  const pathRef = useRef<SVGPathElement>(null);
 
   useEffect(() => {
     const obj = { val: 0 };
@@ -113,63 +112,71 @@ function AnimatedGauge({ score }: { score: number }) {
     });
   }, [score]);
 
-  const radius = 70;
-  const strokeWidth = 12;
-  const cx = 90;
-  const cy = 90;
-  const startAngle = 180;
-  const endAngle = 0;
-  const sweepRange = startAngle - endAngle;
-  const currentAngle = startAngle - (animatedScore / 100) * sweepRange;
-
-  const polarToCartesian = (angle: number) => {
-    const rad = (angle * Math.PI) / 180;
-    return { x: cx + radius * Math.cos(rad), y: cy - radius * Math.sin(rad) };
-  };
-
-  const start = polarToCartesian(startAngle);
-  const end = polarToCartesian(currentAngle);
-  const bgStart = polarToCartesian(startAngle);
-  const bgEnd = polarToCartesian(endAngle);
+  const size = 180;
+  const stroke = 14;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const dashOffset = circumference * (1 - animatedScore / 100);
+  const center = size / 2;
 
   return (
-    <svg viewBox="0 0 180 110" className="w-full max-w-[220px] mx-auto">
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      className="w-full max-w-[200px] mx-auto"
+    >
       <defs>
-        <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={TS_TEXT_SECONDARY} stopOpacity="0.3" />
-          <stop offset="50%" stopColor={ADOBE_RED} />
+        <linearGradient id="donutGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={ADOBE_RED} />
           <stop offset="100%" stopColor={TS_ACCENT} />
         </linearGradient>
       </defs>
 
-      {/* Background arc */}
-      <path
-        d={`M ${bgStart.x} ${bgStart.y} A ${radius} ${radius} 0 0 0 ${bgEnd.x} ${bgEnd.y}`}
+      {/* Background ring */}
+      <circle
+        cx={center}
+        cy={center}
+        r={r}
         fill="none"
         stroke={TS_TEXT_SECONDARY}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        opacity="0.15"
+        strokeOpacity="0.12"
+        strokeWidth={stroke}
       />
 
-      {/* Animated arc */}
-      {animatedScore > 0 && (
-        <path
-          ref={pathRef}
-          d={`M ${start.x} ${start.y} A ${radius} ${radius} 0 0 0 ${end.x} ${end.y}`}
-          fill="none"
-          stroke="url(#gaugeGradient)"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-        />
-      )}
+      {/* Animated progress ring (rotated so it starts at 12 o'clock) */}
+      <circle
+        cx={center}
+        cy={center}
+        r={r}
+        fill="none"
+        stroke="url(#donutGradient)"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={dashOffset}
+        transform={`rotate(-90 ${center} ${center})`}
+      />
 
-      {/* Score text */}
-      <text x={cx} y={cy - 5} textAnchor="middle" className="fill-ts-text-primary text-2xl font-bold" fontSize="28">
+      {/* Center text */}
+      <text
+        x={center}
+        y={center - 4}
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="fill-ts-text-primary font-bold"
+        fontSize="34"
+      >
         {animatedScore}%
       </text>
-      <text x={cx} y={cy + 14} textAnchor="middle" className="fill-ts-text-secondary text-xs" fontSize="11">
-        Opportunity
+      <text
+        x={center}
+        y={center + 24}
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="fill-ts-text-secondary"
+        fontSize="11"
+        letterSpacing="0.05em"
+      >
+        OPPORTUNITY
       </text>
     </svg>
   );
