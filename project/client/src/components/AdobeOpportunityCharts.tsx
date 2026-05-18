@@ -129,8 +129,6 @@ function AnimatedGauge({ score }: { score: number }) {
 
   const start = polarToCartesian(startAngle);
   const end = polarToCartesian(currentAngle);
-  const largeArc = animatedScore > 50 ? 1 : 0;
-
   const bgStart = polarToCartesian(startAngle);
   const bgEnd = polarToCartesian(endAngle);
 
@@ -146,7 +144,7 @@ function AnimatedGauge({ score }: { score: number }) {
 
       {/* Background arc */}
       <path
-        d={`M ${bgStart.x} ${bgStart.y} A ${radius} ${radius} 0 1 1 ${bgEnd.x} ${bgEnd.y}`}
+        d={`M ${bgStart.x} ${bgStart.y} A ${radius} ${radius} 0 0 0 ${bgEnd.x} ${bgEnd.y}`}
         fill="none"
         stroke={TS_TEXT_SECONDARY}
         strokeWidth={strokeWidth}
@@ -158,7 +156,7 @@ function AnimatedGauge({ score }: { score: number }) {
       {animatedScore > 0 && (
         <path
           ref={pathRef}
-          d={`M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`}
+          d={`M ${start.x} ${start.y} A ${radius} ${radius} 0 0 0 ${end.x} ${end.y}`}
           fill="none"
           stroke="url(#gaugeGradient)"
           strokeWidth={strokeWidth}

@@ -7,4 +7,5 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./index.html:/srv/index.html:ro
+      - ./adobe-hero.png:/srv/adobe-hero.png:ro
     restart: unless-stopped

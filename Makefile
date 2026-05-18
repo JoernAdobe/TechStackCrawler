@@ -148,6 +148,7 @@ deploy-hub:
 		$$ROOT_DIR/$(HUB_DIR)/index.html \
 		$$ROOT_DIR/$(HUB_DIR)/Caddyfile \
 		$$ROOT_DIR/$(HUB_DIR)/docker-compose.yml \
+		$$ROOT_DIR/$(HUB_DIR)/adobe-hero.png \
 		"$$SSH_HOST:$(HUB_REMOTE_DIR)/"; \
 	echo ">>> Starte Container auf Server..."; \
 	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" \
