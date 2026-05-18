@@ -40,7 +40,9 @@ app.use(helmet({
     ? {
         directives: {
           ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-          'img-src': ["'self'", 'data:', 'https://www.google.com'],
+          'script-src': ["'self'", 'https://saleshub.corp.adobe.com'],
+          'img-src': ["'self'", 'data:', 'https://www.google.com', 'https://saleshub.corp.adobe.com'],
+          'connect-src': ["'self'", 'https://saleshub.corp.adobe.com'],
           'upgrade-insecure-requests': null,
         },
       }
