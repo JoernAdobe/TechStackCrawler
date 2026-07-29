@@ -79,11 +79,15 @@ export default function ResultsTable({ results }: ResultsTableProps) {
               {results.url}
             </a>
           </span>
-          {results.requestedUrl && (
+          {results.finalUrl ? (
+            <span className="text-ts-warning">
+              Redirected to {results.finalUrl}
+            </span>
+          ) : results.requestedUrl ? (
             <span className="text-ts-warning">
               Redirected from {results.requestedUrl}
             </span>
-          )}
+          ) : null}
           <span>
             Analyzed:{' '}
             {new Date(results.analyzedAt).toLocaleDateString('en-US', {

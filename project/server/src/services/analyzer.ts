@@ -68,8 +68,10 @@ export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void
 
   // Phase 4: Compile and send results
   const result: AnalysisResult = {
-    url: scraped.finalUrl,
-    requestedUrl: url !== scraped.finalUrl ? url : undefined,
+    // Eingegebene URL bleibt primär (User-Intent); die tatsächlich geladene URL
+    // nach Redirects nur als Zusatzinfo, falls abweichend.
+    url,
+    finalUrl: scraped.finalUrl !== url ? scraped.finalUrl : undefined,
     analyzedAt: new Date().toISOString(),
     summary: aiResult.summary,
     categories: aiResult.categories,

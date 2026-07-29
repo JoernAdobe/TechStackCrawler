@@ -1,5 +1,6 @@
 import puppeteer, { type Browser } from 'puppeteer';
 import { config } from '../config.js';
+import { localeForUrl } from '../utils/locale.js';
 
 export interface ScrapedData {
   url: string;
@@ -87,9 +88,15 @@ export async function scrapePage(
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     );
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
-    });
+    // Locale/Timezone zur eingegebenen TLD passend setzen, damit Seiten nicht auf eine
+    // fremde Länderversion umleiten (z.B. .de → englische/US-Variante).
+    const { acceptLanguage, timezone } = localeForUrl(url);
+    await page.setExtraHTTPHeaders({ 'Accept-Language': acceptLanguage });
+    try {
+      await page.emulateTimezone(timezone);
+    } catch {
+      // Timezone-Emulation ist best-effort; Fehler ignorieren.
+    }
 
     // Collect response headers from the main document
     const responseHeaders: Record<string, string[]> = {};

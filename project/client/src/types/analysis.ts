@@ -22,7 +22,11 @@ export interface CategoryResult {
 
 export interface AnalysisResult {
   id?: number;
+  /** Vom User eingegebene URL (primär). */
   url: string;
+  /** Tatsächlich geladene URL nach Redirects, nur falls abweichend. */
+  finalUrl?: string;
+  /** @deprecated frühere Semantik (Redirect-Quelle); durch `finalUrl` ersetzt. */
   requestedUrl?: string;
   analyzedAt: string;
   summary: string;
