@@ -176,7 +176,9 @@ export default function ResultsTable({ results }: ResultsTableProps) {
               <Tooltip key={tech.name}>
                 <TooltipTrigger asChild>
                   <span
-                    className="tech-badge inline-flex items-center gap-1.5 text-xs bg-ts-surface-light border border-ts-border px-3 py-1.5 rounded-full text-ts-text-secondary hover:text-ts-text-primary hover:border-ts-accent/30 transition-all duration-200 cursor-default"
+                    className={`tech-badge inline-flex items-center gap-1.5 text-xs bg-ts-surface-light border px-3 py-1.5 rounded-full text-ts-text-secondary hover:text-ts-text-primary hover:border-ts-accent/30 transition-all duration-200 cursor-default ${
+                      tech.weak ? 'border-dashed border-ts-border/60 opacity-60' : 'border-ts-border'
+                    }`}
                   >
                     <span className="font-medium text-ts-text-primary">
                       {tech.name}
@@ -185,18 +187,24 @@ export default function ResultsTable({ results }: ResultsTableProps) {
                       <span className="text-ts-accent-light">v{tech.version}</span>
                     )}
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                      tech.confidence >= 90
-                        ? 'bg-ts-success/10 text-ts-success'
-                        : tech.confidence >= 80
-                          ? 'bg-ts-accent/10 text-ts-accent-light'
-                          : 'bg-ts-warning/10 text-ts-warning'
+                      tech.weak
+                        ? 'bg-ts-warning/10 text-ts-warning'
+                        : tech.confidence >= 90
+                          ? 'bg-ts-success/10 text-ts-success'
+                          : tech.confidence >= 80
+                            ? 'bg-ts-accent/10 text-ts-accent-light'
+                            : 'bg-ts-warning/10 text-ts-warning'
                     }`}>
-                      {tech.confidence}%
+                      {tech.weak ? 'unverified' : `${tech.confidence}%`}
                     </span>
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{tech.name}{tech.version ? ` v${tech.version}` : ''} — Confidence: {tech.confidence}%</p>
+                  <p>
+                    {tech.name}{tech.version ? ` v${tech.version}` : ''} — {tech.weak
+                      ? 'Unverified: single weak signal, may be a false positive.'
+                      : `Confidence: ${tech.confidence}%`}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             ))}

@@ -38,23 +38,33 @@ export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void
   // Phase 3: AI Analysis
   sse.sendProgress('analyzing', 'Claude is analyzing the technology stack…');
 
+  // Starke Detektionen sind autoritativ; schwache (nur ein generisches HTML-Signal)
+  // gehen als unverifizierte Hinweise ins Modell, damit sie nicht als Fakt gelten.
+  const strongDetections = detected.filter((d) => !d.weak);
+  const weakDetections = detected.filter((d) => d.weak);
+
   let chunkCount = 0;
-  const aiResult = await analyzeWithAI(scraped, detected, () => {
-    chunkCount++;
-    if (chunkCount % 15 === 0) {
-      const msgs = [
-        'Generating summary…',
-        'Identifying opportunities…',
-        'Structuring results…',
-        'Almost done…',
-      ];
-      const idx = Math.min(
-        Math.floor(chunkCount / 15) % msgs.length,
-        msgs.length - 1,
-      );
-      sse.sendProgress('analyzing', msgs[idx]);
-    }
-  });
+  const aiResult = await analyzeWithAI(
+    scraped,
+    strongDetections,
+    () => {
+      chunkCount++;
+      if (chunkCount % 15 === 0) {
+        const msgs = [
+          'Generating summary…',
+          'Identifying opportunities…',
+          'Structuring results…',
+          'Almost done…',
+        ];
+        const idx = Math.min(
+          Math.floor(chunkCount / 15) % msgs.length,
+          msgs.length - 1,
+        );
+        sse.sendProgress('analyzing', msgs[idx]);
+      }
+    },
+    weakDetections,
+  );
 
   // Phase 4: Compile and send results
   const result: AnalysisResult = {
@@ -68,6 +78,7 @@ export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void
       categories: d.categories,
       confidence: d.confidence,
       version: d.version,
+      weak: d.weak,
     })),
     pageContentExcerpt: scraped.bodyText
       ? scraped.bodyText.substring(0, 12000)

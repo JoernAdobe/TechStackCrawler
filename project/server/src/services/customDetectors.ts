@@ -5,6 +5,8 @@ export interface DetectedTech {
   categories: string[];
   confidence: number;
   version?: string;
+  /** True, wenn die Erkennung nur auf einem einzigen generischen HTML-Signal beruht. */
+  weak?: boolean;
 }
 
 interface DetectionRule {
@@ -423,9 +425,17 @@ const rules: DetectionRule[] = [
     name: 'Adobe Commerce (Magento)',
     categories: ['eCommerce'],
     patterns: {
-      html: [/Magento/, /magento/i, /mage\//, /requirejs-config.*Magento/],
-      scriptSrc: [/mage\//, /static\/version/],
-      cookies: ['PHPSESSID', 'form_key', 'mage-cache', 'mage-messages'],
+      // Distinktive Magento-Marker. Bewusst KEIN bare /mage\// (matcht "image/"),
+      // kein /magento/i (matcht Fremderwähnungen) und keine generischen Cookies.
+      html: [
+        /Magento_[A-Z]/,
+        /data-mage-init/,
+        /x-magento-init/,
+        /requirejs-config[\s\S]*?Magento/,
+        /\/static\/version\d+\//,
+      ],
+      scriptSrc: [/\/mage\//, /\/static\/version\d+\//, /Magento_/],
+      cookies: ['mage-cache-sessid', 'mage-cache-storage', 'mage-messages', 'X-Magento-Vary'],
     },
   },
   {
@@ -4332,6 +4342,8 @@ export function customDetect(scraped: ScrapedData): DetectedTech[] {
       name: rule.name,
       categories: rule.categories,
       confidence,
+      // Nur ein einzelnes HTML-Regex getroffen = schwächste Evidenz (potenziell False Positive).
+      weak: signals.length === 1 && signals[0] === 'html',
     });
   }
 

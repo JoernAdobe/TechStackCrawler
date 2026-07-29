@@ -73,7 +73,7 @@ function computeChartData(results: AnalysisResult) {
 
   const confidenceBuckets = results.rawDetections.reduce(
     (acc, t: DetectedTechnology) => {
-      const bucket = t.confidence >= 90 ? '90%+' : t.confidence >= 80 ? '80-89%' : '70-79%';
+      const bucket = t.confidence >= 90 ? '90%+' : t.confidence >= 80 ? '80-89%' : '< 80%';
       acc[bucket] = (acc[bucket] || 0) + 1;
       return acc;
     },
@@ -82,7 +82,7 @@ function computeChartData(results: AnalysisResult) {
   const confidenceData = [
     { name: '90%+', count: confidenceBuckets['90%+'] || 0, fill: TS_SUCCESS },
     { name: '80-89%', count: confidenceBuckets['80-89%'] || 0, fill: TS_ACCENT },
-    { name: '70-79%', count: confidenceBuckets['70-79%'] || 0, fill: TS_WARNING },
+    { name: '< 80%', count: confidenceBuckets['< 80%'] || 0, fill: TS_WARNING },
   ];
 
   return {

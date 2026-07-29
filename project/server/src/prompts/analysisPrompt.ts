@@ -19,12 +19,17 @@ You always respond with valid JSON matching the exact schema provided. Never inc
 export function buildAnalysisPrompt(
   scraped: ScrapedData,
   detectedTechnologies: DetectedTech[],
+  weakDetections: DetectedTech[] = [],
 ): string {
   const techList = detectedTechnologies
     .map(
       (t) =>
         `- ${t.name} (categories: ${t.categories.join(', ')}${t.version ? `, version: ${t.version}` : ''}, confidence: ${t.confidence}%)`,
     )
+    .join('\n');
+
+  const weakList = weakDetections
+    .map((t) => `- ${t.name} (categories: ${t.categories.join(', ')})`)
     .join('\n');
 
   const truncatedBody = scraped.bodyText.substring(0, 15000);
@@ -37,6 +42,12 @@ export function buildAnalysisPrompt(
 
 ## Detected Technologies (automated scan)
 ${techList || '(No technologies detected by automated scan)'}
+
+## Unverified Signals (LOW confidence – likely false positives)
+These matched only a single generic HTML pattern (e.g. a stray keyword in the page).
+Treat them as weak hints, NOT as facts. Only mention one if the page content clearly
+confirms it; otherwise ignore it entirely.
+${weakList || '(None)'}
 
 ## HTTP Headers (selected)
 ${formatHeaders(scraped.headers)}
@@ -99,7 +110,10 @@ Respond with ONLY a raw JSON object (no code fences, no markdown). The JSON must
 
 Rules:
 - Include ALL 11 categories in the output.
-- EVERY detected technology from the list above MUST appear in at least one category (e.g. Magento → eCommerce, React/Next.js → Other).
+- The "Detected Technologies" list is a set of confidence-weighted HINTS, not ground truth. Include a detected technology only when it is consistent with the page content and headers. If a detection looks implausible for this type of site, prefer "Not Detected" over asserting it.
+- NEVER claim two mutually exclusive platforms in the same category (e.g. two different eCommerce platforms, or two different CMS). Pick the single best-supported one; if unclear, state the uncertainty plainly.
+- Ignore the "Unverified Signals" unless the page content clearly confirms them.
+- When in doubt, it is better to say "Not Detected" than to guess.
 - Be specific about versions when known.
 - Challenges should be realistic for enterprise use cases.
 - Adobe opportunities should be genuinely relevant.

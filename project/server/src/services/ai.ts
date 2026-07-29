@@ -43,6 +43,7 @@ export async function analyzeWithAI(
   scraped: ScrapedData,
   detectedTechnologies: DetectedTech[],
   onChunk?: (text: string) => void,
+  weakDetections: DetectedTech[] = [],
 ): Promise<AIAnalysisResult> {
   const useMock =
     process.env.USE_MOCK_AI === '1' || process.env.BEDROCK_SKIP_SIMULATE === '1';
@@ -53,7 +54,7 @@ export async function analyzeWithAI(
   }
 
   const systemPrompt = buildSystemPrompt();
-  const userPrompt = buildAnalysisPrompt(scraped, detectedTechnologies);
+  const userPrompt = buildAnalysisPrompt(scraped, detectedTechnologies, weakDetections);
 
   /** Ein Streaming-Durchlauf; liefert Text und stop_reason (für Truncation-Erkennung). */
   const runOnce = async (

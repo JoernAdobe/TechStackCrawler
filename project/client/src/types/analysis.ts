@@ -9,6 +9,8 @@ export interface DetectedTechnology {
   confidence: number;
   version?: string;
   website?: string;
+  /** Erkennung beruht nur auf einem einzigen generischen HTML-Signal (unverifiziert). */
+  weak?: boolean;
 }
 
 export interface CategoryResult {
