@@ -1,5 +1,6 @@
 import { config } from '../config.js';
 import { getBedrockClient } from './bedrockClient.js';
+import { parseAIJson } from '../utils/aiJson.js';
 import { buildSystemPrompt, buildAnalysisPrompt } from '../prompts/analysisPrompt.js';
 import type { ScrapedData } from './scraper.js';
 import type { DetectedTech } from './customDetectors.js';
@@ -54,16 +55,18 @@ export async function analyzeWithAI(
   const systemPrompt = buildSystemPrompt();
   const userPrompt = buildAnalysisPrompt(scraped, detectedTechnologies);
 
-  try {
-    const stream = await client.messages.stream({
+  /** Ein Streaming-Durchlauf; liefert Text und stop_reason (für Truncation-Erkennung). */
+  const runOnce = async (
+    maxTokens: number,
+  ): Promise<{ text: string; stopReason: string | null }> => {
+    const stream = client.messages.stream({
       model: config.bedrock.model,
-      max_tokens: 4096,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
 
     let fullResponse = '';
-
     for await (const event of stream) {
       if (
         event.type === 'content_block_delta' &&
@@ -74,16 +77,22 @@ export async function analyzeWithAI(
       }
     }
 
-    // Parse the JSON response -- try raw first, then look for code fences
-    let jsonStr = fullResponse.trim();
+    const finalMessage = await stream.finalMessage();
+    return { text: fullResponse, stopReason: finalMessage.stop_reason };
+  };
 
-    // Strip code fences if the model included them anyway
-    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fenceMatch) {
-      jsonStr = fenceMatch[1].trim();
+  try {
+    let { text, stopReason } = await runOnce(config.bedrock.maxTokens);
+
+    // Bei Truncation einmalig mit doppeltem Budget wiederholen.
+    if (stopReason === 'max_tokens') {
+      console.warn(
+        `Analyse-Antwort bei ${config.bedrock.maxTokens} Tokens abgeschnitten – Retry mit ${config.bedrock.maxTokens * 2}.`,
+      );
+      ({ text, stopReason } = await runOnce(config.bedrock.maxTokens * 2));
     }
 
-    const parsed = JSON.parse(jsonStr) as AIAnalysisResult;
+    const parsed = parseAIJson<AIAnalysisResult>(text);
 
     // Validate basic structure
     if (!parsed.summary || !Array.isArray(parsed.categories)) {

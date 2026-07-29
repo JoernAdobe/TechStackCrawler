@@ -35,6 +35,11 @@ import { config } from './config.js';
 
 const app = express();
 
+// Caddy sitzt als Reverse-Proxy davor und setzt X-Forwarded-For.
+// Genau einen Proxy vertrauen, damit express-rate-limit die Client-IP korrekt
+// erkennt (verhindert ERR_ERL_UNEXPECTED_X_FORWARDED_FOR).
+app.set('trust proxy', 1);
+
 app.use(helmet({
   contentSecurityPolicy: config.nodeEnv === 'production'
     ? {

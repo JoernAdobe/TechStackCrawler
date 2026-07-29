@@ -9,6 +9,8 @@ export const config = {
     /** Custom Endpoint (z.B. https://bedrock-runtime.us-west-2.amazonaws.com) */
     endpoint: process.env.BEDROCK_ENDPOINT || '',
     model: process.env.BEDROCK_MODEL_ID || process.env.BEDROCK_MODEL || 'us.anthropic.claude-sonnet-4-6',
+    /** Max. Output-Tokens pro LLM-Aufruf (11-Kategorien-Analyse braucht Reserve). */
+    maxTokens: parseInt(process.env.BEDROCK_MAX_TOKENS || '8192', 10),
     /** Fallback: AWS IAM Credentials */
     awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',

@@ -81,5 +81,12 @@ function toUserFriendlyError(raw: string): string {
   if (raw.includes('net::')) {
     return 'Netzwerkfehler beim Laden der Website. Bitte URL prüfen und erneut versuchen.';
   }
+  if (
+    raw.includes('JSON') ||
+    raw.includes('Unterminated') ||
+    raw.includes('Unexpected token')
+  ) {
+    return 'Die Analyse konnte nicht vollständig verarbeitet werden. Bitte erneut versuchen.';
+  }
   return raw.length > 120 ? raw.substring(0, 120) + '…' : raw;
 }

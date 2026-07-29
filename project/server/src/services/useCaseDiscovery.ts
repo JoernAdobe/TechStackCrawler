@@ -1,5 +1,6 @@
 import { config } from '../config.js';
 import { getBedrockClient } from './bedrockClient.js';
+import { parseAIJson } from '../utils/aiJson.js';
 import { buildUseCaseDiscoveryPrompt } from '../prompts/useCaseDiscoveryPrompt.js';
 import { fetchSitemapUrls } from './sitemap.js';
 import type { AnalysisResult, UseCaseDiscoveryResult } from '../types/analysis.js';
@@ -24,26 +25,33 @@ export async function discoverUseCases(
   const sitemapUrls = await fetchSitemapUrls(analysis.url);
   const userPrompt = buildUseCaseDiscoveryPrompt(analysis, sitemapUrls);
 
-  try {
+  const runOnce = async (
+    maxTokens: number,
+  ): Promise<{ text: string; stopReason: string | null }> => {
     const response = await client.messages.create({
       model: config.bedrock.model,
-      max_tokens: 4096,
+      max_tokens: maxTokens,
       system: 'You are a senior enterprise martech consultant. You always respond with valid JSON only, no markdown or code fences.',
       messages: [{ role: 'user', content: userPrompt }],
     });
 
     const text =
-      response.content?.[0]?.type === 'text'
-        ? response.content[0].text
-        : '';
+      response.content?.[0]?.type === 'text' ? response.content[0].text : '';
+    return { text, stopReason: response.stop_reason };
+  };
 
-    let jsonStr = text.trim();
-    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fenceMatch) {
-      jsonStr = fenceMatch[1].trim();
+  try {
+    let { text, stopReason } = await runOnce(config.bedrock.maxTokens);
+
+    // Bei Truncation einmalig mit doppeltem Budget wiederholen.
+    if (stopReason === 'max_tokens') {
+      console.warn(
+        `Use-Case-Antwort bei ${config.bedrock.maxTokens} Tokens abgeschnitten – Retry mit ${config.bedrock.maxTokens * 2}.`,
+      );
+      ({ text, stopReason } = await runOnce(config.bedrock.maxTokens * 2));
     }
 
-    const parsed = JSON.parse(jsonStr) as UseCaseDiscoveryResult;
+    const parsed = parseAIJson<UseCaseDiscoveryResult>(text);
 
     if (!parsed.useCases || !Array.isArray(parsed.useCases)) {
       throw new Error('Invalid use case response structure');
