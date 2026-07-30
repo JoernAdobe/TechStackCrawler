@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Lightbulb, CheckCircle2, Sparkles } from 'lucide-react';
+import { Lightbulb, CheckCircle2, Sparkles, TrendingUp } from 'lucide-react';
 import type { AnalysisResult, UseCaseItem } from '../types/analysis';
 
 gsap.registerPlugin(useGSAP);
@@ -216,6 +216,35 @@ export default function UseCaseDiscovery({
   );
 }
 
+/* ── Prioritization metric badges ── */
+type BadgeTone = 'neutral' | 'success' | 'warning' | 'accent';
+
+const toneClasses: Record<BadgeTone, string> = {
+  neutral: 'bg-ts-surface-light text-ts-text-secondary border-ts-border',
+  success: 'bg-ts-success/10 text-ts-success border-ts-success/20',
+  warning: 'bg-ts-warning/10 text-ts-warning border-ts-warning/20',
+  accent: 'bg-ts-accent/10 text-ts-accent-light border-ts-accent/20',
+};
+
+function levelTone(v: 'Low' | 'Medium' | 'High'): BadgeTone {
+  return v === 'High' ? 'success' : v === 'Medium' ? 'accent' : 'neutral';
+}
+
+function effortTone(v: 'Low' | 'Medium' | 'High'): BadgeTone {
+  return v === 'Low' ? 'success' : v === 'Medium' ? 'accent' : 'warning';
+}
+
+function MetricBadge({ label, value, tone }: { label: string; value: string; tone: BadgeTone }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-[10px] font-medium border rounded-md px-2 py-1 ${toneClasses[tone]}`}
+    >
+      <span className="uppercase tracking-wider opacity-70">{label}</span>
+      <span className="font-semibold">{value}</span>
+    </span>
+  );
+}
+
 /* ── Rank accent colors ── */
 const rankAccents: Record<number, { border: string; bg: string; text: string }> = {
   1: { border: 'border-l-amber-400', bg: 'bg-amber-400/10', text: 'text-amber-400' },
@@ -271,7 +300,35 @@ function UseCaseCard({ useCase }: { useCase: UseCaseItem }) {
         <p className="text-xs text-ts-text-primary leading-relaxed">
           {useCase.businessValue}
         </p>
+        {useCase.quantifiedRoi && (
+          <div className="mt-2.5 flex items-center gap-1.5">
+            <TrendingUp className="w-3.5 h-3.5 text-ts-success shrink-0" strokeWidth={2} />
+            <span className="text-xs font-semibold text-ts-success">
+              {useCase.quantifiedRoi}
+            </span>
+          </div>
+        )}
+        {useCase.industryBenchmark && (
+          <p className="mt-1 text-[11px] text-ts-text-secondary italic leading-relaxed">
+            {useCase.industryBenchmark}
+          </p>
+        )}
       </div>
+
+      {/* Prioritization metrics — effort / time-to-value / impact */}
+      {(useCase.effort || useCase.timeToValue || useCase.impact) && (
+        <div className="border-t border-ts-border/40 px-5 py-2.5 flex flex-wrap gap-1.5">
+          {useCase.impact && (
+            <MetricBadge label="Impact" value={useCase.impact} tone={levelTone(useCase.impact)} />
+          )}
+          {useCase.effort && (
+            <MetricBadge label="Effort" value={useCase.effort} tone={effortTone(useCase.effort)} />
+          )}
+          {useCase.timeToValue && (
+            <MetricBadge label="Time to value" value={useCase.timeToValue} tone="neutral" />
+          )}
+        </div>
+      )}
 
       {/* Implementation Hint */}
       {useCase.implementationHint && (

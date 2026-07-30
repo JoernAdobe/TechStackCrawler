@@ -88,6 +88,12 @@ function getMockUseCases(analysis: AnalysisResult): UseCaseDiscoveryResult {
           'Leverage customer behavior data to show relevant product suggestions.',
         adobeProducts: ['Adobe Target', 'Adobe Real-Time CDP'],
         businessValue: 'Increase conversion and average order value.',
+        quantifiedRoi: '+10–20% conversion rate',
+        industryBenchmark:
+          'Retailers using on-site personalization commonly report a 10–30% conversion uplift.',
+        effort: 'Medium',
+        timeToValue: '4–8 weeks',
+        impact: 'High',
         implementationHint: 'Start with Target for on-site personalization.',
       },
       {
@@ -97,6 +103,12 @@ function getMockUseCases(analysis: AnalysisResult): UseCaseDiscoveryResult {
           'Consolidate data from web, email, and ads into a single view.',
         adobeProducts: ['Adobe Real-Time CDP'],
         businessValue: 'Better targeting and personalization across channels.',
+        quantifiedRoi: '+5–15% marketing efficiency',
+        industryBenchmark:
+          'Unified profiles typically cut wasted ad spend by 10–25%.',
+        effort: 'High',
+        timeToValue: '1–2 quarters',
+        impact: 'High',
       },
       {
         rank: 3,
@@ -105,6 +117,12 @@ function getMockUseCases(analysis: AnalysisResult): UseCaseDiscoveryResult {
           'Automate multi-channel campaigns based on customer signals.',
         adobeProducts: ['Adobe Journey Optimizer'],
         businessValue: 'Scale personalized engagement efficiently.',
+        quantifiedRoi: '+8–12% customer retention',
+        industryBenchmark:
+          'Orchestrated journeys often lift engagement rates by 15–25%.',
+        effort: 'Medium',
+        timeToValue: '6–10 weeks',
+        impact: 'Medium',
       },
       {
         rank: 4,

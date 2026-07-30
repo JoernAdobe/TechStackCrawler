@@ -44,6 +44,16 @@ export interface UseCaseItem {
   adobeProducts: string[];
   businessValue: string;
   implementationHint?: string;
+  /** Quantifizierte Wirkung inkl. Zahl/Range (z. B. "+10–20% conversion"). TechCase-Sektion 06. */
+  quantifiedRoi?: string;
+  /** Branchen-Benchmark, der die Zahl stützt (z. B. "Retailers see 15–30% uplift from personalization"). */
+  industryBenchmark?: string;
+  /** Umsetzungsaufwand. */
+  effort?: 'Low' | 'Medium' | 'High';
+  /** Zeit bis zum ersten messbaren Wert (z. B. "4–8 weeks"). */
+  timeToValue?: string;
+  /** Geschäftlicher Impact. */
+  impact?: 'Low' | 'Medium' | 'High';
 }
 
 export interface UseCaseDiscoveryResult {
