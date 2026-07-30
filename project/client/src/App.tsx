@@ -5,6 +5,7 @@ import UrlInput from './components/UrlInput';
 import AnalysisProgress from './components/AnalysisProgress';
 import ResultsTable from './components/ResultsTable';
 import UseCaseDiscovery from './components/UseCaseDiscovery';
+import TechCaseInsights from './components/TechCaseInsights';
 import DownloadButton from './components/DownloadButton';
 import PastAnalyses from './components/PastAnalyses';
 import AnimatedView from './components/AnimatedView';
@@ -199,6 +200,9 @@ function Analyzer() {
             loading={useCaseLoading}
             result={useCaseResult}
             error={useCaseError}
+          />
+          <TechCaseInsights
+            analysis={useCaseResult ? { ...results, useCaseDiscovery: useCaseResult } : results}
           />
           <DownloadButton results={results} onReset={handleReset} />
           <div className="h-20" />

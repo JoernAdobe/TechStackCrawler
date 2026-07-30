@@ -1,5 +1,6 @@
 import { scrapePage } from './scraper.js';
 import { detectTechnologies } from './detector.js';
+import { enrichWithAdditionalPages } from './multiPageCrawl.js';
 import { analyzeWithAI } from './ai.js';
 import { getPool } from '../db/index.js';
 import { saveAnalysis } from '../db/analyses.js';
@@ -26,7 +27,7 @@ export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void
   // Phase 2: Detect technologies
   sse.sendProgress('detecting', 'Scanning for known technologies…');
 
-  const detected = await detectTechnologies(scraped, (msg) =>
+  let detected = await detectTechnologies(scraped, (msg) =>
     sse.sendProgress('detecting', msg),
   );
   sse.sendProgress(
@@ -34,6 +35,28 @@ export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void
     `Found ${detected.length} technologies`,
     { technologies: detected.map((t) => t.name) },
   );
+
+  // Phase 2b: repräsentative Unterseiten mitscannen (best-effort, beschränkt).
+  // Abschaltbar via MULTI_PAGE_CRAWL=0; ein Fehler bricht die Analyse nie.
+  if (process.env.MULTI_PAGE_CRAWL !== '0') {
+    try {
+      const { detected: enriched, pagesCrawled } = await enrichWithAdditionalPages(
+        scraped,
+        detected,
+        (msg) => sse.sendProgress('detecting', msg),
+      );
+      detected = enriched;
+      if (pagesCrawled.length > 0) {
+        sse.sendProgress(
+          'detecting',
+          `Enriched stack across ${pagesCrawled.length} additional page(s) — ${detected.length} technologies total`,
+          { technologies: detected.map((t) => t.name) },
+        );
+      }
+    } catch (err) {
+      console.error('Multi-page enrichment failed (continuing with single page):', err);
+    }
+  }
 
   // Phase 3: AI Analysis
   sse.sendProgress('analyzing', 'Claude is analyzing the technology stack…');

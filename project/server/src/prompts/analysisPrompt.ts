@@ -1,5 +1,6 @@
 import type { ScrapedData } from '../services/scraper.js';
 import type { DetectedTech } from '../services/customDetectors.js';
+import { findDisplacements } from '../data/displacementMap.js';
 
 export function buildSystemPrompt(): string {
   return `You are a senior technology analyst specializing in enterprise marketing technology. You work with Adobe sales teams to identify technology gaps and opportunities.
@@ -33,6 +34,22 @@ export function buildAnalysisPrompt(
     .join('\n');
 
   const truncatedBody = scraped.bodyText.substring(0, 15000);
+
+  // Deterministisches Competitor→Adobe-Mapping als Ground-Truth (TechCase-Sektion 04).
+  const detectedNames = [
+    ...detectedTechnologies.map((t) => t.name),
+    ...weakDetections.map((t) => t.name),
+  ];
+  const displacements = findDisplacements(detectedNames);
+  const displacementBlock =
+    displacements.length > 0
+      ? displacements
+          .map(
+            (d) =>
+              `- ${d.competitor} (${d.category}) → ${d.adobeProduct}: ${d.displacementRationale} Key capability: ${d.keyCapability}`,
+          )
+          .join('\n')
+      : '(No known competitor from the displacement knowledge base was detected — use the Adobe Product Reference above and your judgement.)';
 
   return `Analyze the technology stack of the following website and produce a structured JSON report.
 
@@ -91,6 +108,10 @@ Based on the detected technologies and page content, produce a JSON analysis cov
 - Tag Management: Adobe Experience Platform Launch
 - Journey Orchestration: Adobe Journey Optimizer
 - Content Supply Chain: Adobe GenStudio, Adobe Workfront
+
+## Known Adobe Displacement Mapping (GROUND TRUTH — apply when the competitor is present)
+For any detected competitor listed below, base the category's "adobeOpportunity" on this mapping instead of improvising. Reword it into plain language, but keep the recommended Adobe product and the core rationale. Do NOT invent a different Adobe product for these competitors.
+${displacementBlock}
 
 ## Response Format
 

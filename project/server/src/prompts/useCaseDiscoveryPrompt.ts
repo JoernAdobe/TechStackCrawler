@@ -52,7 +52,12 @@ Generate exactly 10 use cases. For each use case provide:
 2. **description** – 2–3 sentences in plain language: what it is, why it matters for this site. No jargon.
 3. **adobeProducts** – Array of 1–3 Adobe products that best address this use case (e.g. ["Adobe Target", "Adobe Real-Time CDP"])
 4. **businessValue** – One sentence on the business impact in plain language (e.g. "Can increase sales by showing the right products to the right customers")
-5. **implementationHint** (optional) – Brief tip in plain language on how to get started
+5. **quantifiedRoi** – A quantified impact WITH A NUMBER OR RANGE (e.g. "+10–20% conversion rate", "15–25% lower cost per acquisition", "+5–8% average order value"). Base it on realistic industry outcomes; use a conservative range, not a single hero number.
+6. **industryBenchmark** – One short sentence citing a typical industry benchmark that supports the number (e.g. "Retailers using on-site personalization commonly report a 10–30% conversion uplift").
+7. **effort** – Implementation effort: exactly one of "Low", "Medium", or "High".
+8. **timeToValue** – Rough time to first measurable value (e.g. "4–8 weeks", "1–2 quarters").
+9. **impact** – Business impact: exactly one of "Low", "Medium", or "High".
+10. **implementationHint** (optional) – Brief tip in plain language on how to get started
 
 ## Adobe Product Reference
 - CMS: Adobe Experience Manager (AEM)
@@ -81,6 +86,11 @@ Respond with ONLY a raw JSON object (no code fences, no markdown):
       "description": "Detailed description...",
       "adobeProducts": ["Adobe Product 1", "Adobe Product 2"],
       "businessValue": "Impact statement...",
+      "quantifiedRoi": "+10–20% conversion rate",
+      "industryBenchmark": "Retailers using on-site personalization commonly report a 10–30% conversion uplift.",
+      "effort": "Medium",
+      "timeToValue": "4–8 weeks",
+      "impact": "High",
       "implementationHint": "Optional tip..."
     }
   ]
@@ -91,6 +101,9 @@ Rules:
 - Be specific to the site's industry and tech stack – avoid generic use cases.
 - When sitemap URLs are provided, reference concrete page types (e.g. product detail pages, category landing pages) in your use cases.
 - Prioritize use cases where Adobe has a clear advantage over their current stack.
+- ALWAYS include quantifiedRoi, industryBenchmark, effort, timeToValue and impact for every use case.
+- quantifiedRoi MUST contain a number or range. Keep ranges realistic and conservative; never fabricate a precise single figure.
+- effort and impact MUST be exactly one of "Low", "Medium", or "High".
 - All text in English.
 - PLAIN LANGUAGE: Write for non-technical readers. No jargon. Short sentences. Focus on business impact.
 - Output ONLY the JSON object, nothing else.`;
