@@ -35,9 +35,15 @@ const TLD_LOCALE: Record<string, { lang: string; tz: string }> = {
   jp: { lang: 'ja-JP', tz: 'Asia/Tokyo' },
 };
 
-/** Fällt für gTLDs (.com/.net/…) und Unbekanntes hierauf zurück. Per ENV überschreibbar. */
-const DEFAULT_LANG = process.env.SCRAPE_DEFAULT_LOCALE || 'de-DE';
-const DEFAULT_TZ = process.env.SCRAPE_DEFAULT_TIMEZONE || 'Europe/Berlin';
+/**
+ * Fällt für gTLDs (.com/.net/.org/…) und Unbekanntes hierauf zurück. Per ENV
+ * überschreibbar. Default ist en-US: globale gTLD-Seiten sind überwiegend
+ * englisch-first, daher ist Englisch die neutralere Sprach-Negotiation als eine
+ * länderspezifische Sprache. (Hinweis: verhindert NUR sprachbasierte Redirects –
+ * IP-Geo-Redirects globaler Marken lassen sich damit nicht überschreiben.)
+ */
+const DEFAULT_LANG = process.env.SCRAPE_DEFAULT_LOCALE || 'en-US';
+const DEFAULT_TZ = process.env.SCRAPE_DEFAULT_TIMEZONE || 'America/New_York';
 
 export function localeForUrl(rawUrl: string): LocaleInfo {
   let tld = '';
