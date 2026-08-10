@@ -91,6 +91,23 @@ export default function DashboardLogin({ onLogin }: Props) {
           </button>
         </form>
 
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-ts-border" />
+          <span className="text-xs text-ts-text-secondary">or</span>
+          <div className="flex-1 h-px bg-ts-border" />
+        </div>
+
+        {/* Okta SSO — full-page navigation (kein fetch), damit Okta redirecten kann */}
+        <a
+          href="/auth/login"
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-ts-border bg-ts-surface-light text-ts-text-primary font-semibold text-sm hover:bg-ts-surface-hover transition-colors"
+        >
+          <svg className="w-4 h-4 text-adobe-red" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm6.232 0L24 22.624V1.376z" />
+          </svg>
+          Sign in with Adobe
+        </a>
+
         <p className="text-center text-xs text-ts-text-secondary mt-6">
           <a href="#/" className="hover:text-ts-accent transition-colors">
             ← Back to Analyzer

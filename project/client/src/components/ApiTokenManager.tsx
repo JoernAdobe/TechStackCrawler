@@ -35,10 +35,19 @@ export default function ApiTokenManager({ token }: Props) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
 
+  const authHeaders = useCallback(
+    (extra?: Record<string, string>): Record<string, string> | undefined => {
+      const headers = { ...extra };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      return Object.keys(headers).length > 0 ? headers : undefined;
+    },
+    [token],
+  );
+
   const fetchTokens = useCallback(async () => {
     try {
       const res = await fetch('/api/tokens', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders(),
       });
       if (res.ok) {
         setTokens(await res.json());
@@ -48,7 +57,7 @@ export default function ApiTokenManager({ token }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [authHeaders]);
 
   useEffect(() => {
     fetchTokens();
@@ -62,10 +71,7 @@ export default function ApiTokenManager({ token }: Props) {
     try {
       const res = await fetch('/api/tokens', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: newName.trim(),
           expiresAt: newExpiry || null,
@@ -92,7 +98,7 @@ export default function ApiTokenManager({ token }: Props) {
     try {
       await fetch(`/api/tokens/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders(),
       });
       await fetchTokens();
     } catch {

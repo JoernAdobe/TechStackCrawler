@@ -33,6 +33,35 @@ function App() {
   const [dashboardToken, setDashboardToken] = useState<string | null>(
     () => sessionStorage.getItem('dashboard_token'),
   );
+  // Okta-Session-Status (Cookie-basiert, ohne sessionStorage-Token).
+  const [oktaSession, setOktaSession] = useState<
+    { authenticated: boolean; isAdmin: boolean } | null
+  >(null);
+
+  const isDashboard = hash === '#/dashboard';
+
+  // Beim Betreten des Dashboards die Cookie-Session prüfen (Okta-Login liefert
+  // keinen sessionStorage-Token, nur ein httpOnly-Cookie).
+  useEffect(() => {
+    if (!isDashboard) return;
+    let cancelled = false;
+    fetch('/api/dashboard/session')
+      .then((res) => (res.ok ? res.json() : { authenticated: false }))
+      .then((data) => {
+        if (!cancelled) {
+          setOktaSession({
+            authenticated: Boolean(data.authenticated),
+            isAdmin: Boolean(data.isAdmin),
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setOktaSession({ authenticated: false, isAdmin: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDashboard]);
 
   const handleDashboardLogin = useCallback((token: string) => {
     sessionStorage.setItem('dashboard_token', token);
@@ -42,13 +71,48 @@ function App() {
   const handleDashboardLogout = useCallback(() => {
     sessionStorage.removeItem('dashboard_token');
     setDashboardToken(null);
+    setOktaSession({ authenticated: false, isAdmin: false });
+    // Okta-/Server-Session + Cookie serverseitig aufräumen (Fehler ignorieren).
+    fetch('/auth/logout').catch(() => {});
   }, []);
 
-  if (hash === '#/dashboard') {
-    if (!dashboardToken) {
-      return <DashboardLogin onLogin={handleDashboardLogin} />;
+  if (isDashboard) {
+    // Break-Glass-Token vorhanden → direkt ins Dashboard.
+    if (dashboardToken) {
+      return <Dashboard token={dashboardToken} onLogout={handleDashboardLogout} />;
     }
-    return <Dashboard token={dashboardToken} onLogout={handleDashboardLogout} />;
+    // Cookie-Session-Check läuft noch.
+    if (oktaSession === null) {
+      return (
+        <div className="min-h-screen bg-ts-surface flex items-center justify-center">
+          <div className="animate-pulse text-ts-text-secondary">Checking session…</div>
+        </div>
+      );
+    }
+    // Per Okta angemeldet und Admin → Dashboard (ohne sessionStorage-Token).
+    if (oktaSession.authenticated && oktaSession.isAdmin) {
+      return <Dashboard token="" onLogout={handleDashboardLogout} />;
+    }
+    // Angemeldet, aber nicht als Admin freigeschaltet.
+    if (oktaSession.authenticated && !oktaSession.isAdmin) {
+      return (
+        <div className="min-h-screen bg-ts-surface flex items-center justify-center px-4">
+          <div className="w-full max-w-sm text-center">
+            <h1 className="text-xl font-bold text-ts-text-primary mb-2">Kein Zugriff</h1>
+            <p className="text-sm text-ts-text-secondary mb-6">
+              Dein Adobe-Konto ist nicht als Admin für dieses Dashboard freigeschaltet.
+            </p>
+            <button
+              onClick={handleDashboardLogout}
+              className="text-sm text-ts-accent hover:underline"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return <DashboardLogin onLogin={handleDashboardLogin} />;
   }
 
   return (
