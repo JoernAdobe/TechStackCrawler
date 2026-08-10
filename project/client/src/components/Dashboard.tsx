@@ -70,7 +70,7 @@ export default function Dashboard({ token, onLogout }: Props) {
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch('/api/dashboard/stats', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       if (res.status === 401) {
         onLogout();

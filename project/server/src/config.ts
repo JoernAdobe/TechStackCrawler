@@ -38,4 +38,17 @@ export const config = {
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'techstack_crawler',
   },
+  okta: {
+    /** Org-Issuer = Wert im id_token `iss`-Claim (OHNE /oauth2). */
+    issuer: (process.env.OKTA_ISSUER || 'https://adobe.okta.com').replace(/\/$/, ''),
+    clientId: (process.env.OKTA_CLIENT_ID || '').trim(),
+    clientSecret: (process.env.OKTA_CLIENT_SECRET || '').trim(),
+    redirectUri: (process.env.OKTA_REDIRECT_URI || '').trim(),
+    scopes: process.env.OKTA_SCOPES || 'openid profile email',
+  },
+  /** E-Mail-Whitelist für Admin-/Dashboard-Zugriff (case-insensitive). */
+  adminEmails: (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || 'daudert@adobe.com')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
 };

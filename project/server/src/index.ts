@@ -20,6 +20,7 @@ if (secretName && !process.env.BEDROCK_API_KEY) {
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { analyzeSyncRoute } from './routes/analyzeSync.js';
 import { useCaseDiscoveryRoute } from './routes/useCaseDiscovery.js';
@@ -27,6 +28,7 @@ import { ttsRoute } from './routes/tts.js';
 import { isTtsAvailable } from './services/tts.js';
 import { listAnalysesRoute, getAnalysisRoute } from './routes/analyses.js';
 import { dashboardLogin, dashboardStats, requireDashboardAuth } from './routes/dashboard.js';
+import { createAuthRoutes } from './routes/oktaAuth.js';
 import { createTokenRoute, listTokensRoute, revokeTokenRoute } from './routes/apiTokens.js';
 import { createMcpRoutes } from './mcp/server.js';
 import { requireMcpAuth } from './mcp/auth.js';
@@ -62,6 +64,7 @@ app.use(
   }),
 );
 app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 
 const analysisLimiter = rateLimit({
   windowMs: 60_000,
@@ -93,6 +96,9 @@ app.get('/api/analyses', listAnalysesRoute);
 app.get('/api/analyses/:id', getAnalysisRoute);
 app.post('/api/dashboard/login', dashboardLogin);
 app.get('/api/dashboard/stats', requireDashboardAuth, dashboardStats);
+
+// Okta OIDC + Session-Status (/auth/login, /auth/callback, /auth/logout, /api/dashboard/session)
+app.use(createAuthRoutes());
 
 // Token management API (dashboard-auth protected)
 app.post('/api/tokens', requireDashboardAuth, createTokenRoute);

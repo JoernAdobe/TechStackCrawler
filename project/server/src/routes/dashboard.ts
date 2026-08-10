@@ -1,7 +1,8 @@
-import { createHash, randomBytes } from 'crypto';
+import { createHash } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { getPool } from '../db/index.js';
 import type { AnalysisResult } from '../types/analysis.js';
+import { createSession, getSession } from '../services/sessionStore.js';
 
 const DASHBOARD_EMAIL = 'daudert@adobe.com';
 const DASHBOARD_PW_HASH = createHash('sha256').update('counter123').digest('hex');
@@ -9,16 +10,14 @@ const DASHBOARD_PW_HASH = createHash('sha256').update('counter123').digest('hex'
 const MANUAL_HOURS_PER_ANALYSIS = 3.5;
 const CONSULTANT_HOURLY_RATE = 150;
 
-const activeSessions = new Map<string, number>();
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+/** Cookie-Name des Okta-/Session-Cookies (identisch in oktaAuth.ts). */
+const SESSION_COOKIE = 'ts_session';
 
-function pruneExpiredSessions() {
-  const now = Date.now();
-  for (const [token, expiry] of activeSessions) {
-    if (now > expiry) activeSessions.delete(token);
-  }
-}
-
+/**
+ * Break-Glass-Passwort-Login (Notfallzugang, falls Okta nicht verfügbar/konfiguriert).
+ * Legt eine Admin-Session im gemeinsamen Store an und gibt das Token als JSON zurück
+ * (der Client hält es im sessionStorage und schickt es als Bearer-Header).
+ */
 export function dashboardLogin(req: Request, res: Response) {
   const { email, password } = req.body ?? {};
   if (!email || !password) {
@@ -30,23 +29,36 @@ export function dashboardLogin(req: Request, res: Response) {
     res.status(401).json({ error: 'Invalid credentials' });
     return;
   }
-  pruneExpiredSessions();
-  const token = randomBytes(32).toString('hex');
-  activeSessions.set(token, Date.now() + SESSION_TTL_MS);
+  const token = createSession(DASHBOARD_EMAIL, true);
   res.json({ token });
 }
 
+/**
+ * Schützt Dashboard-Routen. Akzeptiert entweder einen Bearer-Token (Break-Glass)
+ * ODER das ts_session-Cookie (Okta-Login). Beide Kandidaten werden gegen den
+ * gemeinsamen Session-Store geprüft — kein Early-Return, damit ein leerer/ungültiger
+ * Bearer nicht ein gültiges Cookie blockiert. Erfordert isAdmin.
+ */
 export function requireDashboardAuth(req: Request, res: Response, next: NextFunction) {
+  const candidates: string[] = [];
+
   const auth = req.headers.authorization;
-  if (!auth?.startsWith('Bearer ')) {
+  if (auth?.startsWith('Bearer ')) {
+    const bearer = auth.slice(7).trim();
+    if (bearer) candidates.push(bearer);
+  }
+
+  const cookieToken = (req as Request & { cookies?: Record<string, string> }).cookies?.[SESSION_COOKIE];
+  if (cookieToken) candidates.push(cookieToken);
+
+  const session = candidates.map((t) => getSession(t)).find((s) => s !== null) ?? null;
+
+  if (!session) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
-  const token = auth.slice(7);
-  const expiry = activeSessions.get(token);
-  if (!expiry || Date.now() > expiry) {
-    activeSessions.delete(token);
-    res.status(401).json({ error: 'Session expired' });
+  if (!session.isAdmin) {
+    res.status(403).json({ error: 'Admin access required' });
     return;
   }
   next();
