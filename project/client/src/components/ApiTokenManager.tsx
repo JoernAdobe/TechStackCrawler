@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type FormEvent } from 'react';
+import { ApiError, apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
 
 interface ApiToken {
   id: number;
@@ -11,6 +12,7 @@ interface ApiToken {
 
 interface Props {
   token: string;
+  onUnauthorized?: () => void;
 }
 
 function formatDate(iso: string | null): string {
@@ -24,7 +26,7 @@ function formatDate(iso: string | null): string {
   });
 }
 
-export default function ApiTokenManager({ token }: Props) {
+export default function ApiTokenManager({ token, onUnauthorized }: Props) {
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -35,32 +37,49 @@ export default function ApiTokenManager({ token }: Props) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
 
-  const authHeaders = useCallback(
-    (extra?: Record<string, string>): Record<string, string> | undefined => {
-      const headers = { ...extra };
-      if (token) headers.Authorization = `Bearer ${token}`;
-      return Object.keys(headers).length > 0 ? headers : undefined;
+  const abortRef = useRef<AbortController | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onUnauthorizedRef = useRef(onUnauthorized);
+  onUnauthorizedRef.current = onUnauthorized;
+
+  /** Bei abgelaufener Session ausloggen statt nur einen Fehler anzuzeigen. */
+  const handleError = useCallback((err: unknown, fallback: string) => {
+    if (err instanceof ApiError && err.status === 401) {
+      onUnauthorizedRef.current?.();
+      return;
+    }
+    setError(toErrorMessage(err, fallback));
+  }, []);
+
+  // Laufende Requests und den Copy-Timer beim Unmount aufräumen.
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     },
-    [token],
+    [],
   );
 
   const fetchTokens = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const res = await fetch('/api/tokens', {
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        setTokens(await res.json());
-      }
-    } catch {
-      // silent
+      setTokens(await apiRequest<ApiToken[]>('/api/tokens', { token, signal: controller.signal }));
+    } catch (err) {
+      if (isAbortError(err)) return;
+      handleError(err, 'Failed to load tokens');
     } finally {
-      setLoading(false);
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setLoading(false);
+      }
     }
-  }, [authHeaders]);
+  }, [token, handleError]);
 
   useEffect(() => {
-    fetchTokens();
+    void fetchTokens();
   }, [fetchTokens]);
 
   async function handleCreate(e: FormEvent) {
@@ -69,26 +88,17 @@ export default function ApiTokenManager({ token }: Props) {
     setCreating(true);
     setError('');
     try {
-      const res = await fetch('/api/tokens', {
+      const data = await apiRequest<{ token: string }>('/api/tokens', {
         method: 'POST',
-        headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          name: newName.trim(),
-          expiresAt: newExpiry || null,
-        }),
+        token,
+        body: { name: newName.trim(), expiresAt: newExpiry || null },
       });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Failed to create token');
-        return;
-      }
-      const data = await res.json();
       setCreatedToken(data.token);
       setNewName('');
       setNewExpiry('');
       await fetchTokens();
-    } catch {
-      setError('Network error');
+    } catch (err) {
+      handleError(err, 'Failed to create token');
     } finally {
       setCreating(false);
     }
@@ -96,24 +106,23 @@ export default function ApiTokenManager({ token }: Props) {
 
   async function handleRevoke(id: number) {
     try {
-      await fetch(`/api/tokens/${id}`, {
-        method: 'DELETE',
-        headers: authHeaders(),
-      });
+      await apiRequest(`/api/tokens/${id}`, { method: 'DELETE', token });
       await fetchTokens();
-    } catch {
-      // silent
+    } catch (err) {
+      handleError(err, 'Failed to revoke token');
     }
   }
 
   function handleCopy() {
-    if (createdToken) {
-      navigator.clipboard.writeText(createdToken);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    if (!createdToken) return;
+    void navigator.clipboard.writeText(createdToken);
+    setCopied(true);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => {
+      setCopied(false);
+      copyTimerRef.current = null;
+    }, 2000);
   }
-
   const activeTokens = tokens.filter((t) => t.isActive);
   const revokedTokens = tokens.filter((t) => !t.isActive);
 

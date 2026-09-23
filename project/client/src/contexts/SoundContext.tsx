@@ -1,10 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  type ReactNode,
-} from 'react';
+import { useState, useCallback, useMemo, type ReactNode } from 'react';
+import { SoundContext } from './sound-context';
 
 const COOKIE_NAME = 'techstack_sound';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 Jahr
@@ -19,14 +14,6 @@ function getSoundFromCookie(): boolean {
 function setSoundCookie(enabled: boolean) {
   document.cookie = `${COOKIE_NAME}=${enabled ? '1' : '0'}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
 }
-
-interface SoundContextValue {
-  soundEnabled: boolean;
-  setSoundEnabled: (enabled: boolean) => void;
-  toggleSound: () => void;
-}
-
-const SoundContext = createContext<SoundContextValue | null>(null);
 
 export function SoundProvider({ children }: { children: ReactNode }) {
   const [soundEnabled, setSoundEnabledState] = useState(getSoundFromCookie);
@@ -44,15 +31,10 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  return (
-    <SoundContext.Provider value={{ soundEnabled, setSoundEnabled, toggleSound }}>
-      {children}
-    </SoundContext.Provider>
+  const value = useMemo(
+    () => ({ soundEnabled, setSoundEnabled, toggleSound }),
+    [soundEnabled, setSoundEnabled, toggleSound],
   );
-}
 
-export function useSound() {
-  const ctx = useContext(SoundContext);
-  if (!ctx) throw new Error('useSound must be used within SoundProvider');
-  return ctx;
+  return <SoundContext.Provider value={value}>{children}</SoundContext.Provider>;
 }

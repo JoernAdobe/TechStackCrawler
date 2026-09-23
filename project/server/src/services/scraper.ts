@@ -1,6 +1,7 @@
 import puppeteer, { type Browser } from 'puppeteer';
 import { config } from '../config.js';
 import { localeForUrl } from '../utils/locale.js';
+import { sanitizeUrlWithDns } from '../utils/sanitize.js';
 
 export interface ScrapedData {
   url: string;
@@ -84,6 +85,30 @@ export async function scrapePage(
   const page = await b.newPage();
 
   try {
+    // SSRF-Schutz: page.goto() folgt Redirects automatisch. Ohne diese Prüfung könnte
+    // ein erlaubter Host auf 127.0.0.1 oder 169.254.169.254 (Cloud-Metadaten) umleiten.
+    // Deshalb wird jede Navigation im Main-Frame erneut gegen die DNS-Auflösung geprüft.
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      void (async () => {
+        try {
+          if (!request.isNavigationRequest() || request.frame() !== page.mainFrame()) {
+            await request.continue();
+            return;
+          }
+          const safe = await sanitizeUrlWithDns(request.url());
+          if (!safe) {
+            console.warn('[scraper] Navigation blockiert (SSRF-Schutz):', request.url());
+            await request.abort('blockedbyclient');
+            return;
+          }
+          await request.continue();
+        } catch {
+          // Request kann bereits abgeschlossen sein – dann ist nichts mehr zu tun.
+        }
+      })();
+    });
+
     onProgress?.('Loading page (this may take 15–30 seconds for large sites)…');
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -118,6 +143,11 @@ export async function scrapePage(
       (s) => `Still loading page… (${s}s)`,
       5000,
     );
+
+    // Zweite Verteidigungslinie: Endzustand nach allen Redirects prüfen.
+    if (!(await sanitizeUrlWithDns(page.url()))) {
+      throw new Error('Blocked unsafe final URL after redirects');
+    }
 
     // Cookie-Banner akzeptieren, damit Marketing-Cookies geladen werden
     const { acceptCookieBanner } = await import('./cookieBanner.js');

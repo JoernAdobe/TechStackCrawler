@@ -1,51 +1,42 @@
 import type { Request, Response } from 'express';
+import { z } from 'zod';
 import { getPool } from '../db/index.js';
 import { updateAnalysis } from '../db/analyses.js';
 import { discoverUseCases } from '../services/useCaseDiscovery.js';
 import type { AnalysisResult } from '../types/analysis.js';
+import { parseBody } from '../utils/http.js';
 
-function isValidAnalysis(body: unknown): body is AnalysisResult {
-  if (!body || typeof body !== 'object') return false;
-  const obj = body as Record<string, unknown>;
-  return (
-    typeof obj.url === 'string' &&
-    obj.url.length > 0 &&
-    typeof obj.summary === 'string' &&
-    typeof obj.analyzedAt === 'string' &&
-    Array.isArray(obj.categories) &&
-    Array.isArray(obj.rawDetections)
-  );
-}
+/**
+ * Minimal-Schema für den eingehenden Analyse-Payload. Bewusst `passthrough`,
+ * da der Client das vollständige Analyse-Objekt zurückschickt und hier nur die
+ * Felder geprüft werden, die `discoverUseCases` tatsächlich benötigt.
+ */
+const analysisSchema = z
+  .object({
+    id: z.number().int().positive().optional(),
+    url: z.string().min(1),
+    summary: z.string(),
+    analyzedAt: z.string(),
+    categories: z.array(z.unknown()),
+    rawDetections: z.array(z.unknown()),
+  })
+  .passthrough();
 
 export async function useCaseDiscoveryRoute(req: Request, res: Response) {
-  if (!isValidAnalysis(req.body)) {
-    res.status(400).json({
-      error: 'Invalid request: analysis result with url, summary, analyzedAt, categories and rawDetections required',
-    });
-    return;
-  }
+  const parsed = parseBody(analysisSchema, req.body);
+  const analysis = parsed as unknown as AnalysisResult;
 
-  const analysis = req.body;
+  const { result, sitemapUrls } = await discoverUseCases(analysis);
 
-  try {
-    const { result, sitemapUrls } = await discoverUseCases(analysis);
-
-    const pool = getPool();
-    if (pool && analysis.id) {
-      try {
-        await updateAnalysis(pool, analysis.id, {
-          useCaseDiscovery: result,
-          sitemapUrls,
-        });
-      } catch (err) {
-        console.error('Failed to save use case discovery to DB:', err);
-      }
+  const pool = getPool();
+  if (pool && analysis.id) {
+    try {
+      await updateAnalysis(pool, analysis.id, { useCaseDiscovery: result, sitemapUrls });
+    } catch (err) {
+      // Persistenz ist hier optional — das Ergebnis geht trotzdem an den Client.
+      console.error('Failed to save use case discovery to DB:', err);
     }
-
-    res.json({ ok: true, result });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Use case discovery error:', message);
-    res.status(500).json({ error: message });
   }
+
+  res.json({ ok: true, result });
 }

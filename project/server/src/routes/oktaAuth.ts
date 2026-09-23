@@ -16,6 +16,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { randomBytes } from 'crypto';
 import { config } from '../config.js';
 import { createSession, getSession, destroySession } from '../services/sessionStore.js';
+import { asyncHandler } from '../utils/http.js';
 
 const SESSION_COOKIE = 'ts_session';
 const DEFAULT_NEXT = '/#/dashboard';
@@ -64,10 +65,21 @@ interface Pending {
 }
 const pendingAuth = new Map<string, Pending>();
 
+/**
+ * Harte Obergrenze gegen Speicherwachstum: Ohne Limit könnte ein Angreifer durch
+ * massenhafte /auth/login-Aufrufe beliebig viele Einträge erzeugen.
+ */
+const MAX_PENDING_AUTH = 1000;
+
 function rememberPending(state: string, nonce: string, next: string): void {
   const now = Date.now();
   for (const [k, v] of pendingAuth) {
     if (v.expiry < now) pendingAuth.delete(k);
+  }
+  while (pendingAuth.size >= MAX_PENDING_AUTH) {
+    const oldest = pendingAuth.keys().next().value;
+    if (oldest === undefined) break;
+    pendingAuth.delete(oldest);
   }
   pendingAuth.set(state, { nonce, next, expiry: now + PENDING_TTL_MS });
 }
@@ -150,7 +162,9 @@ export function createAuthRoutes(): Router {
 
   router.get('/auth/login', (req: Request, res: Response) => {
     if (!oidcConfigured()) {
-      res.status(503).json({ error: 'Okta OIDC not configured (OKTA_CLIENT_ID/SECRET/REDIRECT_URI).' });
+      res
+        .status(503)
+        .json({ error: 'Okta OIDC not configured.', code: 'service_unavailable' });
       return;
     }
     const next = safeNext(typeof req.query.next === 'string' ? req.query.next : undefined);
@@ -168,9 +182,11 @@ export function createAuthRoutes(): Router {
     res.redirect(302, `${authorizeUrl()}?${params.toString()}`);
   });
 
-  router.get('/auth/callback', async (req: Request, res: Response) => {
+  router.get(
+    '/auth/callback',
+    asyncHandler(async (req: Request, res: Response) => {
     if (!oidcConfigured()) {
-      res.status(503).json({ error: 'Okta OIDC not configured.' });
+      res.status(503).json({ error: 'Okta OIDC not configured.', code: 'service_unavailable' });
       return;
     }
 
@@ -234,7 +250,8 @@ export function createAuthRoutes(): Router {
       console.error('Okta callback error:', err);
       res.status(502).send('Okta authentication failed');
     }
-  });
+    }),
+  );
 
   router.get('/auth/logout', (req: Request, res: Response) => {
     const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;

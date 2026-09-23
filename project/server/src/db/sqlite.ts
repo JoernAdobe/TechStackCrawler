@@ -32,6 +32,9 @@ export function createSqliteHandle(dbPath: string): DbHandle {
     },
     async close() {
       database.close();
+      // Singleton zurücksetzen, sonst liefert getSqliteDb() nach einem close()
+      // im selben Prozess eine bereits geschlossene Verbindung zurück.
+      if (db === database) db = null;
     },
   };
 }

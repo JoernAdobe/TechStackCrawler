@@ -1,3 +1,5 @@
+import { sanitizeUrlWithDns } from '../utils/sanitize.js';
+
 const SITEMAP_TIMEOUT_MS = 12_000;
 const MAX_URLS = 200;
 const LOC_REGEX = /<loc>([^<]+)<\/loc>/gi;
@@ -31,23 +33,47 @@ function isSitemapIndex(xml: string): boolean {
   return /<sitemapindex/i.test(xml) || /<sitemap[\s>]/i.test(xml);
 }
 
+/**
+ * Holt eine URL mit Timeout. Das Ziel wird vorher gegen private/reservierte
+ * Adressen geprüft (inkl. DNS-Auflösung) — Sitemap-Ziele stammen teils aus
+ * robots.txt bzw. Sitemap-Indizes der Gegenstelle und sind damit fremdgesteuert.
+ * Redirects werden manuell verfolgt, damit auch jedes Redirect-Ziel geprüft wird.
+ */
 async function fetchWithTimeout(
   url: string,
   timeoutMs: number,
+  maxRedirects = 3,
 ): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (compatible; TechStackAnalyzer/1.0; +https://example.com)',
-      },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    return text;
+    let current = url;
+
+    for (let hop = 0; hop <= maxRedirects; hop++) {
+      const safeUrl = await sanitizeUrlWithDns(current);
+      if (!safeUrl) throw new Error(`Blocked URL: ${current}`);
+
+      const res = await fetch(safeUrl, {
+        signal: controller.signal,
+        redirect: 'manual',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (compatible; TechStackAnalyzer/1.0; +https://example.com)',
+        },
+      });
+
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get('location');
+        if (!location) throw new Error(`HTTP ${res.status} ohne Location-Header`);
+        current = new URL(location, safeUrl).toString();
+        continue;
+      }
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.text();
+    }
+
+    throw new Error('Zu viele Redirects');
   } finally {
     clearTimeout(timeout);
   }

@@ -137,16 +137,18 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
       {/* Feature highlights */}
       <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 fill-mode-both">
         {[
-          { icon: Zap, color: 'ts-accent', title: 'Instant Detection', desc: 'Detection in seconds' },
-          { icon: Sparkles, color: 'ts-accent', title: 'AI-Powered', desc: 'Claude analyzes the stack' },
-          { icon: Lightbulb, color: 'adobe-red', title: 'Adobe Opportunities', desc: 'Use case recommendations' },
-        ].map(({ icon: Icon, color, title, desc }) => (
+          { icon: Zap, iconClass: 'text-ts-accent', bgClass: 'bg-ts-accent/20', title: 'Instant Detection', desc: 'Detection in seconds' },
+          { icon: Sparkles, iconClass: 'text-ts-accent', bgClass: 'bg-ts-accent/20', title: 'AI-Powered', desc: 'Claude analyzes the stack' },
+          { icon: Lightbulb, iconClass: 'text-adobe-red', bgClass: 'bg-adobe-red/20', title: 'Adobe Opportunities', desc: 'Use case recommendations' },
+        ].map(({ icon: Icon, iconClass, bgClass, title, desc }) => (
           <div
             key={title}
             className="group flex items-start gap-3 p-4 rounded-xl bg-ts-surface-card border border-ts-border hover:border-ts-accent/30 transition-all duration-300 hover:shadow-glow-accent"
           >
-            <div className={`shrink-0 w-10 h-10 rounded-lg bg-${color}/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-              <Icon className={`w-5 h-5 text-${color}`} strokeWidth={2} />
+            {/* Klassen bewusst statisch: Tailwind scannt den Quelltext, dynamisch
+                zusammengesetzte Namen wie `bg-${color}` würden nie generiert. */}
+            <div className={`shrink-0 w-10 h-10 rounded-lg ${bgClass} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+              <Icon className={`w-5 h-5 ${iconClass}`} strokeWidth={2} />
             </div>
             <div>
               <h3 className="font-semibold text-ts-text-primary text-sm">{title}</h3>

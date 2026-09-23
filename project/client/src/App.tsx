@@ -16,6 +16,7 @@ import { useAnalysis } from './hooks/useAnalysis';
 import { useUseCaseDiscovery } from './hooks/useUseCaseDiscovery';
 import { useStaticAudio } from './hooks/useStaticAudio';
 import { XCircle, Search, Clock } from 'lucide-react';
+import { apiRequest, isAbortError } from './lib/apiClient';
 import type { AnalysisResult, ProgressEvent, AppState } from './types/analysis';
 
 function useHashRoute(): string {
@@ -44,23 +45,26 @@ function App() {
   // keinen sessionStorage-Token, nur ein httpOnly-Cookie).
   useEffect(() => {
     if (!isDashboard) return;
-    let cancelled = false;
-    fetch('/api/dashboard/session')
-      .then((res) => (res.ok ? res.json() : { authenticated: false }))
+    const controller = new AbortController();
+
+    apiRequest<{ authenticated?: boolean; isAdmin?: boolean }>('/api/dashboard/session', {
+      signal: controller.signal,
+    })
       .then((data) => {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setOktaSession({
             authenticated: Boolean(data.authenticated),
             isAdmin: Boolean(data.isAdmin),
           });
         }
       })
-      .catch(() => {
-        if (!cancelled) setOktaSession({ authenticated: false, isAdmin: false });
+      .catch((err: unknown) => {
+        if (!isAbortError(err) && !controller.signal.aborted) {
+          setOktaSession({ authenticated: false, isAdmin: false });
+        }
       });
-    return () => {
-      cancelled = true;
-    };
+
+    return () => controller.abort();
   }, [isDashboard]);
 
   const handleDashboardLogin = useCallback((token: string) => {
@@ -73,7 +77,7 @@ function App() {
     setDashboardToken(null);
     setOktaSession({ authenticated: false, isAdmin: false });
     // Okta-/Server-Session + Cookie serverseitig aufräumen (Fehler ignorieren).
-    fetch('/auth/logout').catch(() => {});
+    void apiRequest('/auth/logout').catch(() => {});
   }, []);
 
   if (isDashboard) {

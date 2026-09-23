@@ -33,7 +33,10 @@ import { createTokenRoute, listTokensRoute, revokeTokenRoute } from './routes/ap
 import { createMcpRoutes } from './mcp/server.js';
 import { requireMcpAuth } from './mcp/auth.js';
 import { initDb, getPool, closeDb } from './db/index.js';
-import { config } from './config.js';
+import { config, validateConfig } from './config.js';
+import { asyncHandler, errorHandler, notFoundHandler } from './utils/http.js';
+
+validateConfig();
 
 const app = express();
 
@@ -71,7 +74,7 @@ const analysisLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many requests – please try again later.' },
+  message: { error: 'Too many requests – please try again later.', code: 'rate_limited' },
 });
 
 const ttsLimiter = rateLimit({
@@ -79,34 +82,71 @@ const ttsLimiter = rateLimit({
   max: 15,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many TTS requests – please try again later.' },
+  message: { error: 'Too many TTS requests – please try again later.', code: 'rate_limited' },
 });
 
-// DB init (awaited so routes don't hit a missing DB)
+// Break-Glass-Login: eng limitiert, da hier ein Passwort geprüft wird.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many login attempts – please try again later.', code: 'rate_limited' },
+});
+
+// Okta-Flow: begrenzt das Anlegen von pendingAuth-Einträgen. Bewusst großzügig,
+// damit normale Login-/Logout-Zyklen nicht betroffen sind.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many auth attempts – please try again later.', code: 'rate_limited' },
+});
+
+// MCP-Token-Auth: zählt nur FEHLGESCHLAGENE Requests (skipSuccessfulRequests), sonst
+// würden legitime Tool-Calls eines MCP-Clients das Limit sofort ausschöpfen.
+const mcpAuthLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many failed auth attempts – please try again later.', code: 'rate_limited' },
+});
+
+// DB init: In Production ist eine funktionierende DB Pflicht — dann lieber sofort
+// scheitern als mit halb funktionierender App weiterlaufen. Lokal genügt eine Warnung.
 await initDb().catch((err) => {
-  console.error('DB init failed:', err);
+  if (config.nodeEnv === 'production' && !config.database.useSqlite) {
+    console.error('DB init failed:', err);
+    process.exit(1);
+  }
+  console.error('DB init failed (weiter ohne DB):', err);
 });
 
 // API routes
-app.post('/api/analyze-sync', analysisLimiter, analyzeSyncRoute);
-app.post('/api/use-case-discovery', analysisLimiter, useCaseDiscoveryRoute);
+app.post('/api/analyze-sync', analysisLimiter, asyncHandler(analyzeSyncRoute));
+app.post('/api/use-case-discovery', analysisLimiter, asyncHandler(useCaseDiscoveryRoute));
 app.get('/api/tts/status', (_req, res) => res.json({ available: isTtsAvailable() }));
-app.post('/api/tts', ttsLimiter, ttsRoute);
-app.get('/api/analyses', listAnalysesRoute);
-app.get('/api/analyses/:id', getAnalysisRoute);
-app.post('/api/dashboard/login', dashboardLogin);
-app.get('/api/dashboard/stats', requireDashboardAuth, dashboardStats);
+app.post('/api/tts', ttsLimiter, asyncHandler(ttsRoute));
+app.get('/api/analyses', asyncHandler(listAnalysesRoute));
+app.get('/api/analyses/:id', asyncHandler(getAnalysisRoute));
+app.post('/api/dashboard/login', loginLimiter, asyncHandler(dashboardLogin));
+app.get('/api/dashboard/stats', requireDashboardAuth, asyncHandler(dashboardStats));
 
 // Okta OIDC + Session-Status (/auth/login, /auth/callback, /auth/logout, /api/dashboard/session)
+app.use('/auth', authLimiter);
 app.use(createAuthRoutes());
 
 // Token management API (dashboard-auth protected)
-app.post('/api/tokens', requireDashboardAuth, createTokenRoute);
-app.get('/api/tokens', requireDashboardAuth, listTokensRoute);
-app.delete('/api/tokens/:id', requireDashboardAuth, revokeTokenRoute);
+app.post('/api/tokens', requireDashboardAuth, asyncHandler(createTokenRoute));
+app.get('/api/tokens', requireDashboardAuth, asyncHandler(listTokensRoute));
+app.delete('/api/tokens/:id', requireDashboardAuth, asyncHandler(revokeTokenRoute));
 
 // MCP endpoint (bearer-token protected)
-app.use('/mcp', requireMcpAuth, createMcpRoutes());
+app.use('/mcp', mcpAuthLimiter, asyncHandler(requireMcpAuth), createMcpRoutes());
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -126,6 +166,9 @@ app.get('/api/bedrock-status', (_req, res) => {
   });
 });
 
+// Unbekannte API-Pfade: sauberes 404-JSON statt SPA-HTML.
+app.use('/api', notFoundHandler);
+
 // Serve frontend in production
 if (config.nodeEnv === 'production') {
   const clientDist = path.join(__dirname, '../../client/dist');
@@ -134,6 +177,9 @@ if (config.nodeEnv === 'production') {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
+
+// Zentrale Fehlerbehandlung – muss als LETZTES registriert werden.
+app.use(errorHandler);
 
 const host = config.nodeEnv === 'production' ? '0.0.0.0' : '127.0.0.1';
 const server = app.listen(config.port, host, () => {

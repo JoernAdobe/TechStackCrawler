@@ -62,7 +62,14 @@ COPY --from=client-build /app/client/dist client/dist/
 ENV NODE_ENV=production
 ENV PORT=3001
 
+# Nicht als root laufen lassen (node-Image bringt den User "node" bereits mit).
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 WORKDIR /app/server
 CMD ["node", "dist/index.js"]

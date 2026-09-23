@@ -1,5 +1,6 @@
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import type { AnalysisResult, ProgressEvent } from '../types/analysis';
+import { apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
 
 interface UseAnalysisOptions {
   onProgress: (event: ProgressEvent) => void;
@@ -7,9 +8,39 @@ interface UseAnalysisOptions {
   onError: (message: string) => void;
 }
 
+interface AnalyzeResponse {
+  ok: boolean;
+  result?: AnalysisResult;
+  error?: string;
+  progress?: Array<{ phase?: string; message: string } | string>;
+}
+
+/** Abstand zwischen den Platzhalter-Fortschrittsmeldungen. */
+const PLACEHOLDER_INTERVAL_MS = 5000;
+
+const PLACEHOLDER_STEPS: Array<{ phase: ProgressEvent['phase']; message: string }> = [
+  { phase: 'scraping', message: 'Fetching website…' },
+  { phase: 'scraping', message: 'Page is being analyzed…' },
+  { phase: 'detecting', message: 'Detecting technologies…' },
+  { phase: 'analyzing', message: 'AI is analyzing the tech stack…' },
+  { phase: 'analyzing', message: 'Creating summary…' },
+  { phase: 'analyzing', message: 'Almost done…' },
+];
+
 export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOptions) {
   const abortRef = useRef<AbortController | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+
+  // Laufende Analyse beim Unmount abbrechen. abortRef wird vorher geleert, damit
+  // das finally des laufenden Requests kein setState auf der unmounteten Komponente macht.
+  useEffect(
+    () => () => {
+      const controller = abortRef.current;
+      abortRef.current = null;
+      controller?.abort();
+    },
+    [],
+  );
 
   const startAnalysis = useCallback(
     async (url: string) => {
@@ -19,77 +50,50 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
       abortRef.current = controller;
       setIsRunning(true);
 
-      try {
-        onProgress({
-          phase: 'scraping',
-          message: 'Analysis starting…',
-          timestamp: Date.now(),
-        });
+      let intervalId: ReturnType<typeof setInterval> | undefined;
 
-        const placeholders: Array<{ phase: ProgressEvent['phase']; message: string }> = [
-          { phase: 'scraping', message: 'Fetching website…' },
-          { phase: 'scraping', message: 'Page is being analyzed…' },
-          { phase: 'detecting', message: 'Detecting technologies…' },
-          { phase: 'analyzing', message: 'AI is analyzing the tech stack…' },
-          { phase: 'analyzing', message: 'Creating summary…' },
-          { phase: 'analyzing', message: 'Almost done…' },
-        ];
+      try {
+        onProgress({ phase: 'scraping', message: 'Analysis starting…', timestamp: Date.now() });
+
         let placeholderIndex = 0;
-        const intervalId = setInterval(() => {
-          if (placeholderIndex < placeholders.length) {
-            onProgress({
-              ...placeholders[placeholderIndex],
-              timestamp: Date.now(),
-            });
+        intervalId = setInterval(() => {
+          if (placeholderIndex < PLACEHOLDER_STEPS.length) {
+            onProgress({ ...PLACEHOLDER_STEPS[placeholderIndex], timestamp: Date.now() });
             placeholderIndex++;
           }
-        }, 5000);
+        }, PLACEHOLDER_INTERVAL_MS);
 
-        try {
-          const response = await fetch('/api/analyze-sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url }),
-            signal: controller.signal,
+        const data = await apiRequest<AnalyzeResponse>('/api/analyze-sync', {
+          method: 'POST',
+          body: { url },
+          signal: controller.signal,
+        });
+
+        if (data.ok && data.result) {
+          (data.progress ?? []).forEach((p) => {
+            const ev =
+              typeof p === 'string'
+                ? { phase: 'scraping' as const, message: p }
+                : { phase: (p.phase || 'scraping') as ProgressEvent['phase'], message: p.message };
+            onProgress({ ...ev, timestamp: Date.now() });
           });
-
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: 'Request failed' }));
-            throw new Error(err.error || `HTTP ${response.status}`);
-          }
-
-          const data = await response.json();
-          if (data.ok && data.result) {
-            ((data.progress as Array<{ phase?: string; message: string } | string>) || []).forEach(
-              (p) => {
-                const ev =
-                  typeof p === 'string'
-                    ? { phase: 'scraping' as const, message: p }
-                    : {
-                        phase: (p.phase || 'scraping') as ProgressEvent['phase'],
-                        message: p.message,
-                      };
-                onProgress({ ...ev, timestamp: Date.now() });
-              },
-            );
-            onProgress({
-              phase: 'complete',
-              message: 'Done!',
-              timestamp: Date.now(),
-            });
-            onComplete(data.result as AnalysisResult);
-          } else {
-            onError(data.error || 'No result');
-          }
-        } finally {
-          clearInterval(intervalId);
+          onProgress({ phase: 'complete', message: 'Done!', timestamp: Date.now() });
+          onComplete(data.result);
+        } else {
+          onError(data.error || 'No result');
         }
       } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          onError((err as Error).message || 'Analysis failed');
+        if (!isAbortError(err)) {
+          onError(toErrorMessage(err, 'Analysis failed'));
         }
       } finally {
-        setIsRunning(false);
+        clearInterval(intervalId);
+        // Nur aufräumen, wenn dieser Lauf noch der aktuelle ist: Bei Unmount oder
+        // einem nachfolgenden Lauf zeigt abortRef bereits woanders hin.
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+          setIsRunning(false);
+        }
       }
     },
     [onProgress, onComplete, onError],
@@ -97,6 +101,7 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
+    abortRef.current = null;
     setIsRunning(false);
   }, []);
 

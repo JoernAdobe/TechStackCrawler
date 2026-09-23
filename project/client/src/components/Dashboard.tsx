@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   BarChart,
   Bar,
@@ -14,6 +14,7 @@ import {
   Cell,
 } from 'recharts';
 import ApiTokenManager from './ApiTokenManager';
+import { apiRequest, ApiError, isAbortError } from '../lib/apiClient';
 
 interface TechCount {
   name: string;
@@ -67,21 +68,32 @@ export default function Dashboard({ token, onLogout }: Props) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Laufenden Request beim Unmount abbrechen.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   const fetchStats = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const res = await fetch('/api/dashboard/stats', {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      if (res.status === 401) {
+      setStats(
+        await apiRequest<Stats>('/api/dashboard/stats', { token, signal: controller.signal }),
+      );
+    } catch (err) {
+      if (isAbortError(err)) return;
+      if (err instanceof ApiError && err.status === 401) {
         onLogout();
         return;
       }
-      if (!res.ok) throw new Error('Failed to load stats');
-      setStats(await res.json());
-    } catch {
       setError('Could not load dashboard data.');
     } finally {
-      setLoading(false);
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setLoading(false);
+      }
     }
   }, [token, onLogout]);
 
@@ -92,7 +104,7 @@ export default function Dashboard({ token, onLogout }: Props) {
   if (loading) {
     return (
       <div className="min-h-screen bg-ts-surface flex items-center justify-center">
-        <div className="animate-pulse text-ts-text-secondary">Loading dashboard…</div>
+        <div role="status" aria-live="polite" className="animate-pulse text-ts-text-secondary">Loading dashboard…</div>
       </div>
     );
   }
@@ -336,7 +348,7 @@ export default function Dashboard({ token, onLogout }: Props) {
         </section>
 
         {/* API Token Management */}
-        <ApiTokenManager token={token} />
+        <ApiTokenManager token={token} onUnauthorized={onLogout} />
 
         {/* Footer info */}
         <p className="text-center text-xs text-ts-text-secondary pb-4">

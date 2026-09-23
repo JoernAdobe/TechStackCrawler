@@ -3,8 +3,14 @@
  * Kein SSE, keine Streaming-Probleme mit Proxies.
  */
 import type { Request, Response } from 'express';
+import { z } from 'zod';
 import { analyzeUrl, type AnalysisWriter } from '../services/analyzer.js';
-import { sanitizeUrl } from '../utils/sanitize.js';
+import { sanitizeUrlWithDns } from '../utils/sanitize.js';
+import { BadRequestError, parseBody } from '../utils/http.js';
+
+const analyzeSchema = z.object({
+  url: z.string().min(1).max(2048),
+});
 
 interface SyncCollector extends AnalysisWriter {
   getResult(): unknown;
@@ -29,17 +35,11 @@ function createSyncCollector(): SyncCollector {
 }
 
 export async function analyzeSyncRoute(req: Request, res: Response) {
-  const { url } = req.body;
+  const { url } = parseBody(analyzeSchema, req.body);
 
-  if (!url || typeof url !== 'string') {
-    res.status(400).json({ error: 'URL is required' });
-    return;
-  }
-
-  const sanitizedUrl = sanitizeUrl(url);
+  const sanitizedUrl = await sanitizeUrlWithDns(url);
   if (!sanitizedUrl) {
-    res.status(400).json({ error: 'Invalid URL' });
-    return;
+    throw new BadRequestError('Invalid or disallowed URL');
   }
 
   const collector = createSyncCollector();
@@ -50,13 +50,16 @@ export async function analyzeSyncRoute(req: Request, res: Response) {
     if (result) {
       res.json({ ok: true, result, progress: collector.getProgress() });
     } else {
-      res.status(500).json({ error: 'No result', progress: collector.getProgress() });
+      res.status(500).json({ error: 'No result', code: 'no_result', progress: collector.getProgress() });
     }
   } catch (error) {
     const raw = error instanceof Error ? error.message : 'Unknown error';
-    const message = toUserFriendlyError(raw);
     console.error('Analysis error:', raw);
-    res.status(500).json({ error: message, progress: collector.getProgress() });
+    res.status(500).json({
+      error: toUserFriendlyError(raw),
+      code: 'analysis_failed',
+      progress: collector.getProgress(),
+    });
   }
 }
 
@@ -88,5 +91,10 @@ function toUserFriendlyError(raw: string): string {
   ) {
     return 'Die Analyse konnte nicht vollständig verarbeitet werden. Bitte erneut versuchen.';
   }
-  return raw.length > 120 ? raw.substring(0, 120) + '…' : raw;
+  if (raw.includes('Blocked unsafe')) {
+    return 'Die Seite leitet auf eine nicht erlaubte Adresse weiter und wurde blockiert.';
+  }
+  // Kein Durchreichen der Rohmeldung: sie kann Dateipfade, Library-Interna oder
+  // Infrastrukturdetails enthalten. Die Originalmeldung steht im Server-Log.
+  return 'Die Analyse ist fehlgeschlagen. Bitte später erneut versuchen.';
 }

@@ -208,8 +208,10 @@ const LetterGlitch = ({
     window.addEventListener('resize', handleResize);
 
     return () => {
+      clearTimeout(resizeTimeout);
       cancelAnimationFrame(animationRef.current!);
       window.removeEventListener('resize', handleResize);
+      context.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [glitchSpeed, smooth]);

@@ -104,12 +104,15 @@ function AnimatedGauge({ score }: { score: number }) {
 
   useEffect(() => {
     const obj = { val: 0 };
-    gsap.to(obj, {
+    const tween = gsap.to(obj, {
       val: score,
       duration: 1.8,
       ease: 'power3.out',
       onUpdate: () => setAnimatedScore(Math.round(obj.val)),
     });
+    return () => {
+      tween.kill();
+    };
   }, [score]);
 
   const size = 180;

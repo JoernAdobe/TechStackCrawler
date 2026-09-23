@@ -5,13 +5,75 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { analyzeUrl, type AnalysisWriter } from '../services/analyzer.js';
-import { sanitizeUrl } from '../utils/sanitize.js';
+import { sanitizeUrlWithDns } from '../utils/sanitize.js';
 import { getPool } from '../db/index.js';
 import { listAnalyses, getAnalysisById, updateAnalysis } from '../db/analyses.js';
 import { discoverUseCases } from '../services/useCaseDiscovery.js';
 import type { AnalysisResult } from '../types/analysis.js';
+import { asyncHandler } from '../utils/http.js';
 
-const sessions = new Map<string, StreamableHTTPServerTransport>();
+/**
+ * Aktive MCP-Transports. Ohne Aufräumen würde diese Map unbegrenzt wachsen, wenn
+ * Clients ihre Session nicht sauber per DELETE beenden (Verbindungsabbruch, Crash).
+ * Deshalb: Zeitstempel pro Session, periodischer Prune und eine harte Obergrenze.
+ */
+const SESSION_TTL_MS = 30 * 60 * 1000;
+const SESSION_PRUNE_INTERVAL_MS = 5 * 60 * 1000;
+const MAX_SESSIONS = 500;
+
+interface McpSession {
+  transport: StreamableHTTPServerTransport;
+  lastSeen: number;
+}
+
+const sessions = new Map<string, McpSession>();
+
+function touchSession(sessionId: string): StreamableHTTPServerTransport | null {
+  const session = sessions.get(sessionId);
+  if (!session) return null;
+  if (Date.now() - session.lastSeen > SESSION_TTL_MS) {
+    void closeSession(sessionId);
+    return null;
+  }
+  // Neu einfügen, damit die Map-Reihenfolge echte LRU-Semantik hat. Sonst würde die
+  // Verdrängung bei MAX_SESSIONS aktive Nutzer treffen, die nur früh verbunden haben.
+  sessions.delete(sessionId);
+  session.lastSeen = Date.now();
+  sessions.set(sessionId, session);
+  return session.transport;
+}
+
+async function closeSession(sessionId: string): Promise<void> {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  sessions.delete(sessionId);
+  try {
+    await session.transport.close();
+  } catch (err) {
+    console.warn(`[mcp] Fehler beim Schließen von Session ${sessionId}:`, err);
+  }
+}
+
+/** Verdrängt die am längsten inaktiven Sessions, bis das Limit wieder eingehalten wird. */
+function enforceSessionLimit(): void {
+  while (sessions.size > MAX_SESSIONS) {
+    const oldest = sessions.keys().next().value;
+    if (oldest === undefined) break;
+    void closeSession(oldest);
+  }
+}
+
+function pruneSessions(): void {
+  const now = Date.now();
+  for (const [id, session] of sessions) {
+    if (now - session.lastSeen > SESSION_TTL_MS) void closeSession(id);
+  }
+  enforceSessionLimit();
+}
+
+const pruneTimer = setInterval(pruneSessions, SESSION_PRUNE_INTERVAL_MS);
+// Der Timer darf den Prozess nicht am Beenden hindern.
+pruneTimer.unref?.();
 
 function createMcpServer(): McpServer {
   const server = new McpServer(
@@ -24,7 +86,7 @@ function createMcpServer(): McpServer {
     'Analyze a website\'s technology stack using Puppeteer scraping and Claude AI. Returns detected technologies, Adobe opportunities, and a summary.',
     { url: z.string().describe('The URL of the website to analyze') },
     async ({ url }) => {
-      const sanitized = sanitizeUrl(url);
+      const sanitized = await sanitizeUrlWithDns(url);
       if (!sanitized) {
         return { content: [{ type: 'text', text: 'Invalid or disallowed URL' }], isError: true };
       }
@@ -143,30 +205,34 @@ function createMcpServer(): McpServer {
 export function createMcpRoutes(): Router {
   const router = Router();
 
-  router.post('/', async (req: Request, res: Response) => {
+  router.post(
+    '/',
+    asyncHandler(async (req: Request, res: Response) => {
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
-    if (sessionId && sessions.has(sessionId)) {
-      const transport = sessions.get(sessionId)!;
+    if (sessionId) {
+      const transport = touchSession(sessionId);
+      if (!transport) {
+        res.status(400).json({ error: 'Invalid session ID', code: 'invalid_session' });
+        return;
+      }
       await transport.handleRequest(req, res, req.body);
       return;
     }
 
-    if (sessionId && !sessions.has(sessionId)) {
-      res.status(400).json({ error: 'Invalid session ID' });
-      return;
-    }
-
     if (isInitializeRequest(req.body)) {
+      pruneSessions();
+
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {
-          sessions.set(id, transport);
+          sessions.set(id, { transport, lastSeen: Date.now() });
+          enforceSessionLimit();
         },
       });
 
       transport.onclose = () => {
-        const sid = [...sessions.entries()].find(([, t]) => t === transport)?.[0];
+        const sid = [...sessions.entries()].find(([, s]) => s.transport === transport)?.[0];
         if (sid) sessions.delete(sid);
       };
 
@@ -176,30 +242,38 @@ export function createMcpRoutes(): Router {
       return;
     }
 
-    res.status(400).json({ error: 'Bad request: no session ID and not an initialize request' });
-  });
+    res.status(400).json({
+      error: 'Bad request: no session ID and not an initialize request',
+      code: 'bad_request',
+    });
+    }),
+  );
 
-  router.get('/', async (req: Request, res: Response) => {
-    const sessionId = req.headers['mcp-session-id'] as string | undefined;
-    if (!sessionId || !sessions.has(sessionId)) {
-      res.status(400).json({ error: 'Invalid or missing session ID' });
-      return;
-    }
-    const transport = sessions.get(sessionId)!;
-    await transport.handleRequest(req, res);
-  });
+  router.get(
+    '/',
+    asyncHandler(async (req: Request, res: Response) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      const transport = sessionId ? touchSession(sessionId) : null;
+      if (!transport) {
+        res.status(400).json({ error: 'Invalid or missing session ID', code: 'invalid_session' });
+        return;
+      }
+      await transport.handleRequest(req, res);
+    }),
+  );
 
-  router.delete('/', async (req: Request, res: Response) => {
-    const sessionId = req.headers['mcp-session-id'] as string | undefined;
-    if (!sessionId || !sessions.has(sessionId)) {
-      res.status(400).json({ error: 'Invalid or missing session ID' });
-      return;
-    }
-    const transport = sessions.get(sessionId)!;
-    await transport.close();
-    sessions.delete(sessionId);
-    res.status(200).json({ ok: true });
-  });
+  router.delete(
+    '/',
+    asyncHandler(async (req: Request, res: Response) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      if (!sessionId || !sessions.has(sessionId)) {
+        res.status(400).json({ error: 'Invalid or missing session ID', code: 'invalid_session' });
+        return;
+      }
+      await closeSession(sessionId);
+      res.status(200).json({ ok: true });
+    }),
+  );
 
   return router;
 }

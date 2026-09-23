@@ -3,10 +3,11 @@ services:
     image: mariadb:11
     container_name: ${CONTAINER_PREFIX:-techstack-}mariadb
     environment:
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-techstack_root}
+      # Keine Default-Passwörter: fehlt eine Variable, bricht Compose bewusst ab.
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD muss gesetzt sein}
       - MYSQL_DATABASE=${DB_NAME:-techstack_crawler}
       - MYSQL_USER=${DB_USER:-techstack}
-      - MYSQL_PASSWORD=${DB_PASSWORD:-techstack}
+      - MYSQL_PASSWORD=${DB_PASSWORD:?DB_PASSWORD muss gesetzt sein}
     volumes:
       - techstack_mariadb_data:/var/lib/mysql
     restart: unless-stopped
@@ -54,12 +55,15 @@ services:
       - OKTA_ISSUER=${OKTA_ISSUER:-https://adobe.okta.com}
       - OKTA_SCOPES=${OKTA_SCOPES:-openid profile email}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-daudert@adobe.com}
+      # Break-Glass-Login: nur aktiv, wenn beide Werte gesetzt sind.
+      - DASHBOARD_EMAIL=${DASHBOARD_EMAIL:-}
+      - DASHBOARD_PASSWORD_HASH=${DASHBOARD_PASSWORD_HASH:-}
       - NODE_ENV=production
       - PORT=3001
       - DB_HOST=mariadb
       - DB_PORT=3306
       - DB_USER=${DB_USER:-techstack}
-      - DB_PASSWORD=${DB_PASSWORD:-techstack}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD muss gesetzt sein}
       - DB_NAME=${DB_NAME:-techstack_crawler}
     restart: unless-stopped
 

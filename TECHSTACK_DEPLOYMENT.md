@@ -37,6 +37,9 @@ make deploy
 - **MariaDB** speichert alle Analysen und TTS-Audio-Cache
 - **Backup** vor jedem Deploy: `/opt/techstack-backups/techstack_YYYYMMDD_HHMMSS.sql`
 - `.env` auf dem Server muss enthalten: `DB_PASSWORD`, `DB_ROOT_PASSWORD`
+  (beide sind **Pflicht** – `docker compose up` bricht ohne sie ab, damit kein
+  Standardpasswort in Betrieb geht). Optional für den Notfallzugang ohne Okta:
+  `DASHBOARD_EMAIL` und `DASHBOARD_PASSWORD_HASH` (SHA-256-Hex, siehe `.env.example`).
 
 ## Unterschied zu RFP Tool
 

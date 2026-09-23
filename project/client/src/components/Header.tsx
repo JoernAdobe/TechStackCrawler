@@ -1,28 +1,24 @@
-import { useEffect, useState } from 'react';
-import { useSound } from '../contexts/SoundContext';
+import { useSyncExternalStore } from 'react';
+import { useSound } from '../contexts/sound-context';
 
 const BANNER_HEIGHT = 34;
 
+function subscribeToBanner(onStoreChange: () => void) {
+  if (typeof document === 'undefined') return () => {};
+  const observer = new MutationObserver(onStoreChange);
+  observer.observe(document.body, { childList: true, subtree: true });
+  return () => observer.disconnect();
+}
+
+function getBannerOffset() {
+  return typeof document !== 'undefined' && document.getElementById('adobe-hub-banner')
+    ? BANNER_HEIGHT
+    : 0;
+}
+
 export default function Header() {
   const { soundEnabled, toggleSound } = useSound();
-  const [bannerOffset, setBannerOffset] = useState(() =>
-    typeof document !== 'undefined' && document.getElementById('adobe-hub-banner') ? BANNER_HEIGHT : 0,
-  );
-
-  useEffect(() => {
-    if (document.getElementById('adobe-hub-banner')) {
-      setBannerOffset(BANNER_HEIGHT);
-      return;
-    }
-    const observer = new MutationObserver(() => {
-      if (document.getElementById('adobe-hub-banner')) {
-        setBannerOffset(BANNER_HEIGHT);
-        observer.disconnect();
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, []);
+  const bannerOffset = useSyncExternalStore(subscribeToBanner, getBannerOffset, () => 0);
 
   return (
     <header

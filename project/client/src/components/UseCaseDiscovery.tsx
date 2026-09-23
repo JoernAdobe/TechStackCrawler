@@ -25,10 +25,13 @@ interface UseCaseDiscoveryProps {
 function useElapsedTime(isActive: boolean) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    if (!isActive) { setElapsed(0); return; }
+    if (!isActive) return;
     const start = Date.now();
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      setElapsed(0);
+    };
   }, [isActive]);
   return elapsed;
 }

@@ -51,4 +51,74 @@ export const config = {
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
+  dashboard: {
+    /**
+     * Break-Glass-Notfallzugang, falls Okta nicht verfügbar/konfiguriert ist.
+     * Bewusst OHNE Default: Ist DASHBOARD_PASSWORD_HASH nicht gesetzt, bleibt der
+     * Login deaktiviert — so existiert nie ein aus dem Quellcode ableitbares Passwort.
+     * Hash erzeugen:
+     *   node -e "console.log(require('crypto').createHash('sha256').update('<pw>').digest('hex'))"
+     */
+    breakGlassEmail: (process.env.DASHBOARD_EMAIL || '').trim().toLowerCase(),
+    breakGlassPasswordHash: (process.env.DASHBOARD_PASSWORD_HASH || '').trim().toLowerCase(),
+  },
 };
+
+/**
+ * Prüft die Konfiguration beim Start, damit Fehlkonfiguration sofort auffällt
+ * statt erst beim ersten Request. Wirft nur bei unbrauchbaren Werten; fehlende
+ * optionale Integrationen werden lediglich gewarnt, damit lokale Setups starten.
+ */
+export function validateConfig(): void {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const numbers: Array<[string, number]> = [
+    ['PORT', config.port],
+    ['BEDROCK_MAX_TOKENS', config.bedrock.maxTokens],
+    ['SCRAPE_TIMEOUT', config.puppeteer.timeout],
+  ];
+  // DB_PORT ist nur relevant, wenn tatsächlich MariaDB genutzt wird.
+  if (!config.database.useSqlite) {
+    numbers.push(['DB_PORT', config.database.port]);
+  }
+  for (const [name, value] of numbers) {
+    if (!Number.isFinite(value) || value <= 0) {
+      errors.push(`${name} ist keine gültige positive Zahl (aktuell: ${String(value)})`);
+    }
+  }
+
+  if (!config.bedrock.apiKey && !(config.bedrock.awsAccessKeyId && config.bedrock.awsSecretAccessKey)) {
+    warnings.push(
+      'Kein Bedrock-Zugang konfiguriert (BEDROCK_API_KEY oder AWS-IAM-Credentials) – AI-Analysen schlagen fehl.',
+    );
+  }
+  if (config.nodeEnv === 'production' && !config.database.useSqlite && !config.database.password) {
+    errors.push('DB_PASSWORD fehlt, obwohl in Production MariaDB genutzt wird.');
+  }
+  if (!config.okta.clientId || !config.okta.clientSecret || !config.okta.redirectUri) {
+    warnings.push(
+      'Okta-SSO unvollständig konfiguriert (OKTA_CLIENT_ID/SECRET/REDIRECT_URI) – SSO-Login deaktiviert.',
+    );
+  }
+
+  const { breakGlassEmail, breakGlassPasswordHash } = config.dashboard;
+  if (breakGlassEmail && !breakGlassPasswordHash) {
+    warnings.push('DASHBOARD_EMAIL gesetzt, aber DASHBOARD_PASSWORD_HASH fehlt – Break-Glass-Login bleibt deaktiviert.');
+  }
+  if (breakGlassPasswordHash && !/^[0-9a-f]{64}$/.test(breakGlassPasswordHash)) {
+    // In Production ist eine fehlerhafte Auth-Konfiguration ein harter Fehler. Lokal
+    // soll ein vertippter optionaler Hash den Start nicht verhindern.
+    const msg = 'DASHBOARD_PASSWORD_HASH ist kein gültiger SHA-256-Hex-Hash (64 Hex-Zeichen).';
+    if (config.nodeEnv === 'production') {
+      errors.push(msg);
+    } else {
+      warnings.push(`${msg} Break-Glass-Login bleibt deaktiviert.`);
+    }
+  }
+
+  for (const w of warnings) console.warn(`[config] ${w}`);
+  if (errors.length > 0) {
+    throw new Error(`Ungültige Konfiguration:\n - ${errors.join('\n - ')}`);
+  }
+}

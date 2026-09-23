@@ -12,7 +12,13 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="$BACKUP_DIR/techstack_${TIMESTAMP}.sql"
 
 if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-  docker exec "$CONTAINER_NAME" mariadb-dump -u root -p"${DB_ROOT_PASSWORD:-techstack_root}" \
+  # Kein Default-Passwort: sonst erzeugt ein fehlerhafter Lauf eine leere
+  # Backup-Datei, die ein echtes Backup überschreiben könnte.
+  if [ -z "${DB_ROOT_PASSWORD:-}" ]; then
+    echo "DB_ROOT_PASSWORD nicht gesetzt – Backup abgebrochen" >&2
+    exit 1
+  fi
+  docker exec "$CONTAINER_NAME" mariadb-dump -u root -p"${DB_ROOT_PASSWORD}" \
     --single-transaction --routines --triggers "$DB_NAME" > "$BACKUP_FILE"
   echo "Backup erstellt: $BACKUP_FILE"
 else

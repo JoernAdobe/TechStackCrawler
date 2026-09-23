@@ -19,6 +19,13 @@ export default function Footer() {
         </span>
         <span className="block text-xs text-ts-text-secondary/60">
           Build: {buildLabel}
+          {' · '}
+          <a
+            href="#/dashboard"
+            className="text-ts-text-secondary/60 hover:text-ts-accent transition-colors duration-200"
+          >
+            Admin Login
+          </a>
         </span>
       </div>
     </footer>

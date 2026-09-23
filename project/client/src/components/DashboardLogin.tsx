@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { apiRequest, toErrorMessage } from '../lib/apiClient';
 
 interface Props {
   onLogin: (token: string) => void;
@@ -10,26 +11,29 @@ export default function DashboardLogin({ onLogin }: Props) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // onLogin unmountet diese Komponente – danach darf kein State mehr gesetzt werden.
+  const mountedRef = useRef(true);
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('/api/dashboard/login', {
+      const data = await apiRequest<{ token: string }>('/api/dashboard/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: { email, password },
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Login failed');
-        return;
-      }
       onLogin(data.token);
-    } catch {
-      setError('Network error');
+    } catch (err) {
+      if (mountedRef.current) setError(toErrorMessage(err, 'Login failed'));
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }
 
@@ -79,7 +83,7 @@ export default function DashboardLogin({ onLogin }: Props) {
           </div>
 
           {error && (
-            <p className="text-adobe-red text-sm text-center">{error}</p>
+            <p role="alert" className="text-adobe-red text-sm text-center">{error}</p>
           )}
 
           <button

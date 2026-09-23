@@ -18,6 +18,8 @@ interface Session {
 }
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+/** Obergrenze, damit der Store auch bei einem Login-Ansturm nicht unbegrenzt wächst. */
+const MAX_SESSIONS = 10_000;
 
 const activeSessions = new Map<string, Session>();
 
@@ -25,6 +27,18 @@ function pruneExpired(): void {
   const now = Date.now();
   for (const [token, session] of activeSessions) {
     if (now > session.expiry) activeSessions.delete(token);
+  }
+
+  // Notbremse: Sind nach dem Prune immer noch zu viele Sessions aktiv, werden die
+  // ältesten verworfen (Map bewahrt Einfügereihenfolge).
+  if (activeSessions.size >= MAX_SESSIONS) {
+    const excess = activeSessions.size - MAX_SESSIONS + 1;
+    let removed = 0;
+    for (const token of activeSessions.keys()) {
+      activeSessions.delete(token);
+      if (++removed >= excess) break;
+    }
+    console.warn(`[sessionStore] Limit von ${MAX_SESSIONS} erreicht – ${removed} älteste Sessions verworfen.`);
   }
 }
 

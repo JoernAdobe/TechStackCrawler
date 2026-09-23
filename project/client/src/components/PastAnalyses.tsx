@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { RefreshCw, ChevronRight, Clock } from 'lucide-react';
+import { RefreshCw, ChevronRight, Clock, Globe } from 'lucide-react';
 import type { AnalysisResult } from '../types/analysis';
 import ResultsTable from './ResultsTable';
 import UseCaseDiscovery from './UseCaseDiscovery';
 import DownloadButton from './DownloadButton';
 import SpotlightCard from './SpotlightCard';
 import { useUseCaseDiscovery } from '../hooks/useUseCaseDiscovery';
+import { apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
 
 gsap.registerPlugin(useGSAP);
 
@@ -32,6 +33,35 @@ function getDomain(url: string): string {
 function getFaviconUrl(url: string): string {
   const domain = getDomain(url);
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+}
+
+/**
+ * Favicon mit Platzhalter, falls das Icon nicht geladen werden kann.
+ * Der Fallback läuft bewusst über React-State statt über direkte
+ * DOM-Manipulation (vorher: `parentElement.innerHTML = ...`).
+ */
+function Favicon({ url }: { url: string }) {
+  // Statt eines Reset-Effects wird die fehlgeschlagene URL gespeichert: Wechselt `url`,
+  // greift der Fallback automatisch nicht mehr.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const failed = failedUrl === url;
+
+  if (failed) {
+    return (
+      <span className="flex items-center justify-center w-7 h-7" aria-hidden="true">
+        <Globe className="w-6 h-6 text-ts-text-secondary" strokeWidth={1.5} />
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={getFaviconUrl(url)}
+      alt=""
+      className="w-7 h-7"
+      onError={() => { setFailedUrl(url); }}
+    />
+  );
 }
 
 function formatDate(dateStr: string): string {
@@ -63,24 +93,35 @@ export default function PastAnalyses({
     error: useCaseError,
   } = useUseCaseDiscovery();
 
-  const fetchAnalyses = useCallback(() => {
-    setLoading(true);
-    setError('');
-    fetch('/api/analyses', { cache: 'no-store' })
-      .then(async (r) => {
-        const data = await r.json().catch(() => ({}));
-        if (r.ok) return data;
-        throw new Error(data.detail || data.error || 'Failed');
-      })
-      .then(setSummaries)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load analyses.'))
-      .finally(() => setLoading(false));
-  }, []);
+  const abortRef = useRef<AbortController | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const reloadAnalyses = useCallback(() => setReloadKey((k) => k + 1), []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional data fetch on mount/refresh
-    fetchAnalyses();
-  }, [fetchAnalyses, refreshTrigger]);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- gewollter Data-Fetch bei Mount/Refresh
+    setLoading(true);
+    setError('');
+
+    apiRequest<AnalysisSummary[]>('/api/analyses', {
+      signal: controller.signal,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+      .then((data) => {
+        if (!controller.signal.aborted) setSummaries(data);
+      })
+      .catch((e: unknown) => {
+        if (!isAbortError(e) && !controller.signal.aborted) {
+          setError(toErrorMessage(e, 'Failed to load analyses.'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [refreshTrigger, reloadKey]);
 
   useGSAP(
     () => {
@@ -96,10 +137,17 @@ export default function PastAnalyses({
   );
 
   const loadAnalysis = (id: number) => {
-    fetch(`/api/analyses/${id}`, { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then(setSelected)
-      .catch(() => setError('Failed to load analysis.'));
+    const controller = abortRef.current;
+    apiRequest<AnalysisResult>(`/api/analyses/${id}`, {
+      signal: controller?.signal,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+      .then((data) => {
+        if (!controller?.signal.aborted) setSelected(data);
+      })
+      .catch((e: unknown) => {
+        if (!isAbortError(e) && !controller?.signal.aborted) setError('Failed to load analysis.');
+      });
   };
 
   // Limit to last 3 analyses
@@ -108,7 +156,7 @@ export default function PastAnalyses({
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <div className="flex items-center gap-3 text-ts-text-secondary">
+        <div role="status" aria-live="polite" className="flex items-center gap-3 text-ts-text-secondary">
           <div className="w-5 h-5 border-2 border-ts-accent/30 border-t-ts-accent rounded-full animate-spin" />
           Loading analyses...
         </div>
@@ -118,7 +166,7 @@ export default function PastAnalyses({
 
   if (error && summaries.length === 0) {
     return (
-      <div className="text-center py-16 text-ts-text-secondary text-sm">
+      <div role="alert" className="text-center py-16 text-ts-text-secondary text-sm">
         {error}
       </div>
     );
@@ -176,7 +224,7 @@ export default function PastAnalyses({
           Showing the {recentSummaries.length} most recent {recentSummaries.length === 1 ? 'analysis' : 'analyses'}
         </p>
         <button
-          onClick={fetchAnalyses}
+          onClick={reloadAnalyses}
           disabled={loading}
           className="flex items-center gap-1.5 text-sm text-ts-text-secondary hover:text-ts-text-primary font-medium px-3 py-1.5 rounded-lg hover:bg-ts-surface-card border border-transparent hover:border-ts-border transition-all"
           title="Refresh list"
@@ -199,15 +247,7 @@ export default function PastAnalyses({
             >
               <div className="flex items-center gap-4">
                 <div className="shrink-0 w-12 h-12 rounded-xl bg-ts-surface-light border border-ts-border flex items-center justify-center overflow-hidden">
-                  <img
-                    src={getFaviconUrl(s.url)}
-                    alt=""
-                    className="w-7 h-7"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.innerHTML = '<span class="flex items-center justify-center w-7 h-7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 text-ts-text-secondary"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>';
-                    }}
-                  />
+                  <Favicon url={s.url} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="block text-lg font-bold text-ts-text-primary truncate">

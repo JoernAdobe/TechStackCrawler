@@ -1,11 +1,11 @@
-import { createHash } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
+import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
 import { getPool } from '../db/index.js';
 import type { AnalysisResult } from '../types/analysis.js';
 import { createSession, getSession } from '../services/sessionStore.js';
-
-const DASHBOARD_EMAIL = 'daudert@adobe.com';
-const DASHBOARD_PW_HASH = createHash('sha256').update('counter123').digest('hex');
+import { config } from '../config.js';
+import { ServiceUnavailableError, UnauthorizedError, ForbiddenError, DbUnavailableError, parseBody } from '../utils/http.js';
 
 const MANUAL_HOURS_PER_ANALYSIS = 3.5;
 const CONSULTANT_HOURLY_RATE = 150;
@@ -13,23 +13,45 @@ const CONSULTANT_HOURLY_RATE = 150;
 /** Cookie-Name des Okta-/Session-Cookies (identisch in oktaAuth.ts). */
 const SESSION_COOKIE = 'ts_session';
 
+const loginSchema = z.object({
+  email: z.string().min(1).max(320),
+  password: z.string().min(1).max(1024),
+});
+
 /**
  * Break-Glass-Passwort-Login (Notfallzugang, falls Okta nicht verfügbar/konfiguriert).
- * Legt eine Admin-Session im gemeinsamen Store an und gibt das Token als JSON zurück
- * (der Client hält es im sessionStorage und schickt es als Bearer-Header).
+ *
+ * Credentials kommen ausschließlich aus der Umgebung (DASHBOARD_EMAIL +
+ * DASHBOARD_PASSWORD_HASH). Ohne beide Werte ist der Endpunkt deaktiviert — es gibt
+ * bewusst keinen Default, damit nie ein aus dem Quellcode ableitbares Passwort existiert.
+ * Der Hash-Vergleich läuft konstantzeitig (timingSafeEqual).
  */
 export function dashboardLogin(req: Request, res: Response) {
-  const { email, password } = req.body ?? {};
-  if (!email || !password) {
-    res.status(400).json({ error: 'Email and password required' });
-    return;
+  const { breakGlassEmail, breakGlassPasswordHash } = config.dashboard;
+  if (!breakGlassEmail || !breakGlassPasswordHash) {
+    throw new ServiceUnavailableError(
+      'Break-glass login is disabled. Set DASHBOARD_EMAIL and DASHBOARD_PASSWORD_HASH to enable it.',
+    );
   }
-  const pwHash = createHash('sha256').update(password).digest('hex');
-  if (email !== DASHBOARD_EMAIL || pwHash !== DASHBOARD_PW_HASH) {
-    res.status(401).json({ error: 'Invalid credentials' });
-    return;
+  // Ein fehlerhaft formatierter Hash würde sonst still jeden Login mit 401 ablehnen.
+  if (!/^[0-9a-f]{64}$/i.test(breakGlassPasswordHash)) {
+    throw new ServiceUnavailableError(
+      'Break-glass login is misconfigured: DASHBOARD_PASSWORD_HASH is not a valid SHA-256 hex hash.',
+    );
   }
-  const token = createSession(DASHBOARD_EMAIL, true);
+
+  const { email, password } = parseBody(loginSchema, req.body);
+
+  const given = createHash('sha256').update(password).digest();
+  const expected = Buffer.from(breakGlassPasswordHash, 'hex');
+  const emailMatches = email.trim().toLowerCase() === breakGlassEmail;
+  const hashMatches = given.length === expected.length && timingSafeEqual(given, expected);
+
+  if (!emailMatches || !hashMatches) {
+    throw new UnauthorizedError('Invalid credentials');
+  }
+
+  const token = createSession(breakGlassEmail, true);
   res.json({ token });
 }
 
@@ -39,7 +61,7 @@ export function dashboardLogin(req: Request, res: Response) {
  * gemeinsamen Session-Store geprüft — kein Early-Return, damit ein leerer/ungültiger
  * Bearer nicht ein gültiges Cookie blockiert. Erfordert isAdmin.
  */
-export function requireDashboardAuth(req: Request, res: Response, next: NextFunction) {
+export function requireDashboardAuth(req: Request, _res: Response, next: NextFunction) {
   const candidates: string[] = [];
 
   const auth = req.headers.authorization;
@@ -54,12 +76,10 @@ export function requireDashboardAuth(req: Request, res: Response, next: NextFunc
   const session = candidates.map((t) => getSession(t)).find((s) => s !== null) ?? null;
 
   if (!session) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
+    throw new UnauthorizedError();
   }
   if (!session.isAdmin) {
-    res.status(403).json({ error: 'Admin access required' });
-    return;
+    throw new ForbiddenError('Admin access required');
   }
   next();
 }
@@ -108,11 +128,10 @@ function getWeekKey(dateStr: string): string {
 export async function dashboardStats(_req: Request, res: Response) {
   const pool = getPool();
   if (!pool) {
-    res.status(503).json({ error: 'Database not available' });
-    return;
+    throw new DbUnavailableError();
   }
 
-  try {
+  {
     const { rows } = await pool.execute(
       'SELECT id, url, result_json, analyzed_at FROM analyses ORDER BY analyzed_at ASC',
     );
@@ -213,8 +232,5 @@ export async function dashboardStats(_req: Request, res: Response) {
     };
 
     res.json(stats);
-  } catch (err) {
-    console.error('Dashboard stats error:', err);
-    res.status(500).json({ error: 'Failed to compute statistics' });
   }
 }
