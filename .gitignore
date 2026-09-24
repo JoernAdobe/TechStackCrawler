@@ -8,6 +8,7 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.deploy.example
 *.local
 
 # Private keys - NIEMALS committen!
@@ -38,3 +39,12 @@ Thumbs.db
 
 # Plugins (local)
 connect-apps-plugin/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Lokale Tool-Artefakte
+.playwright-mcp/
+*.log
+CLAUDE.md
+verify-*.png

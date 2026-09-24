@@ -1,6 +1,7 @@
 import { scrapePage, type ScrapedData } from './scraper.js';
 import { detectTechnologies } from './detector.js';
 import type { DetectedTech } from './customDetectors.js';
+import { sanitizeUrlWithDns } from '../utils/sanitize.js';
 
 /**
  * Repräsentativer Multi-Page-Crawl (TechCase-Sektionen 03 & 07).
@@ -133,8 +134,12 @@ export async function enrichWithAdditionalPages(
       } catch {
         /* keep full url */
       }
+      // Links stammen von der fremden Seite → vorab gegen private Ziele prüfen
+      // (scrapePage prüft zusätzlich jeden Request und die Remote-IPs).
+      const safeUrl = await sanitizeUrlWithDns(url);
+      if (!safeUrl) continue;
       onProgress?.(`Scanning additional page: ${label}`);
-      const scraped = await scrapePage(url, () => {});
+      const scraped = await scrapePage(safeUrl, () => {});
       const detected = await detectTechnologies(scraped);
       merged = mergeDetections(merged, detected);
       crawled.push(url);

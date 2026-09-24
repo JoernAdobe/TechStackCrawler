@@ -3,9 +3,21 @@ services:
     image: caddy:2-alpine
     container_name: adobe-tools-hub
     ports:
-      - "${HOST_PORT:-8510}:80"
+      - "80:80"
+      - "443:443"
+      - "8510:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./index.html:/srv/index.html:ro
       - ./adobe-hero.png:/srv/adobe-hero.png:ro
+      - ./banner-inject.js:/srv/banner-inject.js:ro
+      - ./banner.html:/srv/banner.html:ro
+      - /opt/ssl/saleshub.crt:/etc/ssl/saleshub.crt:ro
+      - /opt/ssl/saleshub.key:/etc/ssl/saleshub.key:ro
+      - /opt/ssl/battlemind.crt:/etc/ssl/battlemind.crt:ro
+      - /opt/ssl/battlemind.key:/etc/ssl/battlemind.key:ro
+      - /opt/ssl/techstack.crt:/etc/ssl/techstack.crt:ro
+      - /opt/ssl/techstack.key:/etc/ssl/techstack.key:ro
+      - /opt/ssl/rfp.crt:/etc/ssl/rfp.crt:ro
+      - /opt/ssl/rfp.key:/etc/ssl/rfp.key:ro
     restart: unless-stopped

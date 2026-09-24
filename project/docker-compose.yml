@@ -21,7 +21,10 @@ services:
     image: caddy:2-alpine
     container_name: ${CONTAINER_PREFIX:-techstack-}caddy
     ports:
-      - "${HOST_PORT:-8516}:80"
+      # HOST_BIND=172.17.0.1 beschränkt den Port auf die Docker-Bridge (nur der Hub-Caddy
+      # kommt dann dran, kein Klartext-HTTP aus dem Corp-Netz). Achtung: Der Health-Check
+      # in `make deploy` greift von außen auf den Port zu und muss dann angepasst werden.
+      - "${HOST_BIND:-0.0.0.0}:${HOST_PORT:-8516}:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -58,6 +61,8 @@ services:
       # Break-Glass-Login: nur aktiv, wenn beide Werte gesetzt sind.
       - DASHBOARD_EMAIL=${DASHBOARD_EMAIL:-}
       - DASHBOARD_PASSWORD_HASH=${DASHBOARD_PASSWORD_HASH:-}
+      # CORS: leer = nur Same-Origin (Standard); sonst komma-getrennte Origin-Liste.
+      - CORS_ORIGIN=${CORS_ORIGIN:-}
       - NODE_ENV=production
       - PORT=3001
       - DB_HOST=mariadb

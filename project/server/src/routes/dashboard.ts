@@ -1,5 +1,5 @@
-import { createHash, timingSafeEqual } from 'crypto';
 import { z } from 'zod';
+import { passwordHashFormat, verifyPassword } from '../utils/passwordHash.js';
 import type { Request, Response, NextFunction } from 'express';
 import { getPool } from '../db/index.js';
 import type { AnalysisResult } from '../types/analysis.js';
@@ -24,7 +24,7 @@ const loginSchema = z.object({
  * Credentials kommen ausschließlich aus der Umgebung (DASHBOARD_EMAIL +
  * DASHBOARD_PASSWORD_HASH). Ohne beide Werte ist der Endpunkt deaktiviert — es gibt
  * bewusst keinen Default, damit nie ein aus dem Quellcode ableitbares Passwort existiert.
- * Der Hash-Vergleich läuft konstantzeitig (timingSafeEqual).
+ * Hash-Format: scrypt (empfohlen) oder Legacy-SHA-256, siehe utils/passwordHash.ts.
  */
 export function dashboardLogin(req: Request, res: Response) {
   const { breakGlassEmail, breakGlassPasswordHash } = config.dashboard;
@@ -34,18 +34,17 @@ export function dashboardLogin(req: Request, res: Response) {
     );
   }
   // Ein fehlerhaft formatierter Hash würde sonst still jeden Login mit 401 ablehnen.
-  if (!/^[0-9a-f]{64}$/i.test(breakGlassPasswordHash)) {
+  if (passwordHashFormat(breakGlassPasswordHash) === 'invalid') {
     throw new ServiceUnavailableError(
-      'Break-glass login is misconfigured: DASHBOARD_PASSWORD_HASH is not a valid SHA-256 hex hash.',
+      'Break-glass login is misconfigured: DASHBOARD_PASSWORD_HASH has an unknown format.',
     );
   }
 
   const { email, password } = parseBody(loginSchema, req.body);
 
-  const given = createHash('sha256').update(password).digest();
-  const expected = Buffer.from(breakGlassPasswordHash, 'hex');
   const emailMatches = email.trim().toLowerCase() === breakGlassEmail;
-  const hashMatches = given.length === expected.length && timingSafeEqual(given, expected);
+  // Hash immer prüfen (auch bei falscher E-Mail), damit die Antwortzeit nichts verrät.
+  const hashMatches = verifyPassword(password, breakGlassPasswordHash);
 
   if (!emailMatches || !hashMatches) {
     throw new UnauthorizedError('Invalid credentials');

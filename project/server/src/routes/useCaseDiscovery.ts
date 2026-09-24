@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { getPool } from '../db/index.js';
-import { updateAnalysis } from '../db/analyses.js';
+import { getAnalysisById, updateAnalysis } from '../db/analyses.js';
 import { discoverUseCases } from '../services/useCaseDiscovery.js';
 import type { AnalysisResult } from '../types/analysis.js';
-import { parseBody } from '../utils/http.js';
+import { NotFoundError, parseBody } from '../utils/http.js';
 
 /**
  * Minimal-Schema für den eingehenden Analyse-Payload. Bewusst `passthrough`,
@@ -24,12 +24,25 @@ const analysisSchema = z
 
 export async function useCaseDiscoveryRoute(req: Request, res: Response) {
   const parsed = parseBody(analysisSchema, req.body);
-  const analysis = parsed as unknown as AnalysisResult;
+  const pool = getPool();
+
+  // Gespeicherte Analysen werden serverseitig aus der DB geladen. Der Client-Payload wird
+  // dann ignoriert – sonst könnte jeder mit einer beliebigen `id` und manipuliertem
+  // `summary` (Prompt-Injection) fremde Datensätze überschreiben.
+  let analysis: AnalysisResult;
+  let persist = false;
+  if (pool && parsed.id) {
+    const stored = await getAnalysisById(pool, parsed.id);
+    if (!stored) throw new NotFoundError('Analysis not found');
+    analysis = stored;
+    persist = true;
+  } else {
+    analysis = { ...(parsed as unknown as AnalysisResult), id: undefined };
+  }
 
   const { result, sitemapUrls } = await discoverUseCases(analysis);
 
-  const pool = getPool();
-  if (pool && analysis.id) {
+  if (pool && persist && analysis.id) {
     try {
       await updateAnalysis(pool, analysis.id, { useCaseDiscovery: result, sitemapUrls });
     } catch (err) {

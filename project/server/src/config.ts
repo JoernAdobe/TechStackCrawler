@@ -1,4 +1,5 @@
 import path from 'path';
+import { passwordHashFormat } from './utils/passwordHash.js';
 
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
@@ -56,8 +57,8 @@ export const config = {
      * Break-Glass-Notfallzugang, falls Okta nicht verfügbar/konfiguriert ist.
      * Bewusst OHNE Default: Ist DASHBOARD_PASSWORD_HASH nicht gesetzt, bleibt der
      * Login deaktiviert — so existiert nie ein aus dem Quellcode ableitbares Passwort.
-     * Hash erzeugen:
-     *   node -e "console.log(require('crypto').createHash('sha256').update('<pw>').digest('hex'))"
+     * Hash erzeugen (scrypt, gesalzen):
+     *   npm run hash-dashboard-password -- '<pw>'   (im Ordner project/)
      */
     breakGlassEmail: (process.env.DASHBOARD_EMAIL || '').trim().toLowerCase(),
     breakGlassPasswordHash: (process.env.DASHBOARD_PASSWORD_HASH || '').trim().toLowerCase(),
@@ -106,15 +107,20 @@ export function validateConfig(): void {
   if (breakGlassEmail && !breakGlassPasswordHash) {
     warnings.push('DASHBOARD_EMAIL gesetzt, aber DASHBOARD_PASSWORD_HASH fehlt – Break-Glass-Login bleibt deaktiviert.');
   }
-  if (breakGlassPasswordHash && !/^[0-9a-f]{64}$/.test(breakGlassPasswordHash)) {
+  const hashFormat = breakGlassPasswordHash ? passwordHashFormat(breakGlassPasswordHash) : null;
+  if (hashFormat === 'invalid') {
     // In Production ist eine fehlerhafte Auth-Konfiguration ein harter Fehler. Lokal
     // soll ein vertippter optionaler Hash den Start nicht verhindern.
-    const msg = 'DASHBOARD_PASSWORD_HASH ist kein gültiger SHA-256-Hex-Hash (64 Hex-Zeichen).';
+    const msg = 'DASHBOARD_PASSWORD_HASH hat ein unbekanntes Format (erwartet: scrypt$<salt>$<hash> oder SHA-256-Hex).';
     if (config.nodeEnv === 'production') {
       errors.push(msg);
     } else {
       warnings.push(`${msg} Break-Glass-Login bleibt deaktiviert.`);
     }
+  } else if (hashFormat === 'sha256') {
+    warnings.push(
+      'DASHBOARD_PASSWORD_HASH nutzt das ungesalzene Legacy-SHA-256-Format – bitte per `npm run hash-dashboard-password` auf scrypt umstellen.',
+    );
   }
 
   for (const w of warnings) console.warn(`[config] ${w}`);

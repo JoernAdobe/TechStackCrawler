@@ -1,4 +1,4 @@
-import { sanitizeUrlWithDns } from '../utils/sanitize.js';
+import { safeFetch } from '../utils/safeFetch.js';
 
 const SITEMAP_TIMEOUT_MS = 12_000;
 const MAX_URLS = 200;
@@ -34,49 +34,26 @@ function isSitemapIndex(xml: string): boolean {
 }
 
 /**
- * Holt eine URL mit Timeout. Das Ziel wird vorher gegen private/reservierte
- * Adressen geprüft (inkl. DNS-Auflösung) — Sitemap-Ziele stammen teils aus
- * robots.txt bzw. Sitemap-Indizes der Gegenstelle und sind damit fremdgesteuert.
- * Redirects werden manuell verfolgt, damit auch jedes Redirect-Ziel geprüft wird.
+ * Holt eine URL mit Timeout. Sitemap-Ziele stammen teils aus robots.txt bzw.
+ * Sitemap-Indizes der Gegenstelle und sind damit fremdgesteuert — daher über
+ * `safeFetch`: DNS einmal auflösen + prüfen, Verbindung auf die geprüfte IP pinnen
+ * (kein DNS-Rebinding), Redirects manuell verfolgen und jede Station neu prüfen.
  */
 async function fetchWithTimeout(
   url: string,
   timeoutMs: number,
-  maxRedirects = 3,
+  maxRedirects = 5,
 ): Promise<string> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    let current = url;
-
-    for (let hop = 0; hop <= maxRedirects; hop++) {
-      const safeUrl = await sanitizeUrlWithDns(current);
-      if (!safeUrl) throw new Error(`Blocked URL: ${current}`);
-
-      const res = await fetch(safeUrl, {
-        signal: controller.signal,
-        redirect: 'manual',
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (compatible; TechStackAnalyzer/1.0; +https://example.com)',
-        },
-      });
-
-      if (res.status >= 300 && res.status < 400) {
-        const location = res.headers.get('location');
-        if (!location) throw new Error(`HTTP ${res.status} ohne Location-Header`);
-        current = new URL(location, safeUrl).toString();
-        continue;
-      }
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.text();
-    }
-
-    throw new Error('Zu viele Redirects');
-  } finally {
-    clearTimeout(timeout);
-  }
+  const res = await safeFetch(url, {
+    timeoutMs,
+    maxRedirects,
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (compatible; TechStackAnalyzer/1.0; +https://example.com)',
+    },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text;
 }
 
 async function tryFetchSitemap(baseUrl: string): Promise<string | null> {

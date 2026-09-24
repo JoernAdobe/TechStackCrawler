@@ -61,8 +61,13 @@ app.use(helmet({
 }));
 app.use(
   cors({
+    // Production: nur explizit erlaubte Origins (CORS_ORIGIN, komma-getrennt), sonst
+    // ausschließlich Same-Origin. Früher wurde jeder Origin gespiegelt – damit konnte
+    // jede fremde Seite über den Browser eines Mitarbeiters die API aufrufen.
     origin: config.nodeEnv === 'production'
-      ? (process.env.CORS_ORIGIN || true)
+      ? (process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
+        : false)
       : true,
   }),
 );

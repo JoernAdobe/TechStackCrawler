@@ -38,14 +38,14 @@ Für jedes Projekt bzw. jede Installation auf dem Server anpassen:
 | `CONTAINER_PREFIX` | Präfix für Container-Namen | `rfp-` | `mein-` |
 | `DB_NAME` | MariaDB Datenbankname (eindeutig!) | `rfp_tool` | `mein_projekt_db` |
 | `REDIS_DB` | Redis DB-Index (0, 1, 2 …) | `0` | `1` |
-| `APP_BASE_URL` | Öffentliche URL der App | `http://10.42.71.232:8513` | `http://10.42.71.232:8514` |
+| `APP_BASE_URL` | Öffentliche URL der App | `http://<server-host>:8513` | `http://<server-host>:8514` |
 
 ### Deploy-Konfiguration (.env.deploy.example)
 
 Eine Vorlage für deploy-spezifische Variablen liegt unter `.env.deploy.example`:
 
 - `SSH_KEY` – Pfad zum SSH-Key
-- `SSH_HOST` – Server-Adresse (z.B. `root@10.42.71.232`)
+- `SSH_HOST` – Server-Adresse (z.B. `user@<server-host>`)
 - `REMOTE_DIR` – Zielverzeichnis auf dem Server
 - `HOST_PORT` – Öffentlicher Port (8513, 8514, …)
 
@@ -55,7 +55,7 @@ Kopiere nach `.env.deploy` und passe an. `deploy.sh` und `recover.sh` lesen dies
 
 ```bash
 SSH_KEY="BattleMindAI_Dev_57819.txt"      # Pfad zum SSH-Key
-SSH_HOST="root@10.42.71.232"              # Server-Adresse
+SSH_HOST="user@<server-host>"              # Server-Adresse
 REMOTE_DIR="/opt/rfp-tool"                # Zielverzeichnis
 ```
 
@@ -63,7 +63,7 @@ REMOTE_DIR="/opt/rfp-tool"                # Zielverzeichnis
 
 ```bash
 SSH_KEY="BattleMindAI_Dev_57819.txt"
-SSH_HOST="root@10.42.71.232"
+SSH_HOST="user@<server-host>"
 REMOTE_DIR="/opt/rfp-tool"
 ```
 
@@ -190,7 +190,7 @@ make deploy
 | Variable | Typ | Beschreibung |
 |----------|-----|--------------|
 | `SSH_KEY` | Pfad | SSH-Private-Key-Datei |
-| `SSH_HOST` | Host | `user@host` (z.B. `root@10.42.71.232`) |
+| `SSH_HOST` | Host | `user@host` (z.B. `user@<server-host>`) |
 | `REMOTE_DIR` | Pfad | Zielverzeichnis auf dem Server |
 | `REPO_URL` | URL | Optional, für Referenz |
 
@@ -211,7 +211,7 @@ BEDROCK_MAX_CONCURRENT=2
 # === App ===
 JWT_SECRET=rfp-tool-secret-key-change-in-production
 APP_ENV=production
-APP_BASE_URL=http://10.42.71.232:8513
+APP_BASE_URL=http://<server-host>:8513
 
 # === MariaDB (Docker Compose) ===
 DB_USER=rfp_user
@@ -249,7 +249,7 @@ REDIS_URL=redis://redis:6379/0
 | `DB_USER` | Secret | Ja | MariaDB User |
 | `DB_PASSWORD` | Secret | Ja | MariaDB Passwort |
 | `DB_NAME` | Config | Ja | Datenbankname |
-| `APP_BASE_URL` | Config | Ja | Öffentliche URL (z.B. `http://10.42.71.232:8513`) |
+| `APP_BASE_URL` | Config | Ja | Öffentliche URL (z.B. `http://<server-host>:8513`) |
 | `APP_ENV` | Config | Ja | `production` |
 | `REDIS_URL` | Config | Ja | `redis://redis:6379/0` (Docker: `redis` = Service-Name) |
 | `OKTA_CLIENT_SECRET` | Secret | Nein | Für Okta SSO |
@@ -393,5 +393,5 @@ Bei angepasstem `CONTAINER_PREFIX` die Namen entsprechend ersetzen (z.B. `projek
 
 ### Nach dem Deploy
 
-- App: `http://10.42.71.232:8513` (oder konfigurierte URL)
+- App: `http://<server-host>:8513` (oder konfigurierte URL)
 - Admin anlegen: `docker exec rfp-tool-v3 python3 -c "from database import create_user, update_user_verification; from auth import hash_data; create_user('admin@example.com', hash_data('passwort'), None); update_user_verification('admin@example.com', True)"`

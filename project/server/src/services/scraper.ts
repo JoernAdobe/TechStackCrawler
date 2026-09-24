@@ -1,7 +1,7 @@
 import puppeteer, { type Browser } from 'puppeteer';
 import { config } from '../config.js';
 import { localeForUrl } from '../utils/locale.js';
-import { sanitizeUrlWithDns } from '../utils/sanitize.js';
+import { isPrivateIpAddress, resolvesToPrivateAddress, sanitizeUrl, sanitizeUrlWithDns } from '../utils/sanitize.js';
 
 export interface ScrapedData {
   url: string;
@@ -33,6 +33,9 @@ async function getBrowser(): Promise<Browser> {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--disable-software-rasterizer',
+        // WebRTC darf keine direkten UDP-Verbindungen (ICE/STUN) ins interne Netz aufbauen;
+        // diese laufen an der Request-Interception vorbei.
+        '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
       ],
       executablePath: config.puppeteer.executablePath,
     })
@@ -85,28 +88,98 @@ export async function scrapePage(
   const page = await b.newPage();
 
   try {
-    // SSRF-Schutz: page.goto() folgt Redirects automatisch. Ohne diese Prüfung könnte
-    // ein erlaubter Host auf 127.0.0.1 oder 169.254.169.254 (Cloud-Metadaten) umleiten.
-    // Deshalb wird jede Navigation im Main-Frame erneut gegen die DNS-Auflösung geprüft.
+    // SSRF-Schutz: JEDER Request der (fremdgesteuerten) Seite wird geprüft — nicht nur
+    // Main-Frame-Navigationen, sondern auch fetch/XHR/img/script/iframe/Redirect-Hops.
+    // Sonst kann die Seite blind interne Dienste (172.17.0.1, 10.x, 169.254.169.254 …)
+    // ansprechen. Das Prüfergebnis wird pro Hostname im Page-Scope gecacht, damit nicht
+    // jedes Asset neu aufgelöst wird.
+    const hostVerdicts = new Map<string, Promise<boolean>>();
+    // Wird gesetzt, sobald eine Response von einer privaten IP kam (DNS-Rebinding, s.u.).
+    let privateRemoteHit: string | null = null;
+    const isHostAllowed = (hostname: string): Promise<boolean> => {
+      let verdict = hostVerdicts.get(hostname);
+      if (!verdict) {
+        verdict = resolvesToPrivateAddress(hostname).then(
+          (isPrivate) => !isPrivate,
+          () => false,
+        );
+        hostVerdicts.set(hostname, verdict);
+      }
+      return verdict;
+    };
+    const isRequestAllowed = async (rawUrl: string): Promise<boolean> => {
+      // Nach einem Treffer auf eine private IP keine weiteren Requests mehr zulassen –
+      // sonst könnte die Seite die intern gelesene Antwort nach außen exfiltrieren.
+      if (privateRemoteHit) return false;
+      let parsed: URL;
+      try {
+        parsed = new URL(rawUrl);
+      } catch {
+        return false;
+      }
+      if (parsed.protocol === 'data:' || parsed.protocol === 'blob:') return true;
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+      // String-Prüfung (localhost, IP-Literale, .internal …) vor der DNS-Prüfung.
+      if (!sanitizeUrl(rawUrl)) return false;
+      return isHostAllowed(parsed.hostname);
+    };
+
+    // Service Worker umgehen, damit auch deren Requests durch die Interception laufen.
+    await page.setBypassServiceWorker(true);
+    // WebSockets/WebRTC werden von der Request-Interception nicht erfasst → deaktivieren,
+    // damit darüber kein Handshake an interne Hosts möglich ist. Worker werden ebenfalls
+    // abgeschaltet, weil dieses Init-Script dort nicht greift (WebSocket wäre im Worker
+    // wieder verfügbar). Für die Tech-Erkennung sind Worker nicht nötig.
+    await page.evaluateOnNewDocument(() => {
+      const w = window as unknown as Record<string, unknown>;
+      for (const key of ['WebSocket', 'RTCPeerConnection', 'webkitRTCPeerConnection', 'WebTransport', 'Worker', 'SharedWorker']) {
+        try {
+          Object.defineProperty(w, key, { value: undefined, configurable: false, writable: false });
+        } catch {
+          // best effort
+        }
+      }
+    });
+
     await page.setRequestInterception(true);
     page.on('request', (request) => {
       void (async () => {
         try {
-          if (!request.isNavigationRequest() || request.frame() !== page.mainFrame()) {
+          if (await isRequestAllowed(request.url())) {
             await request.continue();
             return;
           }
-          const safe = await sanitizeUrlWithDns(request.url());
-          if (!safe) {
+          if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
             console.warn('[scraper] Navigation blockiert (SSRF-Schutz):', request.url());
-            await request.abort('blockedbyclient');
-            return;
           }
-          await request.continue();
+          await request.abort('blockedbyclient');
         } catch {
           // Request kann bereits abgeschlossen sein – dann ist nichts mehr zu tun.
         }
       })();
+    });
+
+    // DNS-Rebinding/TOCTOU: Die obige Prüfung löst selbst per DNS auf; Chromium löst
+    // danach erneut auf und könnte (bei kurzer TTL) eine andere, private IP bekommen.
+    // Die IP lässt sich im Singleton-Browser nicht pro Host pinnen. Mitigation: die
+    // tatsächlich verbundene Remote-IP JEDER Response prüfen; bei einem Treffer werden alle
+    // weiteren Requests blockiert (isRequestAllowed) und der Crawl verworfen – es wird kein
+    // Inhalt zurückgegeben.
+    // RESTRISIKO: Der erste Request an die private Adresse ist bereits rausgegangen, und
+    // Kanäle außerhalb der Interception (z.B. WebSocket aus about:blank-iframes) lassen
+    // sich auf App-Ebene nicht vollständig schließen. Harte Garantie nur per Netzwerk-
+    // Egress-Filter (RFC1918, 100.64/10, 169.254/16, Docker-Bridge sperren) – empfohlen.
+    const assertNoPrivateRemote = () => {
+      if (privateRemoteHit) {
+        console.warn('[scraper] Response von privater Adresse, Crawl verworfen:', privateRemoteHit);
+        throw new Error('Blocked: resolved to private address');
+      }
+    };
+    page.on('response', (response) => {
+      const ip = response.remoteAddress()?.ip;
+      if (ip && isPrivateIpAddress(ip) && !privateRemoteHit) {
+        privateRemoteHit = `${response.url()} -> ${ip}`;
+      }
     });
 
     onProgress?.('Loading page (this may take 15–30 seconds for large sites)…');
@@ -148,6 +221,7 @@ export async function scrapePage(
     if (!(await sanitizeUrlWithDns(page.url()))) {
       throw new Error('Blocked unsafe final URL after redirects');
     }
+    assertNoPrivateRemote();
 
     // Cookie-Banner akzeptieren, damit Marketing-Cookies geladen werden
     const { acceptCookieBanner } = await import('./cookieBanner.js');
@@ -197,6 +271,10 @@ export async function scrapePage(
     for (const c of rawCookies) {
       cookies[c.name] = c.value;
     }
+
+    // Letzte Prüfung vor Rückgabe: auch nach Cookie-Banner/Extraktion nachgeladene
+    // Responses dürfen nicht von privaten Adressen stammen.
+    assertNoPrivateRemote();
 
     return {
       url,

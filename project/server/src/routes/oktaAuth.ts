@@ -193,7 +193,8 @@ export function createAuthRoutes(): Router {
     const error = typeof req.query.error === 'string' ? req.query.error : undefined;
     if (error) {
       console.warn('Okta error:', error, req.query.error_description);
-      res.status(401).send(`Okta login failed: ${error}`);
+      // Nur eine feste Meldung ausgeben – der Query-Wert würde sonst als HTML reflektiert.
+      res.status(401).type('text/plain').send('Okta login failed. Please try again or contact the administrator.');
       return;
     }
 

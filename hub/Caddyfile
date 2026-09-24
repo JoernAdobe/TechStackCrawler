@@ -1,4 +1,29 @@
-:80 {
+saleshub.corp.adobe.com {
+	tls /etc/ssl/saleshub.crt /etc/ssl/saleshub.key
 	root * /srv
 	file_server
+	header /banner-inject.js Access-Control-Allow-Origin "*"
+	header /banner.html Access-Control-Allow-Origin "*"
+}
+
+battlemind.corp.adobe.com {
+	tls /etc/ssl/battlemind.crt /etc/ssl/battlemind.key
+	reverse_proxy 172.17.0.1:8519
+}
+
+techstack.corp.adobe.com {
+	tls /etc/ssl/techstack.crt /etc/ssl/techstack.key
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy 172.17.0.1:8516 {
+		header_down Content-Security-Policy "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data: https://www.google.com;object-src 'none';script-src 'self' https://saleshub.corp.adobe.com;script-src-attr 'none';style-src 'self' https: 'unsafe-inline'"
+	}
+}
+
+rfp.corp.adobe.com {
+	tls /etc/ssl/rfp.crt /etc/ssl/rfp.key
+	reverse_proxy 172.17.0.1:8513
+}
+
+:80 {
+	redir https://saleshub.corp.adobe.com{uri} permanent
 }
