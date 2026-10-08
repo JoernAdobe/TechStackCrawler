@@ -7,3 +7,6 @@ techstack_local_export.json
 .DS_Store
 Thumbs.db
 .claude/
+
+__pycache__/
+*.pyc
