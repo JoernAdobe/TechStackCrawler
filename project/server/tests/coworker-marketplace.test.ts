@@ -8,9 +8,11 @@ const marketplaceRoot = new URL('../', marketplacePath);
 test('Coworker marketplace points to a matching, installable plugin', async () => {
   const marketplace = JSON.parse(await readFile(marketplacePath, 'utf8')) as {
     name: string;
+    owner?: { name?: unknown };
     plugins: Array<{ name: string; source: string; version: string }>;
   };
   assert.equal(marketplace.name, 'techstack-crawler');
+  assert.equal(typeof marketplace.owner?.name, 'string');
   assert.equal(marketplace.plugins.length, 1);
 
   const entry = marketplace.plugins[0];
@@ -24,5 +26,8 @@ test('Coworker marketplace points to a matching, installable plugin', async () =
   };
   assert.equal(plugin.name, entry.name);
   assert.equal(plugin.version, entry.version);
-  await readFile(new URL('skills/techstack-analysis/SKILL.md', pluginRoot), 'utf8');
+  const skill = await readFile(new URL('skills/techstack-analysis/SKILL.md', pluginRoot), 'utf8');
+  const frontmatter = skill.match(/^---\n([\s\S]*?)\n---\n/)?.[1] ?? '';
+  assert.match(frontmatter, /^name: techstack-analysis$/m);
+  assert.match(frontmatter, /^description: \S.+$/m);
 });

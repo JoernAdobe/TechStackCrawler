@@ -1,5 +1,9 @@
 {
   "name": "techstack-crawler",
+  "owner": {
+    "name": "Joern Daudert"
+  },
+  "description": "TechStack Crawler plugins for CX Enterprise Coworker.",
   "plugins": [
     {
       "name": "techstack-crawler",

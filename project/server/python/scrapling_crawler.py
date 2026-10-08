@@ -182,8 +182,8 @@ def extract_data(
         for value in page.css('a[href^="http"]::attr(href)').getall()[:MAX_LINKS]
         if value
     ]
-    body = page.css("body").get()
-    body_text = body.get_all_text() if body else ""
+    body = page.css("body").first
+    body_text = body.get_all_text() if body is not None else ""
     html = _as_text(page.html_content)[:MAX_HTML_CHARS]
 
     return {
@@ -212,23 +212,49 @@ def _accept_cookie_banner(page: Any) -> Any:
                 continue
 
         buttons = page.locator("button, a, [role=button]")
+        labels: list[str] = []
         for index in range(min(await buttons.count(), 100)):
             candidate = buttons.nth(index)
             try:
-                label = " ".join(
-                    part.lower()
-                    for part in (
-                        await candidate.inner_text(timeout=200),
-                        await candidate.get_attribute("aria-label", timeout=200) or "",
-                    )
-                )
-                if any(word in label for word in ACCEPT_WORDS):
-                    await candidate.click(timeout=700)
-                    return
+                if not await candidate.is_visible(timeout=200):
+                    labels.append("")
+                    continue
+                tag = await candidate.evaluate("el => el.tagName.toLowerCase()")
+                href = (await candidate.get_attribute("href", timeout=200) or "").strip()
+                if tag == "a" and href and not href.startswith(("#", "javascript:")):
+                    labels.append("")
+                    continue
+                text = await candidate.inner_text(timeout=200)
+                aria = await candidate.get_attribute("aria-label", timeout=200) or ""
+                labels.append(f"{text}\n{aria}")
             except Exception:
-                continue
+                labels.append("")
+
+        index = pick_accept_index(labels)
+        if index is not None:
+            try:
+                await buttons.nth(index).click(timeout=700)
+            except Exception:
+                return
 
     return click_accept()
+
+
+def _normalize_label(value: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", value.lower())).strip()
+
+
+def pick_accept_index(labels: list[str]) -> int | None:
+    """Pick the control whose text or aria-label exactly matches the most specific accept phrase."""
+    normalized = [
+        {_normalize_label(part) for part in label.split("\n") if part.strip()}
+        for label in labels
+    ]
+    for word in sorted(ACCEPT_WORDS, key=len, reverse=True):
+        for index, parts in enumerate(normalized):
+            if word in parts:
+                return index
+    return None
 
 
 async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
@@ -304,7 +330,27 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
             remote_tasks.add(task)
             task.add_done_callback(remote_tasks.discard)
 
+        # Route handlers do not see redirect hops; validate them here and fail the job.
+        async def check_redirect(request: Any) -> None:
+            target = request.url
+            try:
+                parsed = urlsplit(target)
+                parse_safe_url(target)
+                if parsed.hostname and await public_host(parsed.hostname):
+                    return
+            except (ValueError, OSError):
+                pass
+            private_remote_hit.append(f"redirect to {target}")
+
+        def on_request(request: Any) -> None:
+            if request.redirected_from is None:
+                return
+            task = asyncio.create_task(check_redirect(request))
+            remote_tasks.add(task)
+            task.add_done_callback(remote_tasks.discard)
+
         page.on("response", on_response)
+        page.context.on("request", on_request)
 
     async def finish_page(page: Any) -> None:
         await _accept_cookie_banner(page)

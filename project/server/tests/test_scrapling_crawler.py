@@ -7,6 +7,7 @@ from python.scrapling_crawler import (
     extract_data,
     hostname_is_public,
     parse_safe_url,
+    pick_accept_index,
 )
 
 
@@ -69,48 +70,47 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(_headers_as_arrays({"Server": "nginx"}), {"server": ["nginx"]})
 
     def test_extracts_detector_contract(self):
-        class Element:
-            def __init__(self, attrs=None, text=""):
-                self.attrib = attrs or {}
-                self._text = text
+        try:
+            from scrapling.parser import Selector
+        except ImportError:
+            self.skipTest("scrapling is not installed")
 
-            def get_all_text(self):
-                return self._text
-
-        class Selection(list):
-            def get(self, default=None):
-                return self[0] if self else default
-
-            def getall(self):
-                return list(self)
-
-        class Page:
-            url = "https://example.com/final"
-            html_content = '<html><head><title>Example</title></head><body>Welcome</body></html>'
-
-            def css(self, selector):
-                return {
-                    "meta": [Element({"name": "generator", "content": "WordPress 6.8"})],
-                    "script[src]::attr(src)": Selection(["/assets/app.js"]),
-                    'a[href^="http"]::attr(href)': Selection(["https://example.com/shop"]),
-                    "body": Selection([Element(text="Welcome")]),
-                    "title::text": Selection(["Example"]),
-                }[selector]
+        page = Selector(
+            '<html><head><title>Example</title>'
+            '<meta name="generator" content="WordPress 6.8">'
+            '<script src="/assets/app.js"></script></head>'
+            '<body>Willkommen, Größe <a href="https://example.com/shop">Shop</a>'
+            '<a href="/relative">rel</a></body></html>',
+            url="https://example.com/final",
+        )
 
         result = extract_data(
-            Page(),
+            page,
             "https://example.com",
             {"Server": "nginx/1.2"},
             {"session": "value"},
         )
         self.assertEqual(result["finalUrl"], "https://example.com/final")
         self.assertEqual(result["title"], "Example")
-        self.assertEqual(result["bodyText"], "Welcome")
+        self.assertIn("Willkommen, Größe", result["bodyText"])
+        self.assertIn("<title>Example</title>", result["html"])
         self.assertEqual(result["meta"]["generator"], ["WordPress 6.8"])
         self.assertEqual(result["headers"]["server"], ["nginx/1.2"])
         self.assertEqual(result["scriptSrc"], ["/assets/app.js"])
         self.assertEqual(result["links"], ["https://example.com/shop"])
         self.assertEqual(result["cookies"], {"session": "value"})
+
+
+class CookieBannerTests(unittest.TestCase):
+    def test_prefers_specific_exact_accept_phrase(self):
+        labels = ["Cookie settings", "Facebook", "Accept", "Accept all cookies"]
+        self.assertEqual(pick_accept_index(labels), 3)
+
+    def test_ignores_substring_matches(self):
+        self.assertIsNone(pick_accept_index(["Cookie policy", "Outlook", "Book now"]))
+
+    def test_matches_aria_label_and_punctuation(self):
+        self.assertEqual(pick_accept_index(["", "X\nAlle akzeptieren!"]), 1)
 
 
 if __name__ == "__main__":

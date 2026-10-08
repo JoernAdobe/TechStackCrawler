@@ -39,6 +39,8 @@ services:
       args:
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
     container_name: ${CONTAINER_PREFIX:-techstack-}techstack
+    # Init-Prozess reapt verwaiste Python-/Chromium-Prozesse nach Scrape-Timeouts.
+    init: true
     depends_on:
       mariadb:
         condition: service_healthy

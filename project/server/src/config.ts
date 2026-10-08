@@ -1,5 +1,13 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { passwordHashFormat } from './utils/passwordHash.js';
+
+/** Relative Pfade (z. B. `.venv/bin/python`) beziehen sich auf `project/`, nicht auf das cwd. */
+function resolvePythonPath(value: string): string {
+  if (!value.includes('/') || path.isAbsolute(value)) return value;
+  const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
+  return path.resolve(projectRoot, value);
+}
 
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
@@ -18,7 +26,7 @@ export const config = {
     awsRegion: process.env.BEDROCK_REGION || process.env.AWS_REGION || 'us-west-2',
   },
   scraper: {
-    pythonPath: process.env.SCRAPLING_PYTHON_PATH || 'python3',
+    pythonPath: resolvePythonPath(process.env.SCRAPLING_PYTHON_PATH || 'python3'),
     chromiumPath: process.env.SCRAPLING_CHROMIUM_PATH || undefined,
     timeout: parseInt(process.env.SCRAPE_TIMEOUT || '60000', 10),
   },
@@ -98,8 +106,8 @@ export function validateConfig(): void {
   if (config.nodeEnv === 'production' && !config.database.useSqlite && !config.database.password) {
     errors.push('DB_PASSWORD fehlt, obwohl in Production MariaDB genutzt wird.');
   }
-  if (config.scraper.timeout > 120_000) {
-    errors.push('SCRAPE_TIMEOUT darf höchstens 120000 Millisekunden betragen.');
+  if (config.scraper.timeout < 1_000 || config.scraper.timeout > 120_000) {
+    errors.push('SCRAPE_TIMEOUT muss zwischen 1000 und 120000 Millisekunden liegen.');
   }
   if (!config.okta.clientId || !config.okta.clientSecret || !config.okta.redirectUri) {
     warnings.push(

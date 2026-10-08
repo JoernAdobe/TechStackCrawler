@@ -54,6 +54,16 @@ async function withHeartbeat<T>(
   }
 }
 
+function publicWorkerError(stderr: string): string {
+  if (/Blocked|private|reserved|unsafe/i.test(stderr)) {
+    return 'Blocked unsafe or private target';
+  }
+  if (/Timeout|timed out/i.test(stderr)) {
+    return `Scrapling timed out after ${config.scraper.timeout}ms`;
+  }
+  return 'Scrapling could not render the page';
+}
+
 function terminateWorker(pid: number | undefined, signal: NodeJS.Signals): void {
   if (!pid) return;
   try {
@@ -76,7 +86,7 @@ function runWorker(url: string): Promise<ScrapedData> {
       [WORKER_PATH],
       { detached: process.platform !== 'win32', stdio: ['pipe', 'pipe', 'pipe'] },
     );
-    let stdout = '';
+    const stdoutChunks: Buffer[] = [];
     let stderr = '';
     let stdoutBytes = 0;
     let timedOut = false;
@@ -105,7 +115,7 @@ function runWorker(url: string): Promise<ScrapedData> {
         terminateWorker(child.pid, 'SIGTERM');
         return;
       }
-      stdout += chunk.toString('utf8');
+      stdoutChunks.push(chunk);
     });
     child.stderr.on('data', (chunk: Buffer) => {
       stderr = (stderr + chunk.toString('utf8')).slice(-MAX_STDERR_CHARS);
@@ -129,13 +139,16 @@ function runWorker(url: string): Promise<ScrapedData> {
       }
       if (code !== 0) {
         const detail = stderr.trim();
-        settleError(new Error(detail || `Scrapling worker exited with ${signal ?? code}`));
+        console.warn(`[scraper] Scrapling worker exited with ${signal ?? code}: ${detail}`);
+        settleError(new Error(publicWorkerError(detail)));
         return;
       }
       try {
+        const stdout = Buffer.concat(stdoutChunks).toString('utf8');
         resolve(SCRAPED_DATA_SCHEMA.parse(JSON.parse(stdout)));
       } catch (error) {
-        settleError(new Error(`Invalid Scrapling worker response: ${(error as Error).message}`));
+        console.warn(`[scraper] Invalid Scrapling worker response: ${(error as Error).message}`);
+        settleError(new Error('Invalid Scrapling worker response'));
       }
     });
 
