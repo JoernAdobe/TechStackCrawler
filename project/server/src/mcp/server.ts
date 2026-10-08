@@ -83,7 +83,7 @@ function createMcpServer(): McpServer {
 
   server.tool(
     'analyze-url',
-    'Analyze a website\'s technology stack using Puppeteer scraping and Claude AI. Returns detected technologies, Adobe opportunities, and a summary.',
+    'Analyze a website\'s technology stack using Scrapling browser scraping and Claude AI. Returns detected technologies, Adobe opportunities, and a summary.',
     { url: z.string().describe('The URL of the website to analyze') },
     async ({ url }) => {
       const sanitized = await sanitizeUrlWithDns(url);

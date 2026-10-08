@@ -13,7 +13,7 @@ import { config } from './config.js';
 import { getPool } from './db/index.js';
 import { textToSpeech, isTtsAvailable } from './services/tts.js';
 import AnthropicBedrock from '@anthropic-ai/bedrock-sdk';
-import puppeteer from 'puppeteer';
+import { scrapePage } from './services/scraper.js';
 
 type TestResult = { ok: boolean; message: string; detail?: string };
 
@@ -101,17 +101,14 @@ async function testDatabase(): Promise<TestResult> {
   }
 }
 
-async function testPuppeteer(): Promise<TestResult> {
+async function testScrapling(): Promise<TestResult> {
   try {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: config.puppeteer.executablePath,
-    });
-    await browser.close();
-    return { ok: true, message: 'OK – Chromium gestartet' };
+    const page = await scrapePage('https://example.com');
+    return page.title
+      ? { ok: true, message: `OK – Scrapling/Chromium geladen („${page.title}“)` }
+      : { ok: false, message: 'Scrapling lieferte keinen Seitentitel' };
   } catch (e) {
-    return { ok: false, message: 'Chromium-Fehler', detail: (e as Error).message };
+    return { ok: false, message: 'Scrapling/Chromium-Fehler', detail: (e as Error).message };
   }
 }
 
@@ -135,10 +132,10 @@ async function main() {
   console.log(`   ${results.database.ok ? '✓' : '✗'} ${results.database.message}`);
   if (results.database.detail) console.log(`   → ${results.database.detail}`);
 
-  console.log('\n4. Puppeteer (Chromium)...');
-  results.puppeteer = await testPuppeteer();
-  console.log(`   ${results.puppeteer.ok ? '✓' : '✗'} ${results.puppeteer.message}`);
-  if (results.puppeteer.detail) console.log(`   → ${results.puppeteer.detail}`);
+  console.log('\n4. Scrapling (Chromium)...');
+  results.scrapling = await testScrapling();
+  console.log(`   ${results.scrapling.ok ? '✓' : '✗'} ${results.scrapling.message}`);
+  if (results.scrapling.detail) console.log(`   → ${results.scrapling.detail}`);
 
   console.log('\n=== Zusammenfassung ===');
   const ok = Object.values(results).filter((r) => r.ok).length;

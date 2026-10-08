@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "test": "tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p 'test_*.py'",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -22,7 +23,6 @@
     "helmet": "^8.1.0",
     "jose": "^5.9.6",
     "mysql2": "^3.18.1",
-    "puppeteer": "^24.2.0",
     "zod": "^4.3.6"
   },
   "optionalDependencies": {

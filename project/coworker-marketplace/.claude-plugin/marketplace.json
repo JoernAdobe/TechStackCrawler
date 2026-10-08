@@ -1,0 +1,10 @@
+{
+  "name": "techstack-crawler",
+  "plugins": [
+    {
+      "name": "techstack-crawler",
+      "source": "./plugins/techstack-crawler",
+      "version": "0.1.0"
+    }
+  ]
+}

@@ -17,8 +17,9 @@ export const config = {
     awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     awsRegion: process.env.BEDROCK_REGION || process.env.AWS_REGION || 'us-west-2',
   },
-  puppeteer: {
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+  scraper: {
+    pythonPath: process.env.SCRAPLING_PYTHON_PATH || 'python3',
+    chromiumPath: process.env.SCRAPLING_CHROMIUM_PATH || undefined,
     timeout: parseInt(process.env.SCRAPE_TIMEOUT || '60000', 10),
   },
   elevenlabs: {
@@ -77,7 +78,7 @@ export function validateConfig(): void {
   const numbers: Array<[string, number]> = [
     ['PORT', config.port],
     ['BEDROCK_MAX_TOKENS', config.bedrock.maxTokens],
-    ['SCRAPE_TIMEOUT', config.puppeteer.timeout],
+    ['SCRAPE_TIMEOUT', config.scraper.timeout],
   ];
   // DB_PORT ist nur relevant, wenn tatsächlich MariaDB genutzt wird.
   if (!config.database.useSqlite) {
@@ -96,6 +97,9 @@ export function validateConfig(): void {
   }
   if (config.nodeEnv === 'production' && !config.database.useSqlite && !config.database.password) {
     errors.push('DB_PASSWORD fehlt, obwohl in Production MariaDB genutzt wird.');
+  }
+  if (config.scraper.timeout > 120_000) {
+    errors.push('SCRAPE_TIMEOUT darf höchstens 120000 Millisekunden betragen.');
   }
   if (!config.okta.clientId || !config.okta.clientSecret || !config.okta.redirectUri) {
     warnings.push(

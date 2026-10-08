@@ -2,11 +2,11 @@
 
 AI-powered website technology stack analyzer that identifies technologies, surfaces Adobe product opportunities, and generates tailored use case recommendations for sales and solution-consulting workflows.
 
-Enter any URL, and the tool scrapes the site with Puppeteer, detects its tech stack, analyzes the result with Claude via AWS Bedrock, stores the analysis, and can generate Adobe-oriented use case recommendations.
+Enter any URL, and the tool renders the site with Scrapling, detects its tech stack, analyzes the result with Claude via AWS Bedrock, stores the analysis, and can generate Adobe-oriented use case recommendations.
 
 ## Features
 
-- **Instant tech detection** — Scrapes websites with Puppeteer and identifies frameworks, libraries, services, and infrastructure signals.
+- **Instant tech detection** — Renders JavaScript-driven websites with Scrapling and identifies frameworks, libraries, services, and infrastructure signals.
 - **AI-powered analysis** — Uses Claude on AWS Bedrock to categorize technologies, summarize challenges, and map Adobe opportunities.
 - **Use case discovery** — Generates prioritized use cases with matching Adobe products, business value, and implementation hints.
 - **Adobe opportunity insights** — Frontend dashboard with placement potential, category status, and confidence charts.
@@ -22,7 +22,7 @@ Enter any URL, and the tool scrapes the site with Puppeteer, detects its tech st
 | Layer | Technologies |
 |-------|--------------|
 | Frontend | React 19, Vite, TypeScript, Tailwind CSS, Recharts, GSAP, Radix UI |
-| Backend | Node.js 20, Express, Puppeteer, AWS Bedrock SDK, ElevenLabs SDK, MCP SDK |
+| Backend | Node.js 20, Express, Python Scrapling, Chromium, AWS Bedrock SDK, ElevenLabs SDK, MCP SDK |
 | Database | SQLite for local development; MariaDB 11 for Docker/production |
 | Auth | Okta OIDC SSO, break-glass dashboard login, MCP bearer tokens |
 | Infrastructure | Docker, Docker Compose, Caddy reverse proxy, Makefile deployment scripts |
@@ -43,7 +43,7 @@ Enter any URL, and the tool scrapes the site with Puppeteer, detects its tech st
                     │  ├─ REST API routes               │
                     │  ├─ /auth Okta OIDC routes        │
                     │  ├─ /mcp Streamable HTTP endpoint │
-                    │  ├─ Puppeteer headless browser    │
+                    │  ├─ Scrapling worker + Chromium   │
                     │  ├─ AWS Bedrock Claude analysis   │
                     │  └─ ElevenLabs TTS (optional)     │
                     └──────────────┬───────────────────┘
@@ -87,6 +87,7 @@ In development, the Vite dev server runs on port `5173` and proxies `/api` reque
 
 - Node.js 20+
 - npm
+- For local scraping: Python 3.10+; from `project/`, create a virtual environment and install the pinned worker dependency with `python3 -m venv .venv && .venv/bin/pip install -r server/requirements.txt`, then run `.venv/bin/scrapling install`. Set `SCRAPLING_PYTHON_PATH=.venv/bin/python` in `project/.env`.
 - For local development: no database service is required if SQLite is used.
 - For AI analysis: either `BEDROCK_API_KEY` or AWS IAM credentials with Bedrock access.
 - For Docker/production: Docker and the required MariaDB passwords in the deployment environment.
@@ -126,6 +127,14 @@ This starts the Express server on `http://localhost:3001` and the Vite client on
 ```bash
 make build
 ```
+
+### Tests
+
+```bash
+cd project && npm test
+```
+
+This runs the Node boundary tests and Scrapling worker unit tests; `npm run test:connections` additionally renders `https://example.com` and checks configured external services.
 
 ## Deployment
 
@@ -172,7 +181,7 @@ Output includes a commit verification similar to:
 
 ## Environment Variables
 
-The server loads the first available `.env` file from the compiled server-relative project path, the current working directory, or the parent working directory. `project/.env.example` is the source template; keep real values in untracked environment files or a secret manager.
+The server loads the first available `.env` file from the compiled server-relative project path, the current working directory, or the parent working directory. `project/.env.example` is the source template; keep real values in untracked environment files or a secret manager. Local development also needs Python 3.10+ and Scrapling: run `python3 -m pip install -r server/requirements.txt` from `project/`, then `scrapling install` to set up its browser dependencies. Docker installs the pinned Scrapling version and uses system Chromium.
 
 | Variable | Used by | Description | Default / behavior |
 |----------|---------|-------------|--------------------|
@@ -195,8 +204,9 @@ The server loads the first available `.env` file from the compiled server-relati
 | `BEDROCK_KEY_EXPIRATION_DAYS` | `rotate-bedrock-key` | Expiration period for newly rotated Bedrock API keys | `365` |
 | `USE_MOCK_AI` | server/tests | Return mock AI output without calling Bedrock when set to `1` | Disabled |
 | `BEDROCK_SKIP_SIMULATE` | server | Skip Bedrock simulation and use mock output when set to `1` | Disabled |
-| `PUPPETEER_EXECUTABLE_PATH` | server | Custom Chromium/Chrome path | Unset; Puppeteer-managed browser is used |
-| `SCRAPE_TIMEOUT` | server | Page navigation timeout in milliseconds | `60000` |
+| `SCRAPLING_PYTHON_PATH` | server | Python interpreter used for the isolated Scrapling worker | `python3`; Docker uses `/opt/scrapling-venv/bin/python` |
+| `SCRAPLING_CHROMIUM_PATH` | server/Docker | Chromium executable used by Scrapling | Scrapling-managed browser locally; `/usr/bin/chromium` in Docker |
+| `SCRAPE_TIMEOUT` | server | Page navigation timeout in milliseconds (max `120000`) | `60000` |
 | `SCRAPE_DEFAULT_LOCALE` | server | Browser locale used during scraping | `en-US` |
 | `SCRAPE_DEFAULT_TIMEZONE` | server | Browser timezone used during scraping | `America/New_York` |
 | `MULTI_PAGE_CRAWL` | server | Enables sitemap/multi-page enrichment unless set to `0` | Enabled |
@@ -355,7 +365,7 @@ Additional npm scripts are available under `project/package.json`, including `te
 - **Logs**: Local development logs go to the terminal running `make start`. Production container logs are available through Docker; use `make logs SERVICE=techstack`, `make logs SERVICE=mariadb`, or `make logs SERVICE=caddy` when `SSH_HOST` is configured.
 - **Sessions**: Dashboard sessions are in-memory and last 24 hours. Restarting the server logs users out. MCP sessions are in-memory and last 30 minutes after last activity.
 - **Public endpoints**: Analysis, TTS, health, Bedrock status, and historical analysis reads are public at the API layer. Put the service behind the intended network boundary or reverse-proxy controls if that is not acceptable for the new owner.
-- **SSRF protection**: Every crawler request (main frame and all sub-resources) is checked against private/reserved IP ranges, the actual remote IP of responses is verified, and server-side fetches (sitemaps, sub-pages) are pinned to the validated IP. Keep this boundary intact when changing crawler behavior.
+- **SSRF protection**: The Scrapling worker validates the target and intercepted HTTP(S) subrequests against private/reserved IP ranges, verifies response remote IPs when Chromium exposes them, and Node-side sitemap/sub-page fetches pin DNS-validated IPs. Browser DNS pinning is not guaranteed; an egress firewall blocking private/reserved ranges and the Docker host remains mandatory for complete SSRF protection.
 
 ## Further Documentation
 
@@ -369,7 +379,7 @@ Additional npm scripts are available under `project/package.json`, including `te
 
 - **Core API is not authenticated**: `/api/analyze-sync`, `/api/use-case-discovery`, `/api/analyses*` and `/api/tts` are reachable by anyone who can reach the service (Adobe corp network). Only the dashboard, token management and `/mcp` require auth. Decide whether to require Okta login for all users.
 - **Chromium runs with `--no-sandbox`** in the container while rendering untrusted websites. A renderer exploit would run as the `node` user with access to the app's environment secrets. Mitigations: rebuild the image regularly (Chromium updates), enable the Chrome sandbox via a seccomp profile, or move the crawler into a separate container without secrets.
-- **Network egress (required before wider rollout)**: App-level SSRF checks block all intercepted browser requests and pin server-side fetches, but cannot fully close channels outside Puppeteer's interception (e.g. WebSockets from script-created `about:blank` iframes) or the first request of a DNS-rebinding attack. An egress firewall for the app container (block RFC1918, `100.64.0.0/10`, `169.254.0.0/16`, and the Docker host `172.17.0.1`) is **mandatory** to fully mitigate SSRF.
+- **Network egress (required before wider rollout)**: App-level SSRF checks block intercepted browser requests, but cannot prevent DNS rebinding between validation and connection or all browser networking channels. An egress firewall for the app container (block RFC1918, `100.64.0.0/10`, `169.254.0.0/16`, and the Docker host `172.17.0.1`) remains **mandatory** to fully mitigate SSRF.
 - **App port reachable over plain HTTP**: Port 8516 is bound on all interfaces by default. Set `HOST_BIND=172.17.0.1` and adjust the deploy health check (see `docs/deployment.md`).
 - **Dependencies**: `npm audit` reports known vulnerabilities (mostly transitive; `xlsx` from npm has no upstream fix — switch to the official SheetJS tarball `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`). Run `npm audit` and update before production changes.
 - **Git history**: An old, no longer valid hard-coded dashboard password exists in the commit history (removed in `ddd8c2c`). It has no effect on current code; rewrite history if the repository is shared more widely.

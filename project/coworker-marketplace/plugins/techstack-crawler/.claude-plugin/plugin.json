@@ -1,0 +1,8 @@
+{
+  "name": "techstack-crawler",
+  "version": "0.1.0",
+  "description": "Analyze public websites, detect their technology stack, and explore Adobe use cases.",
+  "author": {
+    "name": "Joern Daudert"
+  }
+}

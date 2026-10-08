@@ -202,8 +202,6 @@ const server = app.listen(config.port, host, () => {
 });
 
 async function shutdown() {
-  const { closeBrowser } = await import('./services/scraper.js');
-  await closeBrowser();
   await closeDb();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 3000);

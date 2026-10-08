@@ -13,10 +13,6 @@ RUN npm run build --workspace=client
 # Stage 2: Build the server (ohne better-sqlite3 – Production nutzt MariaDB)
 FROM node:20-alpine AS server-build
 WORKDIR /app
-# Puppeteer nicht Chromium herunterladen lassen (Runtime nutzt System-Chromium in Stage 3).
-# Ohne dieses Flag versucht `npm ci` den Chromium-Download → schlägt in gesperrten Netzen fehl.
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 COPY package.json package-lock.json ./
 COPY tsconfig.base.json ./
 COPY client/package.json client/
@@ -25,14 +21,16 @@ RUN npm ci --workspace=server --omit=optional
 COPY server/ server/
 RUN npm run build --workspace=server
 
-# Stage 3: Production runtime with Chromium
+# Stage 3: Production runtime with Chromium and Scrapling
 FROM node:20-slim AS production
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=$GIT_COMMIT
 
-# Install Chromium und Fonts
+# Install Python, Chromium und Fonts for Scrapling.
 RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-venv \
     chromium \
     fonts-ipafont-gothic \
     fonts-wqy-zenhei \
@@ -42,11 +40,14 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV SCRAPLING_CHROMIUM_PATH=/usr/bin/chromium
+ENV SCRAPLING_PYTHON_PATH=/opt/scrapling-venv/bin/python
 
 WORKDIR /app
+
+COPY server/requirements.txt /app/server/requirements.txt
+RUN python3 -m venv /opt/scrapling-venv \
+    && /opt/scrapling-venv/bin/pip install --no-cache-dir -r /app/server/requirements.txt
 
 # Copy server build and production dependencies
 COPY --from=server-build /app/package.json /app/package-lock.json ./
@@ -55,6 +56,7 @@ COPY --from=server-build /app/client/package.json client/
 RUN npm ci --workspace=server --omit=dev --omit=optional
 
 COPY --from=server-build /app/server/dist server/dist/
+COPY server/python/ server/python/
 
 # Copy frontend build
 COPY --from=client-build /app/client/dist client/dist/
