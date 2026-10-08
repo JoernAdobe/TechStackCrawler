@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 import { config } from './config.js';
-import { getPool } from './db/index.js';
+import { closeDb, getPool, initDb } from './db/index.js';
 import { textToSpeech, isTtsAvailable } from './services/tts.js';
 import AnthropicBedrock from '@anthropic-ai/bedrock-sdk';
 import { scrapePage } from './services/scraper.js';
@@ -82,6 +82,11 @@ async function testElevenLabs(): Promise<TestResult> {
 }
 
 async function testDatabase(): Promise<TestResult> {
+  try {
+    await initDb();
+  } catch (e) {
+    return { ok: false, message: 'Initialisierung fehlgeschlagen', detail: (e as Error).message };
+  }
   const db = getPool();
   if (!db) {
     return { ok: false, message: 'Nicht konfiguriert', detail: 'DB_PATH (SQLite) oder DB_PASSWORD (MariaDB) fehlt' };
@@ -141,6 +146,7 @@ async function main() {
   const ok = Object.values(results).filter((r) => r.ok).length;
   const total = Object.keys(results).length;
   console.log(`${ok}/${total} Tests erfolgreich\n`);
+  await closeDb();
 }
 
 main().catch(console.error);

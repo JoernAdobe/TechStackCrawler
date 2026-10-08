@@ -324,7 +324,7 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
         "google_search": False,
         "block_webrtc": True,
         "solve_cloudflare": False,
-        "retries": 0,
+        "retries": 1,
         "dns_over_https": False,
         "page_setup": setup_page,
         "page_action": finish_page,
