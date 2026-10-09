@@ -8,7 +8,7 @@
     {
       "name": "techstack-crawler",
       "source": "./plugins/techstack-crawler",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Analyze public websites, detect their technology stack, and explore Adobe use cases.",
       "author": {
         "name": "Joern Daudert"
@@ -17,6 +17,6 @@
   ],
   "metadata": {
     "description": "TechStack Crawler plugins for CX Enterprise Coworker.",
-    "version": "0.1.0"
+    "version": "0.2.0"
   }
 }

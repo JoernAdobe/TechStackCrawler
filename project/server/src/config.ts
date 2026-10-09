@@ -56,6 +56,19 @@ export const config = {
     redirectUri: (process.env.OKTA_REDIRECT_URI || '').trim(),
     scopes: process.env.OKTA_SCOPES || 'openid profile email',
   },
+  /** IMS-Passthrough für /mcp (Coworker reicht den IMS-User-Token durch). */
+  ims: {
+    enabled: process.env.MCP_IMS_AUTH_ENABLED !== 'false',
+    baseUrl: (process.env.IMS_BASE_URL || 'https://ims-na1.adobelogin.com').replace(/\/$/, ''),
+    allowedEmailDomains: (process.env.MCP_IMS_ALLOWED_EMAIL_DOMAINS || 'adobe.com')
+      .split(',')
+      .map((d) => d.trim().toLowerCase())
+      .filter(Boolean),
+    allowedClientIds: (process.env.MCP_IMS_ALLOWED_CLIENT_IDS || '')
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean),
+  },
   /** E-Mail-Whitelist für Admin-/Dashboard-Zugriff (case-insensitive). */
   adminEmails: (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || 'daudert@adobe.com')
     .split(',')
@@ -113,6 +126,15 @@ export function validateConfig(): void {
     warnings.push(
       'Okta-SSO unvollständig konfiguriert (OKTA_CLIENT_ID/SECRET/REDIRECT_URI) – SSO-Login deaktiviert.',
     );
+  }
+
+  if (config.ims.enabled) {
+    if (!/^https:\/\//.test(config.ims.baseUrl)) {
+      errors.push('IMS_BASE_URL muss eine https-URL sein.');
+    }
+    if (config.ims.allowedEmailDomains.length === 0) {
+      errors.push('MCP_IMS_ALLOWED_EMAIL_DOMAINS darf bei aktivem IMS-Passthrough nicht leer sein.');
+    }
   }
 
   const { breakGlassEmail, breakGlassPasswordHash } = config.dashboard;

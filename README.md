@@ -258,11 +258,13 @@ The server loads the first available `.env` file from the compiled server-relati
 - The password hash should be a salted scrypt hash (`scrypt$<salt>$<hash>`), generated with `cd project && npm run hash-dashboard-password -- '<password>'`. Legacy unsalted SHA-256 hashes still work but trigger a startup warning; never store the clear-text password.
 - Successful login returns a bearer session token that can also authorize dashboard-protected endpoints.
 
-### MCP bearer tokens
+### MCP authentication
 
-- MCP tokens are created, listed, and revoked through `/api/tokens` endpoints protected by dashboard auth.
+- `/mcp` accepts two bearer token types:
+  - **App API tokens** (`tsa_…`) — created, listed, and revoked through `/api/tokens` endpoints protected by dashboard auth; stored/validated in the database with optional expiration dates.
+  - **Adobe IMS user access tokens** — forwarded by the CX Enterprise Coworker plugin via IMS passthrough. The server validates them against IMS (`/ims/userinfo/v2`, cached ≤ 5 min and never beyond token expiry) and only admits verified emails in `MCP_IMS_ALLOWED_EMAIL_DOMAINS` (default `adobe.com`). Optional `MCP_IMS_ALLOWED_CLIENT_IDS` restricts the issuing IMS client. Disable with `MCP_IMS_AUTH_ENABLED=false`.
 - `/mcp` requires `Authorization: Bearer <your-token>` on every request.
-- Tokens are stored/validated in the database and may have optional expiration dates.
+- Tokens are revoked/expired per token type; IMS tokens expire with the user's IMS session.
 - MCP Streamable HTTP sessions expire after 30 minutes of inactivity; the server keeps at most 500 active MCP sessions.
 
 ## API Endpoints

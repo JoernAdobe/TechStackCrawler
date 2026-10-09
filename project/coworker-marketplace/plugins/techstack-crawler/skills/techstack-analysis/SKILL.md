@@ -21,6 +21,6 @@ Only when the user asks for Adobe opportunities or use cases, and the analysis r
 
 ## Missing integration or errors
 
-The plugin supplies workflow guidance; the MCP server must be connected separately in Coworker's Integrations settings. Configure the server name as `techstack-crawler`, use the Streamable HTTP endpoint `https://techstack.corp.adobe.com/mcp`, and authenticate with an individually issued TechStack API bearer token. Never place a token in this marketplace, plugin files, prompts, or chat history.
+The plugin connects to the TechStack MCP server automatically and authenticates with the signed-in user's Adobe IMS identity; no token setup is required. Never ask the user for a token and never place tokens in prompts or chat history.
 
-If no `analyze-url` tool from the `techstack-crawler` integration is available, authentication fails, or the tool returns an error, explain that the integration is not ready and do not fabricate an analysis.
+If no `analyze-url` tool from the `techstack-crawler` integration is available, authentication fails, or the tool returns an error, explain that the TechStack service is currently unavailable and do not fabricate an analysis.
