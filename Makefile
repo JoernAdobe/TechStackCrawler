@@ -242,6 +242,13 @@ ETHOS_LOAD = [ -f .env.deploy ] && . ./.env.deploy; [ -f .env.ethos ] && . ./.en
 	[ -n "$$GHCR_TOKEN" ] || GHCR_TOKEN=$$(security find-generic-password -s ghcr-techstack -w 2>/dev/null || true); \
 	SSH_OPTS=$$([ -n "$$SSH_KEY" ] && echo "-i $$(pwd)/$$SSH_KEY -o IdentitiesOnly=yes" || true)
 
+# kubelogin ≥ 0.2 speichert den Device-Code-Login mit --legacy nicht, sonst fragt jeder kubectl-Aufruf neu.
+# Daher wird das Token EINMAL pro make-Aufruf geholt und per --token an alle kubectl-Aufrufe übergeben.
+ETHOS_KUBELOGIN_ARGS ?= --server-id 41abc0c6-712d-4619-9b79-b96da7ffa825 --client-id 752c7d7f-e651-4ac3-939b-a049f390e19a --tenant-id fa7b1b5a-7b34-4387-94ae-d2c178decee1 --legacy
+ETHOS_AUTH = if [ -z "$$ETHOS_TOKEN" ] && command -v kubelogin >/dev/null; then \
+		ETHOS_TOKEN=$$(kubelogin get-token --login devicecode $(ETHOS_KUBELOGIN_ARGS) | tr -d ' \n' | sed -E 's/.*"token":"([^"]+)".*/\1/') || exit 1; fi; \
+	if [ -n "$$ETHOS_TOKEN" ]; then KC="$$KC --user ethos-token --token $$ETHOS_TOKEN"; fi
+
 # Image für linux/amd64 bauen und nach ghcr pushen (Tag = Git-Commit + latest)
 ethos-image:
 	@$(ETHOS_LOAD); \
@@ -255,7 +262,7 @@ ethos-image:
 # k8s-Secrets anlegen/aktualisieren: ghcr-Pull-Secret + App-Env (Quelle: .env der Corp-VM oder ETHOS_ENV_FILE)
 # Aufruf: make ethos-secrets (GHCR_TOKEN aus dem Schlüsselbund, Eintrag ghcr-techstack)
 ethos-secrets:
-	@$(ETHOS_LOAD); \
+	@$(ETHOS_LOAD); $(ETHOS_AUTH); \
 	: "$${GHCR_TOKEN:?GHCR_TOKEN fehlt – im Schlüsselbund ablegen: security add-generic-password -a JoernAdobe -s ghcr-techstack -w}"; \
 	TMP=$$(mktemp); trap 'rm -f $$TMP $$TMP.f' EXIT; \
 	if [ -n "$$ETHOS_ENV_FILE" ]; then cp "$$ETHOS_ENV_FILE" $$TMP; \
@@ -273,7 +280,7 @@ ethos-secrets:
 
 # Manifeste anwenden, Rollout abwarten, Health- und Commit-Check
 ethos-deploy:
-	@$(ETHOS_LOAD); \
+	@$(ETHOS_LOAD); $(ETHOS_AUTH); \
 	GIT_COMMIT=$$(git rev-parse --short HEAD); IMAGE=$${IMAGE:-$$GHCR_IMAGE:$$GIT_COMMIT}; \
 	echo ">>> Deploy $$IMAGE → $$ETHOS_CONTEXT/$$ETHOS_NAMESPACE ($$ETHOS_HOST)"; \
 	sed -e "s|__NAMESPACE__|$$ETHOS_NAMESPACE|g" -e "s|__IMAGE__|$$IMAGE|g" -e "s|__HOST__|$$ETHOS_HOST|g" \
@@ -289,7 +296,7 @@ ethos-deploy:
 
 # Analysen von der Corp-VM in die Ethos-MariaDB übernehmen (überschreibt die Ethos-DB!)
 ethos-migrate-db:
-	@$(ETHOS_LOAD); \
+	@$(ETHOS_LOAD); $(ETHOS_AUTH); \
 	: "$${SSH_HOST:?SSH_HOST fehlt (.env.deploy)}"; \
 	printf ">>> Ethos-DB in $$ETHOS_NAMESPACE wird mit dem Stand der Corp-VM überschrieben. Weiter? [y/N] "; read a; [ "$$a" = y ] || exit 1; \
 	ssh $$SSH_OPTS "$$SSH_HOST" "cd $${REMOTE_DIR:-/opt/techstack-crawler} && set -a && . ./.env && set +a && docker exec \$${CONTAINER_PREFIX:-techstack-}mariadb mariadb-dump -u root -p\"\$$DB_ROOT_PASSWORD\" --single-transaction techstack_crawler" \
@@ -297,7 +304,7 @@ ethos-migrate-db:
 	echo ">>> Migration OK: $$($$KC exec deploy/techstack-mariadb -- sh -c 'mariadb -N -u root -p"$$MARIADB_ROOT_PASSWORD" -e "SELECT COUNT(*) FROM techstack_crawler.analyses"') Analysen"
 
 ethos-status:
-	@$(ETHOS_LOAD); $$KC get pods,svc,pvc,httpproxy,networkpolicy -o wide; curl -s "https://$$ETHOS_HOST/api/health"; echo
+	@$(ETHOS_LOAD); $(ETHOS_AUTH); $$KC get pods,svc,pvc,httpproxy,networkpolicy -o wide; curl -s "https://$$ETHOS_HOST/api/health"; echo
 
 ethos-logs:
-	@$(ETHOS_LOAD); $$KC logs deploy/$${SERVICE:-techstack} --tail=$${LINES:-100}
+	@$(ETHOS_LOAD); $(ETHOS_AUTH); $$KC logs deploy/$${SERVICE:-techstack} --tail=$${LINES:-100}
