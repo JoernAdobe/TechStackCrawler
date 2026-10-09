@@ -1,0 +1,23 @@
+schema_version: v1
+server_id: "techstack_crawler"
+name: "TechStack Crawler MCP"
+description: "Internal pre-sales tool: analyzes a website's technology stack (Scrapling + Claude) and maps Adobe opportunities and use cases."
+url: "https://techstack.corp.adobe.com/mcp"
+
+authentication:
+  ref: "authentication/ims_passthrough"
+
+include_tools:
+  - analyze-url
+  - list-analyses
+  - get-analysis
+  - use-case-discovery
+
+# Internal Adobe users only (upstream additionally enforces adobe.com via IMS userinfo).
+required_segments:
+  - internal-orgs
+
+# analyze-url renders the page in a headless browser and runs an LLM pass (~30-90s).
+timeout:
+  connect: 10
+  read: 180

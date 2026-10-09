@@ -1,0 +1,14 @@
+schema_version: v1
+manifest_id: techstack_crawler
+description: "TechStack Crawler tool surface — reached explicitly via ?manifest_id=techstack_crawler. Internal-only; references only the techstack_crawler card. Stage test scope for the TechStack Crawler Coworker plugin."
+
+mcp_servers:
+  - ref: "mcp_servers/techstack_crawler_mcp"
+
+virtual_paths:
+  - path_id: techstack_crawler
+    name: "TechStack Crawler"
+    description: "Website tech-stack analysis and Adobe opportunity mapping."
+    servers:
+      - techstack_crawler
+    expose_core_tools: false
