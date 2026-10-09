@@ -246,9 +246,14 @@ ETHOS_LOAD = [ -f .env.deploy ] && . ./.env.deploy; [ -f .env.ethos ] && . ./.en
 # kubelogin ≥ 0.2 speichert den Device-Code-Login mit --legacy nicht, sonst fragt jeder kubectl-Aufruf neu.
 # Daher wird das Token EINMAL pro make-Aufruf geholt und per --token an alle kubectl-Aufrufe übergeben.
 ETHOS_KUBELOGIN_ARGS ?= --server-id 41abc0c6-712d-4619-9b79-b96da7ffa825 --client-id 752c7d7f-e651-4ac3-939b-a049f390e19a --tenant-id fa7b1b5a-7b34-4387-94ae-d2c178decee1 --legacy
-ETHOS_AUTH = if [ -z "$$ETHOS_TOKEN" ] && command -v kubelogin >/dev/null; then \
-		ETHOS_TOKEN=$$(kubelogin get-token --login devicecode $(ETHOS_KUBELOGIN_ARGS) | tr -d ' \n' | sed -E 's/.*"token":"([^"]+)".*/\1/') || exit 1; fi; \
-	if [ -n "$$ETHOS_TOKEN" ]; then KC="$$KC --user ethos-token --token $$ETHOS_TOKEN"; fi
+ETHOS_AUTH = if [ -z "$$ETHOS_TOKEN" ]; then \
+		command -v kubelogin >/dev/null || { echo ">>> kubelogin fehlt: brew install Azure/kubelogin/kubelogin"; exit 1; }; \
+		echo ">>> Ethos-Login: Code unten innerhalb von ~1 Minute auf https://login.microsoft.com/device eingeben"; \
+		ETHOS_RAW=$$(kubelogin get-token --login devicecode $(ETHOS_KUBELOGIN_ARGS)) || { echo ">>> Ethos-Login fehlgeschlagen/abgelaufen – Befehl einfach neu starten"; exit 1; }; \
+		ETHOS_TOKEN=$$(printf '%s' "$$ETHOS_RAW" | tr -d ' \n' | sed -E 's/.*"token":"([^"]+)".*/\1/'); \
+		case "$$ETHOS_TOKEN" in ""|*'{'*) echo ">>> Ethos-Login lieferte kein Token – Befehl neu starten"; exit 1;; esac; \
+	fi; \
+	KC="$$KC --user ethos-token --token $$ETHOS_TOKEN"
 
 # Image für linux/amd64 bauen und nach ghcr pushen (Tag = Git-Commit + latest)
 ethos-image:
