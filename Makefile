@@ -239,6 +239,7 @@ deploy-hub:
 ETHOS_LOAD = [ -f .env.deploy ] && . ./.env.deploy; [ -f .env.ethos ] && . ./.env.ethos; \
 	: "$${ETHOS_CONTEXT:?fehlt in .env.ethos}" "$${ETHOS_NAMESPACE:?fehlt in .env.ethos}" "$${ETHOS_HOST:?fehlt in .env.ethos}" "$${GHCR_IMAGE:?fehlt in .env.ethos}"; \
 	KC="kubectl --context $$ETHOS_CONTEXT -n $$ETHOS_NAMESPACE"; \
+	ETHOS_CORP_HOST=$${ETHOS_CORP_HOST:-$$(echo "$$ETHOS_HOST" | sed 's/\.int\./.corp./')}; \
 	[ -n "$$GHCR_TOKEN" ] || GHCR_TOKEN=$$(security find-generic-password -s ghcr-techstack -w 2>/dev/null || true); \
 	SSH_OPTS=$$([ -n "$$SSH_KEY" ] && echo "-i $$(pwd)/$$SSH_KEY -o IdentitiesOnly=yes" || true)
 
@@ -272,7 +273,7 @@ ethos-secrets:
 		| grep -vE '^(DB_HOST|DB_PORT|DB_NAME|PORT|NODE_ENV|HOST_PORT|HOST_PORT_HTTP|HOST_BIND|CONTAINER_PREFIX|OKTA_REDIRECT_URI|GIT_COMMIT)=' > $$TMP.f; \
 	grep -q '^DB_USER=' $$TMP.f || echo "DB_USER=techstack" >> $$TMP.f; \
 	for k in DB_PASSWORD DB_ROOT_PASSWORD; do grep -q "^$$k=." $$TMP.f || { echo "Fehler: $$k fehlt in der Env-Quelle"; exit 1; }; done; \
-	echo "OKTA_REDIRECT_URI=https://$$ETHOS_HOST/auth/callback" >> $$TMP.f; \
+	echo "OKTA_REDIRECT_URI=https://$$ETHOS_CORP_HOST/auth/callback" >> $$TMP.f; \
 	$$KC create secret generic techstack-env --from-env-file=$$TMP.f --dry-run=client -o yaml | $$KC apply -f - && \
 	$$KC create secret docker-registry ghcr-secret --docker-server=ghcr.io --docker-username="$$GHCR_USER" \
 		--docker-password="$$GHCR_TOKEN" --dry-run=client -o yaml | $$KC apply -f - && \
@@ -282,17 +283,19 @@ ethos-secrets:
 ethos-deploy:
 	@$(ETHOS_LOAD); $(ETHOS_AUTH); \
 	GIT_COMMIT=$$(git rev-parse --short HEAD); IMAGE=$${IMAGE:-$$GHCR_IMAGE:$$GIT_COMMIT}; \
-	echo ">>> Deploy $$IMAGE → $$ETHOS_CONTEXT/$$ETHOS_NAMESPACE ($$ETHOS_HOST)"; \
-	sed -e "s|__NAMESPACE__|$$ETHOS_NAMESPACE|g" -e "s|__IMAGE__|$$IMAGE|g" -e "s|__HOST__|$$ETHOS_HOST|g" \
+	echo ">>> Deploy $$IMAGE → $$ETHOS_CONTEXT/$$ETHOS_NAMESPACE ($$ETHOS_HOST + $$ETHOS_CORP_HOST)"; \
+	sed -e "s|__NAMESPACE__|$$ETHOS_NAMESPACE|g" -e "s|__IMAGE__|$$IMAGE|g" -e "s|__HOST__|$$ETHOS_HOST|g" -e "s|__CORP_HOST__|$$ETHOS_CORP_HOST|g" \
 		-e "s|__MARIADB_IMAGE__|$${MARIADB_IMAGE:-mariadb:11}|g" $(PROJECT_DIR)/ethos.k8s.yaml | $$KC apply -f - || exit 1; \
 	$$KC rollout status deployment/techstack-mariadb --timeout=300s && \
 	$$KC rollout status deployment/techstack --timeout=600s || { $$KC get pods; exit 1; }; \
-	HEALTH=$$(curl -sf "https://$$ETHOS_HOST/api/health"); \
-	if [ -z "$$HEALTH" ]; then echo ">>> Health-Check: https://$$ETHOS_HOST/api/health nicht erreichbar (VPN? HTTPProxy-Status prüfen: make ethos-status)"; exit 1; fi; \
+	echo ">>> Warte auf Ingress/DNS von $$ETHOS_CORP_HOST …"; \
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12; do HEALTH=$$(curl -sf -m 10 "https://$$ETHOS_CORP_HOST/api/health") && break; sleep 10; done; \
+	if [ -z "$$HEALTH" ]; then echo ">>> Health-Check: https://$$ETHOS_CORP_HOST/api/health nicht erreichbar (VPN an? HTTPProxy-Status prüfen: make ethos-status)"; exit 1; fi; \
 	REMOTE_COMMIT=$$(echo "$$HEALTH" | grep -o '"commit":"[^"]*"' | cut -d'"' -f4); \
 	echo ">>> Health-Check: OK, Server-Commit $$REMOTE_COMMIT"; \
 	[ "$$REMOTE_COMMIT" = "$$GIT_COMMIT" ] && echo ">>> Commit-Check: OK" || echo ">>> Commit-Check: MISMATCH (lokal=$$GIT_COMMIT)"; \
-	echo ">>> MCP-Endpoint: https://$$ETHOS_HOST/mcp"
+	echo ">>> MCP-Endpoint (Gateway, nur Rechenzentrum): https://$$ETHOS_HOST/mcp"; \
+	echo ">>> Web-UI/MCP über VPN: https://$$ETHOS_CORP_HOST"
 
 # Analysen von der Corp-VM in die Ethos-MariaDB übernehmen (überschreibt die Ethos-DB!)
 ethos-migrate-db:
@@ -304,7 +307,7 @@ ethos-migrate-db:
 	echo ">>> Migration OK: $$($$KC exec deploy/techstack-mariadb -- sh -c 'mariadb -N -u root -p"$$MARIADB_ROOT_PASSWORD" -e "SELECT COUNT(*) FROM techstack_crawler.analyses"') Analysen"
 
 ethos-status:
-	@$(ETHOS_LOAD); $(ETHOS_AUTH); $$KC get pods,svc,pvc,httpproxy,networkpolicy -o wide; curl -s "https://$$ETHOS_HOST/api/health"; echo
+	@$(ETHOS_LOAD); $(ETHOS_AUTH); $$KC get pods,svc,pvc,httpproxy,networkpolicy -o wide; curl -s -m 10 "https://$$ETHOS_CORP_HOST/api/health"; echo
 
 ethos-logs:
 	@$(ETHOS_LOAD); $(ETHOS_AUTH); $$KC logs deploy/$${SERVICE:-techstack} --tail=$${LINES:-100}

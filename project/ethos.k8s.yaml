@@ -156,6 +156,27 @@ spec:
         - name: techstack
           port: 80
 ---
+# *.int ist nur aus Adobe-Rechenzentren erreichbar (für das Coworker-Gateway).
+# Für Browser/Tests über VPN gibt es zusätzlich *.corp (contour-corp, cluster-ssl-corp).
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: techstack-corp
+  namespace: __NAMESPACE__
+  annotations:
+    kubernetes.io/ingress.class: contour-corp
+spec:
+  virtualhost:
+    fqdn: __CORP_HOST__
+    tls:
+      secretName: heptio-contour/cluster-ssl-corp
+  routes:
+    - conditions: [{ prefix: / }]
+      timeoutPolicy: { response: 300s, idle: 300s }
+      services:
+        - name: techstack
+          port: 80
+---
 # Namespaces auf Ethos sind default-deny. Die folgenden Policies öffnen nur, was die App braucht.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
