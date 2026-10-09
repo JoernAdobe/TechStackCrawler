@@ -328,6 +328,19 @@ The TechStack Analyzer exposes a [Model Context Protocol](https://modelcontextpr
 
 Tokens can be revoked at any time through the dashboard. Expired or revoked tokens are rejected with HTTP 401.
 
+### MCP smoke test
+
+Exercises the endpoint the same way Coworker does (Streamable HTTP, bearer auth): `initialize`, `tools/list`, then `analyze-url`.
+
+```bash
+cd project
+MCP_TOKEN=tsa_... npm run test:mcp                          # prod endpoint, analyzes example.com
+MCP_TOKEN=tsa_... npm run test:mcp -- --list-only           # auth + tool listing only
+MCP_TOKEN=tsa_... MCP_URL=http://localhost:3001/mcp npm run test:mcp -- https://www.bmw.de
+```
+
+To test the IMS passthrough path, use an IMS user access token instead of `tsa_…` (e.g. copy the `Authorization` bearer of any `*.adobe.io` request from browser DevTools while signed in to experience.adobe.com). Rejections are logged server-side as `[mcp-auth]`.
+
 ## Available Commands
 
 | Command | Description |

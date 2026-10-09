@@ -14,6 +14,7 @@
     "test": "npm test --workspace=server",
     "start": "npm run start --workspace=server",
     "test:connections": "cd server && npx dotenv -e ../.env -- tsx src/test-connections.ts",
+    "test:mcp": "cd server && tsx src/mcp-smoke.ts",
     "rotate-bedrock-key": "npx dotenv -e .env -- tsx scripts/rotate-bedrock-key.ts",
     "test-bedrock-key": "npx dotenv -e .env -- tsx scripts/test-bedrock-key.ts",
     "export-for-deploy": "npx dotenv -e .env -- tsx scripts/export-local-analyses.ts",
