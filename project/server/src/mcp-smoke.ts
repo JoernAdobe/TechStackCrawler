@@ -51,7 +51,7 @@ async function main(): Promise<number> {
 
     if (listOnly) return 0;
 
-    console.log(`… analyze-url ${target} (kann 30–90 s dauern)`);
+    console.log(`… analyze-url ${target} (kann 30–150 s dauern)`);
     const started = Date.now();
     const result = await client.callTool(
       { name: 'analyze-url', arguments: { url: target } },
