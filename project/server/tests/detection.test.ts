@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { customDetect, DETECTION_RULES } from '../src/services/customDetectors.js';
 import { detectTechnologies } from '../src/services/detector.js';
-import { mergeDetections } from '../src/services/multiPageCrawl.js';
+import { mergeDetections, selectRepresentativePages } from '../src/services/multiPageCrawl.js';
 import type { ScrapedData } from '../src/services/scraper.js';
 import { SIGNAL_LAYERS } from '../src/services/signalLayers.js';
+
+// Keine echten DNS-Lookups in Unit-Tests (dnsSignals hat eigene Tests mit Fake-Resolver).
+process.env.DNS_SIGNALS = '0';
 
 function page(overrides: Partial<ScrapedData> = {}): ScrapedData {
   return {
@@ -100,4 +103,33 @@ test('mergeDetections unions evidence without duplicates', () => {
   const [m] = mergeDetections(base, extra);
   assert.deepEqual(m.evidence, ['a', 'b']);
   assert.equal(m.confidence, 90);
+});
+
+test('mergeDetections keeps ⚠ warnings even when evidence is capped', () => {
+  const base = [{ name: 'X', categories: ['A'], confidence: 80, evidence: ['1', '2', '3', '4', '5', '6', '7', '8'] }];
+  const extra = [{ name: 'X', categories: ['A'], confidence: 80, evidence: ['⚠ warn'] }];
+  const [m] = mergeDetections(base, extra);
+  assert.equal(m.evidence?.[0], '⚠ warn');
+  assert.equal(m.evidence?.length, 8);
+});
+
+test('selectRepresentativePages prioritises journey pages, one per type, same host only', () => {
+  const pages = selectRepresentativePages('https://www.shop.de/', [
+    'https://www.shop.de/about',
+    'https://www.shop.de/blog/x',
+    'https://www.shop.de/login',
+    'https://www.shop.de/product/1',
+    'https://www.shop.de/product/2',
+    'https://other.de/cart',
+    'https://www.shop.de/cart',
+    'https://www.shop.de/search?q=a',
+    'https://www.shop.de/kontakt',
+  ]);
+  assert.deepEqual(pages, [
+    'https://www.shop.de/product/1',
+    'https://www.shop.de/cart',
+    'https://www.shop.de/login',
+    'https://www.shop.de/search?q=a',
+    'https://www.shop.de/blog/x',
+  ]);
 });

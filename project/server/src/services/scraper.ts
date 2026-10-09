@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { config } from '../config.js';
 import { localeForUrl } from '../utils/locale.js';
 import { sanitizeUrlWithDns } from '../utils/sanitize.js';
+import type { ConsentSnapshot } from './consentAudit.js';
 
 export interface ScrapedData {
   url: string;
@@ -22,6 +23,8 @@ export interface ScrapedData {
   jsGlobals: Record<string, string>;
   /** Zusammenfassung der AEP-Edge-Antworten, z. B. "decisionProvider:TGT", "handle:activation:push". */
   edgeSignals: string[];
+  /** Consent-Audit-Snapshot unmittelbar vor dem Banner-Klick (nur gefüllt, wenn geklickt wurde). */
+  consent?: ConsentSnapshot;
 }
 
 const SCRAPED_DATA_SCHEMA = z.object({
@@ -38,6 +41,14 @@ const SCRAPED_DATA_SCHEMA = z.object({
   requests: z.array(z.string()).default([]),
   jsGlobals: z.record(z.string(), z.string()).default({}),
   edgeSignals: z.array(z.string()).default([]),
+  consent: z
+    .object({
+      bannerAccepted: z.boolean(),
+      preConsentRequests: z.array(z.string()),
+      preConsentCookies: z.array(z.string()),
+    })
+    .strict()
+    .optional(),
 }).strict();
 
 const WORKER_PATH = fileURLToPath(new URL('../../python/scrapling_crawler.py', import.meta.url));

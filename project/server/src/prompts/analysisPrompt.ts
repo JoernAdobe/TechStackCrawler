@@ -143,6 +143,7 @@ Rules:
 - IMPORTANT: When Adobe products are detected (AEM, Adobe Analytics, Adobe Target, Adobe Commerce/Magento, Marketo, Adobe Advertising Cloud, etc.), explicitly name them in the relevant category and note them in the summary. This is valuable for follow-up analyses.
 - "evidence" lines are deterministic proof observed in fired network requests, cookies or the page's JavaScript runtime (e.g. report suites, IMS org, datastream, container IDs). Prefer them over assumptions and cite the most useful ones (IDs, versions, warnings marked ⚠) in currentTechnology.
 - Adobe Experience Cloud ID Service (ECID) or the AEP Web SDK alone do NOT prove a Real-Time CDP, Customer Journey Analytics or Journey Optimizer license. Only state RTCDP / AJO as in use when they appear in the Detected Technologies list; otherwise frame them as opportunities.
+- Evidence "⚠ Active before consent" means the tool sent requests or set cookies before the visitor accepted the cookie banner. Mention this as a privacy/compliance risk (GDPR/ePrivacy) in the Consent Management or relevant category, and position governed, consent-aware data collection (e.g. Adobe Experience Platform consent enforcement) where relevant.
 - All text must be in English.
 - PLAIN LANGUAGE: Write summary, challengesAndPainPoints, and adobeOpportunity for non-technical readers. No jargon without explanation. Short sentences. Focus on business impact.
 - Output ONLY the JSON object, nothing else.`;

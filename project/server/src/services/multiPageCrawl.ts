@@ -13,17 +13,21 @@ import { sanitizeUrlWithDns } from '../utils/sanitize.js';
  * ausfallsicher, sodass ein Fehler die Hauptanalyse nie bricht.
  */
 
-const MAX_EXTRA_PAGES = 3;
+const MAX_EXTRA_PAGES = Math.max(0, Math.min(8, parseInt(process.env.MULTI_PAGE_MAX || '5', 10) || 5));
+/** Parallel laufende Browser-Worker (je ~300–500 MB RAM). */
+const CRAWL_CONCURRENCY = Math.max(1, Math.min(3, parseInt(process.env.MULTI_PAGE_CONCURRENCY || '2', 10) || 2));
 
-/** Ein Muster pro „Seitentyp" – für Vielfalt statt drei Produktseiten. */
+/** Ein Muster pro „Seitentyp" – für Vielfalt statt drei Produktseiten. Reihenfolge = Priorität. */
 const PAGE_TYPE_PATTERNS: RegExp[] = [
   /\/(product|products|produkt|produkte|p|item|dp)(\/|$|\?)/i,
   /\/(cart|checkout|warenkorb|basket|bag)(\/|$|\?)/i,
+  /\/(login|signin|sign-in|anmelden|account|konto|mein-konto|my-account|register|registrieren)(\/|$|\?)/i,
+  /\/(category|categories|kategorie|kategorien|shop|store|collection|models|modelle|fahrzeuge)(\/|$|\?)/i,
+  /\/(search|suche)(\/|$|\?)/i,
   /\/(blog|news|article|artikel|magazine|stories|insights)(\/|$|\?)/i,
+  /\/(contact|kontakt|support|help|service)(\/|$|\?)/i,
+  /\/(pricing|preise|plans|tarife|angebote|offers)(\/|$|\?)/i,
   /\/(about|about-us|ueber-uns|company|unternehmen|team)(\/|$|\?)/i,
-  /\/(category|categories|kategorie|kategorien|shop|store|collection)(\/|$|\?)/i,
-  /\/(contact|kontakt|support|help)(\/|$|\?)/i,
-  /\/(pricing|preise|plans|tarife)(\/|$|\?)/i,
 ];
 
 function hostKey(url: string): string | null {
@@ -54,28 +58,27 @@ export function selectRepresentativePages(
     return [];
   }
 
-  const selected: string[] = [];
-  const usedPatterns = new Set<number>();
+  const firstByPattern = new Map<number, string>();
   const seen = new Set<string>();
 
   for (const link of links) {
-    if (selected.length >= limit) break;
     if (!/^https?:\/\//i.test(link)) continue;
     if (hostKey(link) !== baseHost) continue;
 
     const noHash = link.split('#')[0];
     const key = noHash.replace(/\/+$/, '');
     if (!key || key === baseKey || seen.has(key)) continue;
+    seen.add(key);
 
     const patternIdx = PAGE_TYPE_PATTERNS.findIndex((re) => re.test(noHash));
-    if (patternIdx === -1 || usedPatterns.has(patternIdx)) continue;
-
-    usedPatterns.add(patternIdx);
-    seen.add(key);
-    selected.push(noHash);
+    if (patternIdx === -1 || firstByPattern.has(patternIdx)) continue;
+    firstByPattern.set(patternIdx, noHash);
   }
 
-  return selected;
+  return [...firstByPattern.entries()]
+    .sort(([a], [b]) => a - b)
+    .slice(0, limit)
+    .map(([, url]) => url);
 }
 
 /**
@@ -108,7 +111,10 @@ export function mergeDetections(
     }
     for (const e of d.evidence ?? []) {
       existing.evidence ??= [];
-      if (!existing.evidence.includes(e) && existing.evidence.length < 8) existing.evidence.push(e);
+      if (existing.evidence.includes(e)) continue;
+      // Warnungen (⚠) dürfen nicht am Cap scheitern.
+      if (e.startsWith('⚠')) existing.evidence = [e, ...existing.evidence].slice(0, 8);
+      else if (existing.evidence.length < 8) existing.evidence.push(e);
     }
   };
 
@@ -132,9 +138,10 @@ export async function enrichWithAdditionalPages(
   if (pages.length === 0) return { detected: baseDetected, pagesCrawled: [] };
 
   let merged = baseDetected;
-  const crawled: string[] = [];
+  const results: (DetectedTech[] | null)[] = new Array(pages.length).fill(null);
+  let next = 0;
 
-  for (const url of pages) {
+  const scanOne = async (url: string): Promise<DetectedTech[] | null> => {
     try {
       let label = url;
       try {
@@ -145,17 +152,30 @@ export async function enrichWithAdditionalPages(
       // Links stammen von der fremden Seite → vorab gegen private Ziele prüfen
       // (scrapePage prüft zusätzlich jeden Request und die Remote-IPs).
       const safeUrl = await sanitizeUrlWithDns(url);
-      if (!safeUrl) continue;
+      if (!safeUrl) return null;
       onProgress?.(`Scanning additional page: ${label}`);
       const scraped = await scrapePage(safeUrl, () => {});
-      const detected = await detectTechnologies(scraped);
-      merged = mergeDetections(merged, detected);
-      crawled.push(url);
+      return await detectTechnologies(scraped);
     } catch {
       // Best-effort: fehlerhafte Seiten überspringen, Hauptanalyse nie brechen.
-      continue;
+      return null;
     }
-  }
+  };
+
+  const worker = async () => {
+    while (next < pages.length) {
+      const i = next++;
+      results[i] = await scanOne(pages[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CRAWL_CONCURRENCY, pages.length) }, worker));
+
+  const crawled: string[] = [];
+  results.forEach((detected, i) => {
+    if (!detected) return;
+    merged = mergeDetections(merged, detected);
+    crawled.push(pages[i]);
+  });
 
   return { detected: merged, pagesCrawled: crawled };
 }

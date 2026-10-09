@@ -103,6 +103,10 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(result["requests"], [])
         self.assertEqual(result["jsGlobals"], {})
         self.assertEqual(result["edgeSignals"], [])
+        self.assertEqual(
+            result["consent"],
+            {"bannerAccepted": False, "preConsentRequests": [], "preConsentCookies": []},
+        )
 
     def test_merges_network_scripts_and_runtime_signals(self):
         try:

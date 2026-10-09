@@ -1,6 +1,8 @@
 import type { ScrapedData } from './scraper.js';
 import { customDetect, type DetectedTech } from './customDetectors.js';
 import { extractEvidence } from './tagEvidence.js';
+import { detectFromDns } from './dnsSignals.js';
+import { annotatePreConsent } from './consentAudit.js';
 
 interface VersionExtractor {
   name: string;
@@ -55,6 +57,22 @@ export async function detectTechnologies(
       tech.version = extractor.extract(scraped);
     }
   }
+
+  for (const dnsTech of await detectFromDns(scraped)) {
+    const existing = results.find((t) => t.name === dnsTech.name);
+    if (!existing) {
+      results.push(dnsTech);
+      continue;
+    }
+    existing.confidence = Math.max(existing.confidence, dnsTech.confidence);
+    existing.weak = false;
+    existing.evidence = [...(existing.evidence ?? [])];
+    for (const e of dnsTech.evidence ?? []) {
+      if (!existing.evidence.includes(e) && existing.evidence.length < 8) existing.evidence.push(e);
+    }
+  }
+
+  annotatePreConsent(results, scraped.consent, scraped.finalUrl);
 
   return results;
 }

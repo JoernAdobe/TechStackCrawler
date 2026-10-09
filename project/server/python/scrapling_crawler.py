@@ -196,6 +196,7 @@ def extract_data(
     network_scripts: list[str] | None = None,
     js_globals: dict[str, str] | None = None,
     edge_signals: set[str] | None = None,
+    consent: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     meta: dict[str, list[str]] = {}
     for element in page.css("meta"):
@@ -239,6 +240,11 @@ def extract_data(
         "requests": list(requests or [])[:MAX_REQUESTS],
         "jsGlobals": {str(k): str(v) for k, v in (js_globals or {}).items()},
         "edgeSignals": sorted(edge_signals or ()),
+        "consent": {
+            "bannerAccepted": bool((consent or {}).get("bannerAccepted")),
+            "preConsentRequests": [str(u) for u in (consent or {}).get("preConsentRequests", [])][:MAX_REQUESTS],
+            "preConsentCookies": [str(c) for c in (consent or {}).get("preConsentCookies", [])][:500],
+        },
     }
 
 
@@ -322,6 +328,7 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
     js_globals: dict[str, str] = {}
     edge_signals: set[str] = set()
     edge_responses = [0]
+    consent: dict[str, Any] = {"bannerAccepted": False, "preConsentRequests": [], "preConsentCookies": []}
 
     async def public_host(hostname: str) -> bool:
         hostname = hostname.rstrip(".").lower()
@@ -421,10 +428,23 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
         # Scrapling swallows page_action exceptions, so every step is isolated: one failing
         # step must not silently drop cookies or probes.
         clicked = False
+        # Snapshot before the consent click: whatever already fired did so without consent.
+        pre_requests = list(request_urls)
+        pre_cookies: list[str] = []
+        try:
+            pre_cookies = [c["name"] for c in await page.context.cookies() if c.get("name")]
+        except Exception:
+            pass
         try:
             clicked = await _accept_cookie_banner(page)
         except Exception:
             pass
+        if clicked:
+            consent.update(
+                bannerAccepted=True,
+                preConsentRequests=pre_requests[:MAX_REQUESTS],
+                preConsentCookies=pre_cookies[:500],
+            )
         try:
             # Many tags (Analytics, Pixels, Personalization) only fire after consent or on scroll.
             await page.evaluate("window.scrollTo(0, Math.floor(document.body.scrollHeight / 2))")
@@ -490,6 +510,7 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
         network_scripts=list(network_scripts),
         js_globals=js_globals,
         edge_signals=edge_signals,
+        consent=consent,
     )
 
 
