@@ -72,7 +72,7 @@ Stand 2026-10-09: Ethos läuft (`ethos105-stage-or2`, Image `4fd636b`), `/mcp` a
   - `/dev/shm` als Memory-`emptyDir` mit 1 Gi. Chromium crasht sonst mit dem Default von 64 MB.
   - Probes auf `/api/health`, Ausführung als nicht-root (`node`, UID 1000).
 - **Contour-`HTTPProxy`** (`contour-internal`, TLS über `cluster-ssl-int`) für das Gateway, dazu ein zweiter Proxy `techstack-corp` (`contour-corp`, `cluster-ssl-corp`) für den Zugriff über VPN. Beide haben ein Response-Timeout von 300 s. `analyze-url` braucht bis zu 100 s, der Contour-Default liegt bei 15 s.
-- **NetworkPolicies:** Erlaubt sind nur Ingress von `heptio-contour` auf Port 3001, DNS, App→MariaDB auf Port 3306 und HTTP(S)-Egress der App (`techstack-allow-web-egress`) für Crawler und Bedrock.
+- **NetworkPolicies:** Erlaubt sind nur Ingress von `heptio-contour` auf Port 3001, DNS, App→MariaDB auf Port 3306 und der Internet-Egress über das EKO-Label (siehe oben, ohne interne Netze).
 - **Troubleshooting:**
   - Timeouts beim Crawlen oder bei Bedrock: `$KC get networkpolicy` prüfen und kontrollieren, ob das Label `use-default-egress-policy` am Pod hängt.
   - Wenn `https://<host>` nicht antwortet: `$KC get httpproxy` ausführen; der Status muss `valid` sein.
