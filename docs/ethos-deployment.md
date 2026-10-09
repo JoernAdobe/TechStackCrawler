@@ -8,7 +8,7 @@ Die Corp-VM bleibt parallel als Web-App bestehen (`make deploy`). Ethos ist zus�
 
 Kanal: `#coworker-gateway`.
 
-1. Welcher Cluster bzw. welche Namespace-Art ist vom Gateway aus erreichbar? Ist es dieselbe wie bei `statusmcp` (`ethos105-stage-or2`, Host `*.int.…`)?
+1. ~~Welcher Cluster bzw. welche Namespace-Art ist vom Gateway aus erreichbar?~~ **Geklärt am 2026-10-09 (Alex Trifan):** `int`-Cluster sind vom Gateway erreichbar, `corp` und Ethos ATS nicht. Der Namespace muss also auf einem `int`-Cluster liegen, wie `ethos105-stage-or2`.
 2. Ist aus diesem Namespace **ausgehender Internet-Zugriff** möglich? Das ist Pflicht, denn der Crawler lädt öffentliche Websites und ruft AWS Bedrock auf.
 3. Hostname-Konvention für die IngressRoute: Braucht `*.int.<cluster>.ethos.adobe.net` ein Ticket?
 
