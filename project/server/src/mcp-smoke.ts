@@ -53,7 +53,12 @@ async function main(): Promise<number> {
 
     console.log(`… analyze-url ${target} (kann 30–90 s dauern)`);
     const started = Date.now();
-    const result = await client.callTool({ name: 'analyze-url', arguments: { url: target } });
+    const result = await client.callTool(
+      { name: 'analyze-url', arguments: { url: target } },
+      undefined,
+      // Match the Coworker plugin's tool_timeout_seconds (SDK default is 60s).
+      { timeout: 180_000 },
+    );
     const text = textOf(result);
     const secs = ((Date.now() - started) / 1000).toFixed(1);
     if (result.isError) {
