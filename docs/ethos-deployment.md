@@ -36,9 +36,11 @@ Das Vorgehen entspricht den Schritten 1–7 in `~/.copilot/knowledge/references/
 ## Deploy
 
 ```bash
+# einmalig: ghcr-PAT in den Schlüsselbund (make liest ihn automatisch)
+security add-generic-password -a JoernAdobe -s ghcr-techstack -w "$(pbpaste)"
 # kubelogin fragt per Device-Code → im eigenen Terminal ausführen
-GHCR_TOKEN=$(pbpaste) make ethos-image      # Image linux/amd64 → ghcr.io (Tag = Git-Commit)
-GHCR_TOKEN=$(pbpaste) make ethos-secrets    # Pull-Secret + App-Env (aus der .env der Corp-VM)
+make ethos-image # Image linux/amd64 → ghcr.io (Tag = Git-Commit)
+make ethos-secrets # Pull-Secret + App-Env (aus der .env der Corp-VM)
 make ethos-deploy                           # MariaDB + App + HTTPProxy + NetworkPolicies, Rollout, Health-/Commit-Check
 make ethos-migrate-db                       # optional: Analysen der Corp-VM übernehmen (überschreibt!)
 ```

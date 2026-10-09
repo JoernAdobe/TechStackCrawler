@@ -239,6 +239,7 @@ deploy-hub:
 ETHOS_LOAD = [ -f .env.deploy ] && . ./.env.deploy; [ -f .env.ethos ] && . ./.env.ethos; \
 	: "$${ETHOS_CONTEXT:?fehlt in .env.ethos}" "$${ETHOS_NAMESPACE:?fehlt in .env.ethos}" "$${ETHOS_HOST:?fehlt in .env.ethos}" "$${GHCR_IMAGE:?fehlt in .env.ethos}"; \
 	KC="kubectl --context $$ETHOS_CONTEXT -n $$ETHOS_NAMESPACE"; \
+	[ -n "$$GHCR_TOKEN" ] || GHCR_TOKEN=$$(security find-generic-password -s ghcr-techstack -w 2>/dev/null || true); \
 	SSH_OPTS=$$([ -n "$$SSH_KEY" ] && echo "-i $$(pwd)/$$SSH_KEY -o IdentitiesOnly=yes" || true)
 
 # Image für linux/amd64 bauen und nach ghcr pushen (Tag = Git-Commit + latest)
@@ -252,10 +253,10 @@ ethos-image:
 		-t $$GHCR_IMAGE:$$GIT_COMMIT -t $$GHCR_IMAGE:latest --push .
 
 # k8s-Secrets anlegen/aktualisieren: ghcr-Pull-Secret + App-Env (Quelle: .env der Corp-VM oder ETHOS_ENV_FILE)
-# Aufruf: GHCR_TOKEN=$(pbpaste) make ethos-secrets
+# Aufruf: make ethos-secrets (GHCR_TOKEN aus dem Schlüsselbund, Eintrag ghcr-techstack)
 ethos-secrets:
 	@$(ETHOS_LOAD); \
-	: "$${GHCR_TOKEN:?GHCR_TOKEN fehlt – Aufruf: GHCR_TOKEN=\$$(pbpaste) make ethos-secrets}"; \
+	: "$${GHCR_TOKEN:?GHCR_TOKEN fehlt – im Schlüsselbund ablegen: security add-generic-password -a JoernAdobe -s ghcr-techstack -w}"; \
 	TMP=$$(mktemp); trap 'rm -f $$TMP $$TMP.f' EXIT; \
 	if [ -n "$$ETHOS_ENV_FILE" ]; then cp "$$ETHOS_ENV_FILE" $$TMP; \
 	else : "$${SSH_HOST:?SSH_HOST fehlt (.env.deploy)}"; \
