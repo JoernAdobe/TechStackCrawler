@@ -1,0 +1,24 @@
+{
+  "auth_providers": [
+    {
+      "name": "techstack-ims",
+      "provider": {
+        "type": "passthrough",
+        "headers": {
+          "authorization": "authorization"
+        }
+      }
+    }
+  ],
+  "mcp_servers": {
+    "servers": [
+      {
+        "name": "techstack-crawler",
+        "source": "https://techstack.corp.adobe.com/mcp",
+        "transport": "streamable_http",
+        "auth": "techstack-ims",
+        "tool_timeout_seconds": 180
+      }
+    ]
+  }
+}

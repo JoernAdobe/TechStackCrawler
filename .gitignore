@@ -36,7 +36,8 @@ Thumbs.db
 # Claude Flow / MCP tooling
 .claude-flow/
 .mcp.json
-
+# Coworker-Plugin-Konfiguration enthält keine Secrets und muss ausgeliefert werden.
+!project/coworker-marketplace/plugins/*/.mcp.json
 # Plugins (local)
 connect-apps-plugin/
 
