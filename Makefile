@@ -18,6 +18,7 @@ help:
 	@echo "  make docker-down - Docker-Container stoppen"
 	@echo "  make deploy     - Auf Server deployen (Docker)"
 	@echo "  make deploy-hub - Hub-Seite deployen (Adobe AI Tools)"
+	@echo "  make ethos-image | ethos-secrets | ethos-deploy | ethos-status - Ethos (Coworker-Gateway), siehe docs/ethos-deployment.md"
 	@echo ""
 
 # Abhängigkeiten installieren
@@ -228,3 +229,74 @@ deploy-hub:
 	else \
 		echo ">>> Status: noch nicht bereit"; \
 	fi
+
+# ---------------------------------------------------------------------------
+# Ethos (Nicht-Corp-Cluster, erreichbar vom CX Coworker Gateway)
+# Konfig: .env.ethos (siehe .env.ethos.example), Runbook: docs/ethos-deployment.md
+# ---------------------------------------------------------------------------
+.PHONY: ethos-image ethos-secrets ethos-deploy ethos-migrate-db ethos-status ethos-logs
+
+ETHOS_LOAD = [ -f .env.deploy ] && . ./.env.deploy; [ -f .env.ethos ] && . ./.env.ethos; \
+	: "$${ETHOS_CONTEXT:?fehlt in .env.ethos}" "$${ETHOS_NAMESPACE:?fehlt in .env.ethos}" "$${ETHOS_HOST:?fehlt in .env.ethos}" "$${GHCR_IMAGE:?fehlt in .env.ethos}"; \
+	KC="kubectl --context $$ETHOS_CONTEXT -n $$ETHOS_NAMESPACE"; \
+	SSH_OPTS=$$([ -n "$$SSH_KEY" ] && echo "-i $$(pwd)/$$SSH_KEY -o IdentitiesOnly=yes" || true)
+
+# Image für linux/amd64 bauen und nach ghcr pushen (Tag = Git-Commit + latest)
+ethos-image:
+	@$(ETHOS_LOAD); \
+	GIT_COMMIT=$$(git rev-parse --short HEAD); \
+	[ -z "$$(git status --porcelain -- $(PROJECT_DIR))" ] || echo ">>> Warnung: uncommittete Änderungen in $(PROJECT_DIR) landen im Image $$GIT_COMMIT"; \
+	if [ -n "$$GHCR_TOKEN" ]; then echo "$$GHCR_TOKEN" | docker login ghcr.io -u "$$GHCR_USER" --password-stdin >/dev/null || exit 1; fi; \
+	echo ">>> Baue $$GHCR_IMAGE:$$GIT_COMMIT (linux/amd64)"; \
+	cd $(PROJECT_DIR) && docker buildx build --platform linux/amd64 --build-arg GIT_COMMIT=$$GIT_COMMIT \
+		-t $$GHCR_IMAGE:$$GIT_COMMIT -t $$GHCR_IMAGE:latest --push .
+
+# k8s-Secrets anlegen/aktualisieren: ghcr-Pull-Secret + App-Env (Quelle: .env der Corp-VM oder ETHOS_ENV_FILE)
+# Aufruf: GHCR_TOKEN=$(pbpaste) make ethos-secrets
+ethos-secrets:
+	@$(ETHOS_LOAD); \
+	: "$${GHCR_TOKEN:?GHCR_TOKEN fehlt – Aufruf: GHCR_TOKEN=\$$(pbpaste) make ethos-secrets}"; \
+	TMP=$$(mktemp); trap 'rm -f $$TMP $$TMP.f' EXIT; \
+	if [ -n "$$ETHOS_ENV_FILE" ]; then cp "$$ETHOS_ENV_FILE" $$TMP; \
+	else : "$${SSH_HOST:?SSH_HOST fehlt (.env.deploy)}"; \
+		ssh $$SSH_OPTS "$$SSH_HOST" "cat $${REMOTE_DIR:-/opt/techstack-crawler}/.env" > $$TMP || exit 1; fi; \
+	grep -E '^[A-Za-z_][A-Za-z0-9_]*=|^export ' $$TMP | sed -E -e 's/^export +//' -e "s/^([A-Za-z0-9_]+)=[\"'](.*)[\"']$$/\1=\2/" \
+		| grep -vE '^(DB_HOST|DB_PORT|DB_NAME|PORT|NODE_ENV|HOST_PORT|HOST_PORT_HTTP|HOST_BIND|CONTAINER_PREFIX|OKTA_REDIRECT_URI|GIT_COMMIT)=' > $$TMP.f; \
+	grep -q '^DB_USER=' $$TMP.f || echo "DB_USER=techstack" >> $$TMP.f; \
+	for k in DB_PASSWORD DB_ROOT_PASSWORD; do grep -q "^$$k=." $$TMP.f || { echo "Fehler: $$k fehlt in der Env-Quelle"; exit 1; }; done; \
+	echo "OKTA_REDIRECT_URI=https://$$ETHOS_HOST/auth/callback" >> $$TMP.f; \
+	$$KC create secret generic techstack-env --from-env-file=$$TMP.f --dry-run=client -o yaml | $$KC apply -f - && \
+	$$KC create secret docker-registry ghcr-secret --docker-server=ghcr.io --docker-username="$$GHCR_USER" \
+		--docker-password="$$GHCR_TOKEN" --dry-run=client -o yaml | $$KC apply -f - && \
+	echo ">>> Secrets aktualisiert ($$(wc -l < $$TMP.f | tr -d ' ') Env-Keys: $$(cut -d= -f1 $$TMP.f | tr '\n' ' '))"
+
+# Manifeste anwenden, Rollout abwarten, Health- und Commit-Check
+ethos-deploy:
+	@$(ETHOS_LOAD); \
+	GIT_COMMIT=$$(git rev-parse --short HEAD); IMAGE=$${IMAGE:-$$GHCR_IMAGE:$$GIT_COMMIT}; \
+	echo ">>> Deploy $$IMAGE → $$ETHOS_CONTEXT/$$ETHOS_NAMESPACE ($$ETHOS_HOST)"; \
+	sed -e "s|__NAMESPACE__|$$ETHOS_NAMESPACE|g" -e "s|__IMAGE__|$$IMAGE|g" -e "s|__HOST__|$$ETHOS_HOST|g" \
+		-e "s|__MARIADB_IMAGE__|$${MARIADB_IMAGE:-mariadb:11}|g" $(PROJECT_DIR)/ethos.k8s.yaml | $$KC apply -f - || exit 1; \
+	$$KC rollout status deployment/techstack-mariadb --timeout=300s && \
+	$$KC rollout status deployment/techstack --timeout=600s || { $$KC get pods; exit 1; }; \
+	HEALTH=$$(curl -sf "https://$$ETHOS_HOST/api/health"); \
+	if [ -z "$$HEALTH" ]; then echo ">>> Health-Check: https://$$ETHOS_HOST/api/health nicht erreichbar (VPN? IngressRoute/DNS?)"; exit 1; fi; \
+	REMOTE_COMMIT=$$(echo "$$HEALTH" | grep -o '"commit":"[^"]*"' | cut -d'"' -f4); \
+	echo ">>> Health-Check: OK, Server-Commit $$REMOTE_COMMIT"; \
+	[ "$$REMOTE_COMMIT" = "$$GIT_COMMIT" ] && echo ">>> Commit-Check: OK" || echo ">>> Commit-Check: MISMATCH (lokal=$$GIT_COMMIT)"; \
+	echo ">>> MCP-Endpoint: https://$$ETHOS_HOST/mcp"
+
+# Analysen von der Corp-VM in die Ethos-MariaDB übernehmen (überschreibt die Ethos-DB!)
+ethos-migrate-db:
+	@$(ETHOS_LOAD); \
+	: "$${SSH_HOST:?SSH_HOST fehlt (.env.deploy)}"; \
+	printf ">>> Ethos-DB in $$ETHOS_NAMESPACE wird mit dem Stand der Corp-VM überschrieben. Weiter? [y/N] "; read a; [ "$$a" = y ] || exit 1; \
+	ssh $$SSH_OPTS "$$SSH_HOST" "cd $${REMOTE_DIR:-/opt/techstack-crawler} && set -a && . ./.env && set +a && docker exec \$${CONTAINER_PREFIX:-techstack-}mariadb mariadb-dump -u root -p\"\$$DB_ROOT_PASSWORD\" --single-transaction techstack_crawler" \
+		| $$KC exec -i deploy/techstack-mariadb -- sh -c 'mariadb -u root -p"$$MARIADB_ROOT_PASSWORD" techstack_crawler' && \
+	echo ">>> Migration OK: $$($$KC exec deploy/techstack-mariadb -- sh -c 'mariadb -N -u root -p"$$MARIADB_ROOT_PASSWORD" -e "SELECT COUNT(*) FROM techstack_crawler.analyses"') Analysen"
+
+ethos-status:
+	@$(ETHOS_LOAD); $$KC get pods,svc,pvc,ingressroute -o wide; curl -s "https://$$ETHOS_HOST/api/health"; echo
+
+ethos-logs:
+	@$(ETHOS_LOAD); $$KC logs deploy/$${SERVICE:-techstack} --tail=$${LINES:-100}

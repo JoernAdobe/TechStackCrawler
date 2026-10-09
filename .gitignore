@@ -9,6 +9,7 @@ dist/
 .env.*
 !.env.example
 !.env.deploy.example
+!.env.ethos.example
 *.local
 
 # Private keys - NIEMALS committen!
