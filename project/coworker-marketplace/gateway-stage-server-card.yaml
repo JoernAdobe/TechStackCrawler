@@ -2,7 +2,7 @@ schema_version: v1
 server_id: "techstack_crawler"
 name: "TechStack Crawler MCP"
 description: "Internal pre-sales tool: analyzes a website's technology stack (Scrapling + Claude) and maps Adobe opportunities and use cases."
-url: "https://techstack.corp.adobe.com/mcp"
+url: "https://techstack-mcp.int.ethos105-stage-or2.ethos.adobe.net/mcp"
 
 authentication:
   ref: "authentication/ims_passthrough"

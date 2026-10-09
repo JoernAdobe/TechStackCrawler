@@ -20,11 +20,19 @@ git remote add fork "https://github.com/$ME/aif.git"
 git config credential.helper '!gh auth git-credential'
 HEAD_REF="$ME:$BRANCH"
 git sparse-checkout set config/cxo-ai-gateway
-git checkout -b "$BRANCH"
+# Existiert der PR-Branch schon im Fork, darauf aufsetzen (PR wird dann nur aktualisiert).
+if git fetch --depth 1 fork "$BRANCH" 2>/dev/null; then git checkout -b "$BRANCH" FETCH_HEAD; UPDATE=1; else git checkout -b "$BRANCH"; UPDATE=0; fi
 DEST=config/cxo-ai-gateway/environments/stage
 cp "$SRC/gateway-stage-server-card.yaml" "$DEST/mcp_servers/techstack_crawler_mcp.yaml"
 cp "$SRC/gateway-stage-manifest.yaml" "$DEST/manifests/techstack_crawler.yaml"
 git add "$DEST"
+if [ "$UPDATE" = 1 ]; then
+  git diff --cached --quiet && { echo "Keine Änderungen gegenüber dem PR-Branch."; exit 0; }
+  git commit -m "cxo-ai-gateway(stage): point TechStack Crawler MCP to Ethos (ethos105-stage-or2, int ingress)"
+  git push fork "$BRANCH"
+  echo "PR-Branch aktualisiert: https://github.com/$REPO/pulls?q=head%3A$BRANCH"
+  exit 0
+fi
 git commit -m "cxo-ai-gateway(stage): onboard TechStack Crawler MCP on a scoped manifest"
 git push -u fork "$BRANCH"
 
@@ -34,7 +42,7 @@ gh pr create --repo "$REPO" --base main --head "$HEAD_REF" \
 
 - Server card \`stage/mcp_servers/techstack_crawler_mcp.yaml\`: IMS passthrough, include_tools allowlist (4 tools), required_segments internal-orgs, read timeout 180s (analyze-url renders the page + LLM pass, ~30-90s).
 - Manifest \`stage/manifests/techstack_crawler.yaml\`: only this card, reached via \`/mcp/collection/techstack_crawler?manifest_id=techstack_crawler\`.
-- Upstream \`https://techstack.corp.adobe.com/mcp\` is a corp-network VM; reachability from the gateway's Ethos namespace still to be confirmed.
+- Upstream \`https://techstack-mcp.int.ethos105-stage-or2.ethos.adobe.net/mcp\` runs on Ethos (ethos105-stage-or2, contour-internal), same pattern as statusmcp.
 - Upstream auth validates the passthrough IMS token via IMS userinfo and allows adobe.com users only."
 
 echo "PR erstellt. Workdir: $WORK"
