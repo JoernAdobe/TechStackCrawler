@@ -1,4 +1,5 @@
 import type { ScrapedData } from './scraper.js';
+import { SIGNAL_LAYERS } from './signalLayers.js';
 
 export interface DetectedTech {
   name: string;
@@ -7,9 +8,11 @@ export interface DetectedTech {
   version?: string;
   /** True, wenn die Erkennung nur auf einem einzigen generischen HTML-Signal beruht. */
   weak?: boolean;
+  /** Deterministische Belege, z. B. "Report suite: acmeprod" oder "Fired beacon: smetrics.acme.com/b/ss/…". */
+  evidence?: string[];
 }
 
-interface DetectionRule {
+export interface DetectionRule {
   name: string;
   categories: string[];
   patterns: {
@@ -18,6 +21,12 @@ interface DetectionRule {
     cookies?: string[];
     headers?: Record<string, RegExp>;
     meta?: Record<string, RegExp>;
+    /** Gegen alle Netzwerk-Requests (Beacons/XHR/Pixel) – stärkster Beleg: der Tag hat tatsächlich gefeuert. */
+    requests?: RegExp[];
+    /** Probe-Key aus python/js_probes.js → Wert-Regex. */
+    js?: Record<string, RegExp>;
+    /** Gegen edgeSignals aus AEP-Edge-Antworten. */
+    edge?: RegExp[];
   };
 }
 
@@ -32,6 +41,17 @@ const rules: DetectionRule[] = [
       html: [/\/etc\.clientlibs\//, /cq[-:]template/, /jcr:content/, /\/content\/dam\//, /crx\/de/],
       cookies: ['cq-authoring-mode', 'cq-dam-path'],
       scriptSrc: [/\/etc\.clientlibs\//, /granite\.js/],
+      js: { 'adobe.aem': /./ },
+    },
+  },
+  {
+    name: 'Adobe Experience Manager (Edge Delivery Services)',
+    categories: ['CMS'],
+    patterns: {
+      scriptSrc: [/\/scripts\/aem\.js(\?|$)/, /\/scripts\/lib-franklin\.js(\?|$)/],
+      requests: [/rum\.hlx\.page\//, /\/\.rum\/@adobe\/helix-rum-js/, /rum\.aem\.(page|live)\//],
+      html: [/\.aem\.(page|live)\b/, /\.hlx\.(page|live)\b/],
+      js: { 'adobe.eds': /./ },
     },
   },
   {
@@ -660,9 +680,12 @@ const rules: DetectionRule[] = [
     name: 'Adobe Audience Manager',
     categories: ['DMP'],
     patterns: {
-      html: [/demdex\.net/, /dpm\.demdex\.net/],
-      scriptSrc: [/demdex\.net/, /dil\.js/],
-      cookies: ['demdex', 'dextp', 'dst'],
+      // dpm.demdex.net + demdex-Cookie setzt auch der ECID-Service (ID-Sync) → kein AAM-Beleg.
+      html: [/\bDIL\.create\(/],
+      scriptSrc: [/(^|\/)dil(\.min)?\.js(\?|$)/i],
+      requests: [/\.demdex\.net\/event\?/],
+      cookies: ['aam_uuid'],
+      js: { 'adobe.dil': /./ },
     },
   },
   {
@@ -757,9 +780,9 @@ const rules: DetectionRule[] = [
     name: 'Adobe Real-Time CDP',
     categories: ['CDP'],
     patterns: {
-      scriptSrc: [/alloy\.js/, /launchpad\.adobedc\.net/],
-      html: [/adobedc\.net/],
-      cookies: ['AMCV_', 'adobe_mc'],
+      // Client-seitig nur über Edge-Segmentierung belegbar (activation:push aus dem Edge Network).
+      // Web SDK / ECID allein beweisen KEINE RTCDP-Lizenz.
+      edge: [/^handle:activation:push$/],
     },
   },
   {
@@ -789,7 +812,7 @@ const rules: DetectionRule[] = [
     name: 'Treasure Data',
     categories: ['CDP'],
     patterns: {
-      scriptSrc: [/treasuredata\.com/, /td\.js/],
+      scriptSrc: [/treasuredata\.com/, /(^|\/)td(\.min)?\.js(\?|$)/],
       cookies: ['_td'],
     },
   },
@@ -905,25 +928,39 @@ const rules: DetectionRule[] = [
     name: 'Adobe Analytics',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/omtrdc\.net/, /AppMeasurement/, /assets\.adobedtm\.com/],
+      scriptSrc: [/AppMeasurement/i, /(^|\/)s_code(\.min)?\.js/],
+      requests: [/\/b\/ss\/[^/]+\/\d+\//, /\.sc\.omtrdc\.net\//, /\.2o7\.net\//],
       html: [/s_account/, /omniture/i, /sc\.omtrdc\.net/],
-      cookies: ['s_vi', 's_sq', 's_cc', 's_fid', 's_ecid', 'AMCV_'],
+      cookies: ['s_vi', 's_sq', 's_cc', 's_fid', 's_ecid'],
+      js: { 'adobe.appmeasurement': /./ },
+    },
+  },
+  {
+    name: 'Adobe Experience Cloud Identity Service (ECID)',
+    categories: ['Analytics'],
+    patterns: {
+      scriptSrc: [/VisitorAPI/i],
+      requests: [/dpm\.demdex\.net\/id\?/],
+      cookies: ['AMCV_'],
+      js: { 'adobe.visitor': /./ },
     },
   },
   {
     name: 'Adobe Experience Platform Web SDK',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/alloy\.js/, /launch-.*\.adobedtm\.com/],
-      html: [/alloy\(/, /adobedc\.net/],
-      cookies: ['AMCV_', 'adobe_mc'],
+      scriptSrc: [/(^|\/)alloy(\.min)?\.js(\?|$)/],
+      requests: [/\/ee\/(?:[a-z0-9-]+\/)?v\d+\/(interact|collect)/i, /edge\.adobedc\.net\//],
+      html: [/__alloyNS/],
+      cookies: ['kndctr_'],
+      js: { 'adobe.alloy': /./ },
     },
   },
   {
     name: 'Adobe Customer Journey Analytics',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/adobedc\.net/],
+      // Server-seitig – vom Client aus nicht belegbar; nur expliziter Verweis als schwacher Hinweis.
       html: [/cja\.adobe\.com/],
     },
   },
@@ -931,18 +968,22 @@ const rules: DetectionRule[] = [
     name: 'Google Analytics (Universal)',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/google-analytics\.com\/analytics\.js/],
-      html: [/UA-\d+-\d+/],
-      cookies: ['_ga', '_gid', '_gat'],
+      scriptSrc: [/google-analytics\.com\/analytics\.js/, /google-analytics\.com\/ga\.js/],
+      requests: [/google-analytics\.com\/(r\/)?collect\?v=1&/, /[?&]tid=UA-\d+-\d+/],
+      html: [/['"]UA-\d{4,10}-\d{1,4}['"]/],
+      // _ga setzt auch GA4 → kein UA-Beleg.
+      cookies: ['_gid', '_gat'],
     },
   },
   {
     name: 'Google Analytics 4',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/googletagmanager\.com\/gtag/],
-      html: [/G-[A-Z0-9]+/, /gtag\(.*config/],
+      scriptSrc: [/googletagmanager\.com\/gtag\/js\?id=G-/],
+      requests: [/\/g\/collect\?v=2&/],
+      html: [/['"]G-[A-Z0-9]{6,12}['"]/, /gtag\(.*config/],
       cookies: ['_ga_'],
+      js: { 'google.tags': /(^|,)G-/ },
     },
   },
   {
@@ -1057,7 +1098,7 @@ const rules: DetectionRule[] = [
     name: 'Snowplow',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/snowplow/, /sp\.js/],
+      scriptSrc: [/snowplow/, /(^|\/)sp(\.min)?\.js(\?|$)/],
       cookies: ['_sp_'],
     },
   },
@@ -1333,9 +1374,13 @@ const rules: DetectionRule[] = [
     name: 'Adobe Target',
     categories: ['Personalization & Optimization'],
     patterns: {
-      scriptSrc: [/tt\.omtrdc\.net/, /at\.js/],
-      html: [/mboxCreate/, /adobe\.target/, /mbox/],
-      cookies: ['mbox', 'AMCV_'],
+      // Bewusst kein bares /at\.js/ (matcht chat.js, format.js …) und kein /mbox/ im HTML.
+      scriptSrc: [/tt\.omtrdc\.net/, /(^|\/)at(\.min)?\.js(\?|$)/, /(^|\/)at-\d[\d.]*(\.min)?\.js(\?|$)/],
+      requests: [/\.tt\.omtrdc\.net\//, /\/rest\/v1\/delivery\?client=/, /\/m2\/[^/]+\/mbox\/json/],
+      html: [/mboxCreate/, /adobe\.target\.(getOffer|applyOffer|triggerView)/],
+      cookies: ['mbox'],
+      js: { 'adobe.target': /./ },
+      edge: [/^decisionProvider:TGT$/],
     },
   },
   {
@@ -1542,6 +1587,15 @@ const rules: DetectionRule[] = [
     },
   },
   {
+    name: 'Adobe Dynamic Media',
+    categories: ['DAM'],
+    patterns: {
+      html: [/\.scene7\.com\/is\/(image|content)\//, /\/adobe\/dynamicmedia\/deliver\//],
+      requests: [/\.scene7\.com\/is\/(image|content|agm)\//, /\/adobe\/dynamicmedia\/deliver\//],
+      scriptSrc: [/\.scene7\.com\/s7viewers\//, /s7sdk/i],
+    },
+  },
+  {
     name: 'Bynder',
     categories: ['DAM'],
     patterns: {
@@ -1707,16 +1761,19 @@ const rules: DetectionRule[] = [
     name: 'Adobe Marketo Engage',
     categories: ['ESP/Marketing Automation'],
     patterns: {
-      scriptSrc: [/munchkin\.marketo\.net/, /mktoForms/],
+      scriptSrc: [/munchkin\.marketo\.net/, /mktoForms/, /\/js\/forms2\/js\/forms2(\.min)?\.js/],
+      requests: [/\.mktoresp\.com\//, /\/webevents\/visitWebPage\?/],
       html: [/mktoForm/, /marketo/i, /munchkin/i],
       cookies: ['_mkto_'],
+      js: { 'marketo.munchkin': /./ },
     },
   },
   {
     name: 'Adobe Journey Optimizer',
     categories: ['ESP/Marketing Automation'],
     patterns: {
-      scriptSrc: [/adobedc\.net/],
+      // Belegbar über Web-/Code-based-Experiences: Edge liefert Propositions mit decisionProvider "AJO".
+      edge: [/^decisionProvider:AJO$/],
       html: [/journey-optimizer/, /ajo\.adobe/],
     },
   },
@@ -2044,16 +2101,26 @@ const rules: DetectionRule[] = [
     name: 'Adobe Experience Platform Tags (Launch)',
     categories: ['Tag Management'],
     patterns: {
-      scriptSrc: [/assets\.adobedtm\.com/, /launch-.*\.min\.js/],
-      cookies: ['_sdsat', 'AMCV_'],
+      scriptSrc: [/assets\.adobedtm\.com\/.*launch-/, /(^|\/)launch-[\w-]+(\.min)?\.js(\?|$)/],
+      cookies: ['_sdsat'],
+      js: { 'adobe.launch': /./ },
+    },
+  },
+  {
+    name: 'Adobe Dynamic Tag Management (DTM, end-of-life)',
+    categories: ['Tag Management'],
+    patterns: {
+      scriptSrc: [/satelliteLib-[0-9a-f]+(\.min)?\.js/],
+      js: { 'adobe.dtm': /./ },
     },
   },
   {
     name: 'Google Tag Manager',
     categories: ['Tag Management'],
     patterns: {
-      scriptSrc: [/googletagmanager\.com\/gtm\.js/],
-      html: [/GTM-[A-Z0-9]+/],
+      scriptSrc: [/googletagmanager\.com\/gtm\.js/, /\/gtm\.js\?id=GTM-/],
+      html: [/GTM-[A-Z0-9]{4,10}/],
+      js: { 'google.gtm': /GTM-/ },
     },
   },
   {
@@ -4269,18 +4336,34 @@ const rules: DetectionRule[] = [
   },
 ];
 
-// Per-signal-type confidence bases (server-side signals score higher, HTML regex weakest).
+// Per-signal-type confidence bases (observed runtime behaviour > server-side signals > HTML regex).
 const SIGNAL_STRENGTH: Record<string, number> = {
+  edge: 92,
+  requests: 90,
   headers: 88,
+  js: 86,
   cookies: 84,
   scriptSrc: 78,
   meta: 72,
   html: 64,
 };
 
+/** Hängt Netzwerk-/JS-Signale an bestehende Regeln an (Tabelle in signalLayers.ts). */
+for (const layer of SIGNAL_LAYERS) {
+  const rule = rules.find((r) => r.name === layer.name);
+  if (!rule) throw new Error(`signalLayers: unknown rule "${layer.name}"`);
+  if (layer.requests) rule.patterns.requests = [...(rule.patterns.requests ?? []), ...layer.requests];
+  if (layer.js) rule.patterns.js = { ...(rule.patterns.js ?? {}), ...layer.js };
+}
+
+export const DETECTION_RULES: readonly DetectionRule[] = rules;
+
 export function customDetect(scraped: ScrapedData): DetectedTech[] {
   const seen = new Set<string>();
   const detected: DetectedTech[] = [];
+  const requests = scraped.requests ?? [];
+  const jsGlobals = scraped.jsGlobals ?? {};
+  const edgeSignals = scraped.edgeSignals ?? [];
 
   for (const rule of rules) {
     if (seen.has(rule.name)) continue;
@@ -4297,6 +4380,23 @@ export function customDetect(scraped: ScrapedData): DetectedTech[] {
       )
     ) {
       signals.push('scriptSrc');
+    }
+
+    if (rule.patterns.requests?.some((re) => requests.some((u) => re.test(u)))) {
+      signals.push('requests');
+    }
+
+    if (
+      rule.patterns.js &&
+      Object.entries(rule.patterns.js).some(
+        ([key, re]) => jsGlobals[key] !== undefined && re.test(jsGlobals[key]),
+      )
+    ) {
+      signals.push('js');
+    }
+
+    if (rule.patterns.edge?.some((re) => edgeSignals.some((s) => re.test(s)))) {
+      signals.push('edge');
     }
 
     if (rule.patterns.cookies) {

@@ -209,6 +209,13 @@ export default function ResultsTable({ results }: ResultsTableProps) {
                       ? 'Unverified: single weak signal, may be a false positive.'
                       : `Confidence: ${tech.confidence}%`}
                   </p>
+                  {tech.evidence && tech.evidence.length > 0 && (
+                    <ul className="mt-1 list-disc pl-4 text-xs">
+                      {tech.evidence.map((e) => (
+                        <li key={e}>{e}</li>
+                      ))}
+                    </ul>
+                  )}
                 </TooltipContent>
               </Tooltip>
             ))}

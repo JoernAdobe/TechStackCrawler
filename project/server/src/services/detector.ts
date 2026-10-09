@@ -1,5 +1,6 @@
 import type { ScrapedData } from './scraper.js';
 import { customDetect, type DetectedTech } from './customDetectors.js';
+import { extractEvidence } from './tagEvidence.js';
 
 interface VersionExtractor {
   name: string;
@@ -38,8 +39,14 @@ export async function detectTechnologies(
 ): Promise<DetectedTech[]> {
   onProgress?.('Running technology detection…');
   const results = customDetect(scraped);
+  const evidence = extractEvidence(scraped);
 
   for (const tech of results) {
+    const ev = evidence.get(tech.name);
+    if (ev) {
+      if (ev.evidence.length) tech.evidence = ev.evidence;
+      if (!tech.version && ev.version) tech.version = ev.version;
+    }
     if (tech.version) continue;
     const extractor = versionExtractors.find(
       (e) => e.name.toLowerCase() === tech.name.toLowerCase(),

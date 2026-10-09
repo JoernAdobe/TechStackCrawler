@@ -4,6 +4,7 @@ from unittest.mock import patch
 from python.scrapling_crawler import (
     _headers_as_arrays,
     _is_public_ip,
+    edge_signals_from_payload,
     extract_data,
     hostname_is_public,
     parse_safe_url,
@@ -99,6 +100,69 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(result["scriptSrc"], ["/assets/app.js"])
         self.assertEqual(result["links"], ["https://example.com/shop"])
         self.assertEqual(result["cookies"], {"session": "value"})
+        self.assertEqual(result["requests"], [])
+        self.assertEqual(result["jsGlobals"], {})
+        self.assertEqual(result["edgeSignals"], [])
+
+    def test_merges_network_scripts_and_runtime_signals(self):
+        try:
+            from scrapling.parser import Selector
+        except ImportError:
+            self.skipTest("scrapling is not installed")
+
+        page = Selector(
+            '<html><head><script src="/assets/app.js"></script></head><body></body></html>',
+            url="https://example.com/",
+        )
+        result = extract_data(
+            page,
+            "https://example.com",
+            {},
+            {},
+            requests=["https://example.com/b/ss/rs/1/JS-2.25.0/s1"],
+            network_scripts=["/assets/app.js", "https://assets.adobedtm.com/launch-x.min.js"],
+            js_globals={"adobe.launch": "present"},
+            edge_signals={"decisionProvider:TGT", "handle:activation:push"},
+        )
+        self.assertEqual(
+            result["scriptSrc"],
+            ["/assets/app.js", "https://assets.adobedtm.com/launch-x.min.js"],
+        )
+        self.assertEqual(result["requests"], ["https://example.com/b/ss/rs/1/JS-2.25.0/s1"])
+        self.assertEqual(result["jsGlobals"], {"adobe.launch": "present"})
+        self.assertEqual(result["edgeSignals"], ["decisionProvider:TGT", "handle:activation:push"])
+
+
+class EdgeSignalTests(unittest.TestCase):
+    def test_summarizes_handles_and_decision_providers(self):
+        payload = {
+            "handle": [
+                {"type": "state:store", "payload": [{"key": "kndctr"}]},
+                {
+                    "type": "personalization:decisions",
+                    "payload": [
+                        {"scopeDetails": {"decisionProvider": "TGT"}},
+                        {"scopeDetails": {"decisionProvider": "AJO"}},
+                    ],
+                },
+                {"type": "activation:push", "payload": []},
+            ]
+        }
+        self.assertEqual(
+            edge_signals_from_payload(payload),
+            {
+                "handle:state:store",
+                "handle:personalization:decisions",
+                "handle:activation:push",
+                "decisionProvider:TGT",
+                "decisionProvider:AJO",
+            },
+        )
+
+    def test_ignores_malformed_payloads(self):
+        self.assertEqual(edge_signals_from_payload(None), set())
+        self.assertEqual(edge_signals_from_payload({"handle": "x"}), set())
+        self.assertEqual(edge_signals_from_payload({"handle": [1, {"payload": "y"}]}), set())
 
 
 class CookieBannerTests(unittest.TestCase):

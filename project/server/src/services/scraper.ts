@@ -16,6 +16,12 @@ export interface ScrapedData {
   title: string;
   bodyText: string;
   links: string[];
+  /** Alle Request-URLs der Seite (Beacons, XHR, Pixel) – Basis für Netzwerk-Signale. */
+  requests: string[];
+  /** Ergebnisse der JS-Global-Probes (python/js_probes.js): key → Version/IDs/"present". */
+  jsGlobals: Record<string, string>;
+  /** Zusammenfassung der AEP-Edge-Antworten, z. B. "decisionProvider:TGT", "handle:activation:push". */
+  edgeSignals: string[];
 }
 
 const SCRAPED_DATA_SCHEMA = z.object({
@@ -29,6 +35,9 @@ const SCRAPED_DATA_SCHEMA = z.object({
   title: z.string(),
   bodyText: z.string(),
   links: z.array(z.string()),
+  requests: z.array(z.string()).default([]),
+  jsGlobals: z.record(z.string(), z.string()).default({}),
+  edgeSignals: z.array(z.string()).default([]),
 }).strict();
 
 const WORKER_PATH = fileURLToPath(new URL('../../python/scrapling_crawler.py', import.meta.url));

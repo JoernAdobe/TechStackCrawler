@@ -104,6 +104,7 @@ export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void
       confidence: d.confidence,
       version: d.version,
       weak: d.weak,
+      ...(d.evidence?.length ? { evidence: d.evidence } : {}),
     })),
     pageContentExcerpt: scraped.bodyText
       ? scraped.bodyText.substring(0, 12000)

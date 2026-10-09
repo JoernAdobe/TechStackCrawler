@@ -93,7 +93,11 @@ export function mergeDetections(
     const key = d.name.toLowerCase();
     const existing = byName.get(key);
     if (!existing) {
-      byName.set(key, { ...d, categories: [...d.categories] });
+      byName.set(key, {
+        ...d,
+        categories: [...d.categories],
+        ...(d.evidence ? { evidence: [...d.evidence] } : {}),
+      });
       return;
     }
     existing.confidence = Math.max(existing.confidence, d.confidence);
@@ -101,6 +105,10 @@ export function mergeDetections(
     if (!existing.version && d.version) existing.version = d.version;
     for (const c of d.categories) {
       if (!existing.categories.includes(c)) existing.categories.push(c);
+    }
+    for (const e of d.evidence ?? []) {
+      existing.evidence ??= [];
+      if (!existing.evidence.includes(e) && existing.evidence.length < 8) existing.evidence.push(e);
     }
   };
 

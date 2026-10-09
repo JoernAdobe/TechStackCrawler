@@ -16,6 +16,13 @@ from urllib.parse import urlsplit, urlunsplit
 MAX_HTML_CHARS = 10_000_000
 MAX_LINKS = 200
 MAX_BODY_TEXT_CHARS = 50_000
+MAX_REQUESTS = 1_500
+MAX_REQUEST_URL_CHARS = 2_048
+MAX_EDGE_BODY_BYTES = 512_000
+MAX_EDGE_RESPONSES = 5
+# Adobe Experience Platform Edge Network (also first-party CNAMEs like edge.example.com/ee/v1/interact).
+EDGE_INTERACT_RE = re.compile(r"/ee/(?:[a-z0-9-]+/)?v\d+/interact", re.I)
+JS_PROBES = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "js_probes.js"), encoding="utf-8").read()
 BLOCKED_SCHEME_RE = re.compile(r"^(?:0x[0-9a-f]*|\d+)(?:\.(?:0x[0-9a-f]*|\d+))*$", re.I)
 ACCEPT_SELECTORS = (
     "#onetrust-accept-btn-handler",
@@ -158,11 +165,37 @@ def _headers_as_arrays(headers: dict[str, Any]) -> dict[str, list[str]]:
     return {str(key).lower(): [str(value)] for key, value in headers.items()}
 
 
+def edge_signals_from_payload(data: Any) -> set[str]:
+    """Summarize an AEP Edge interact response into handle types and decision providers."""
+    signals: set[str] = set()
+    if not isinstance(data, dict):
+        return signals
+    for handle in data.get("handle") or []:
+        if not isinstance(handle, dict):
+            continue
+        handle_type = handle.get("type")
+        if isinstance(handle_type, str) and len(handle_type) < 80:
+            signals.add(f"handle:{handle_type}")
+        payload = handle.get("payload")
+        for item in payload if isinstance(payload, list) else []:
+            if not isinstance(item, dict):
+                continue
+            details = item.get("scopeDetails")
+            provider = details.get("decisionProvider") if isinstance(details, dict) else None
+            if isinstance(provider, str) and len(provider) < 40:
+                signals.add(f"decisionProvider:{provider}")
+    return signals
+
+
 def extract_data(
     page: Any,
     requested_url: str,
     response_headers: dict[str, Any],
     cookies: dict[str, str],
+    requests: list[str] | None = None,
+    network_scripts: list[str] | None = None,
+    js_globals: dict[str, str] | None = None,
+    edge_signals: set[str] | None = None,
 ) -> dict[str, Any]:
     meta: dict[str, list[str]] = {}
     for element in page.css("meta"):
@@ -177,6 +210,12 @@ def extract_data(
         for value in page.css("script[src]::attr(src)").getall()
         if value
     ]
+    # Tag managers inject and remove scripts at runtime; the network log is the complete picture.
+    seen_scripts = set(script_src)
+    for value in network_scripts or []:
+        if value not in seen_scripts:
+            seen_scripts.add(value)
+            script_src.append(value)
     links = [
         _as_text(value)
         for value in page.css('a[href^="http"]::attr(href)').getall()[:MAX_LINKS]
@@ -197,17 +236,20 @@ def extract_data(
         "title": _as_text(page.css("title::text").get()),
         "bodyText": _as_text(body_text)[:MAX_BODY_TEXT_CHARS],
         "links": links,
+        "requests": list(requests or [])[:MAX_REQUESTS],
+        "jsGlobals": {str(k): str(v) for k, v in (js_globals or {}).items()},
+        "edgeSignals": sorted(edge_signals or ()),
     }
 
 
 def _accept_cookie_banner(page: Any) -> Any:
-    async def click_accept() -> None:
+    async def click_accept() -> bool:
         for selector in ACCEPT_SELECTORS:
             candidate = page.locator(selector).first
             try:
                 if await candidate.is_visible(timeout=200):
                     await candidate.click(timeout=700)
-                    return
+                    return True
             except Exception:
                 continue
 
@@ -234,8 +276,10 @@ def _accept_cookie_banner(page: Any) -> Any:
         if index is not None:
             try:
                 await buttons.nth(index).click(timeout=700)
+                return True
             except Exception:
-                return
+                return False
+        return False
 
     return click_accept()
 
@@ -273,6 +317,11 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
     cookie_values: dict[str, str] = {}
     private_remote_hit: list[str] = []
     remote_tasks: set[asyncio.Task[Any]] = set()
+    request_urls: dict[str, None] = {}
+    network_scripts: dict[str, None] = {}
+    js_globals: dict[str, str] = {}
+    edge_signals: set[str] = set()
+    edge_responses = [0]
 
     async def public_host(hostname: str) -> bool:
         hostname = hostname.rstrip(".").lower()
@@ -322,6 +371,16 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
                 ip = address.get("ipAddress") if address else None
                 if ip and not _is_public_ip(ip):
                     private_remote_hit.append(f"{response.url} -> {ip}")
+                    return
+                if (
+                    EDGE_INTERACT_RE.search(response.url)
+                    and edge_responses[0] < MAX_EDGE_RESPONSES
+                    and response.ok
+                ):
+                    edge_responses[0] += 1
+                    body = await response.body()
+                    if len(body) <= MAX_EDGE_BODY_BYTES:
+                        edge_signals.update(edge_signals_from_payload(json.loads(body)))
             except Exception:
                 return
 
@@ -343,6 +402,12 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
             private_remote_hit.append(f"redirect to {target}")
 
         def on_request(request: Any) -> None:
+            url = _as_text(request.url)
+            if url.startswith(("http://", "https://")) and len(request_urls) < MAX_REQUESTS:
+                url = url[:MAX_REQUEST_URL_CHARS]
+                request_urls[url] = None
+                if request.resource_type == "script":
+                    network_scripts[url] = None
             if request.redirected_from is None:
                 return
             task = asyncio.create_task(check_redirect(request))
@@ -353,7 +418,26 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
         page.context.on("request", on_request)
 
     async def finish_page(page: Any) -> None:
-        await _accept_cookie_banner(page)
+        # Scrapling swallows page_action exceptions, so every step is isolated: one failing
+        # step must not silently drop cookies or probes.
+        clicked = False
+        try:
+            clicked = await _accept_cookie_banner(page)
+        except Exception:
+            pass
+        try:
+            # Many tags (Analytics, Pixels, Personalization) only fire after consent or on scroll.
+            await page.evaluate("window.scrollTo(0, Math.floor(document.body.scrollHeight / 2))")
+            # networkidle resolves immediately if it already fired before the click, so give
+            # post-consent tags a fixed head start first.
+            await page.wait_for_timeout(1_500 if clicked else 800)
+            await page.wait_for_load_state("networkidle", timeout=4_000 if clicked else 2_000)
+        except Exception:
+            pass
+        try:
+            js_globals.update(await asyncio.wait_for(page.evaluate(JS_PROBES), timeout=5))
+        except Exception:
+            pass
         if remote_tasks:
             await asyncio.gather(*list(remote_tasks), return_exceptions=True)
         if private_remote_hit:
@@ -397,7 +481,16 @@ async def scrape(payload: dict[str, Any]) -> dict[str, Any]:
     )
     if private_remote_hit:
         raise RuntimeError(f"Blocked response from private IP address: {private_remote_hit[0]}")
-    return extract_data(page, requested_url, response_headers, cookie_values)
+    return extract_data(
+        page,
+        requested_url,
+        response_headers,
+        cookie_values,
+        requests=list(request_urls),
+        network_scripts=list(network_scripts),
+        js_globals=js_globals,
+        edge_signals=edge_signals,
+    )
 
 
 def main() -> int:

@@ -11,6 +11,7 @@ export interface DetectedTechnology {
   website?: string;
   /** Erkennung beruht nur auf einem einzigen generischen HTML-Signal (unverifiziert). */
   weak?: boolean;
+  evidence?: string[];
 }
 
 export interface CategoryResult {
