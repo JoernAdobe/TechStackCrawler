@@ -68,7 +68,7 @@ Einmalig (Klickarbeit für Jörn, laienverständlich anleiten):
 
 Kubeconfig ohne git.corp-Account:
 - Die Minimal-Kubeconfig aus `project/ethos.kubeconfig.yaml` kopieren (EKS-Server `https://apiserver.corp.<cluster>.ethos.adobe.net`, kubelogin-`exec` mit `--login devicecode --legacy`).
-- **kubelogin > 0.1.9 speichert den Login nicht.** Jeder kubectl-Aufruf will dann einen neuen Device-Code. Lösung im Makefile: einmal `kubelogin get-token` aufrufen und dann `kubectl --user ethos-token --token $TOKEN` nutzen. Dafür braucht die Kubeconfig einen leeren User `ethos-token`. Tokens nie ausgeben.
+- **kubelogin > 0.1.9 speichert den Login nicht.** Jeder kubectl-Aufruf will dann einen neuen Device-Code. Lösung im Makefile: einmal `kubelogin get-token` aufrufen und dann `kubectl --user ethos-token --token $TOKEN` nutzen. Dafür braucht die Kubeconfig einen leeren User `ethos-token`. Tokens nie ausgeben. Schlägt der Login fehl (Code nicht rechtzeitig eingegeben), **muss make sofort abbrechen**. Sonst fällt kubectl auf exec-Auth zurück und erzeugt bei jedem Retry einen neuen Device-Code, die Codes fluten das Terminal. Achtung: `$(cmd | sed) || exit` erkennt keinen Fehler von `cmd`.
 
 Manifeste (Vorlage `project/ethos.k8s.yaml`):
 - Deployment(s) + Service, bei Bedarf MariaDB mit PVC (`Recreate`).
