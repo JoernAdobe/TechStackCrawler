@@ -4,13 +4,22 @@
 
 Die Corp-VM bleibt parallel als Web-App bestehen (`make deploy`). Ethos ist zusätzlich der Upstream für den Coworker-Marketplace.
 
-## Vor dem Start mit dem Gateway-Team klären
+## Geklärte Voraussetzungen (Stand 2026-10-09)
 
-Kanal: `#coworker-gateway`.
+1. **Erreichbarkeit:** Laut Alex Trifan (Gateway-Team) sind `int`-Cluster vom Gateway aus erreichbar, `corp` und Ethos ATS nicht. Der Namespace muss deshalb auf einem `int`-Cluster liegen, z. B. `ethos105-stage-or2`, wo auch `statusmcp` läuft. Corp-Connected-Cluster wie `ethos53-*` mit dem Profil `it-corp` sind ungeeignet.
+2. **Internet-Zugriff:**
+   - Ethos-Namespaces sperren standardmäßig allen Traffic (Policy `np-eko--default`).
+   - Pods mit dem Label `use-default-egress-policy: "true"` dürfen auf `0.0.0.0/0` über Port 80 und 443 hinaus, private Netze (RFC1918) ausgenommen. Das deckt das Crawlen öffentlicher Websites und Bedrock ab.
+   - Websites auf anderen Ports bleiben gesperrt.
+   - Quellen: devhome „deploy-doctor / Infrastructure & Config“, Jira EON-72421.
+3. **Ingress:**
+   - `int`-Cluster nutzen Contour mit `HTTPProxy` und der Ingress-Klasse `contour-internal`.
+   - TLS-Secret für `*.int.<cluster>.ethos.adobe.net` ist `heptio-contour/cluster-ssl-int`.
+   - Die FQDN kann frei gewählt werden, z. B. `techstack-mcp.int.<cluster>.ethos.adobe.net`.
+   - Quelle: devhome „ethos-cluster-gateway / Cross-Cluster Connectivity“.
+4. **Images:** Docker Hub über den Artifactory-Mirror `docker-hub-remote.dr-uw2.adobeitc.com/...` beziehen, falls der direkte Pull scheitert (`MARIADB_IMAGE`).
 
-1. ~~Welcher Cluster bzw. welche Namespace-Art ist vom Gateway aus erreichbar?~~ **Geklärt am 2026-10-09 (Alex Trifan):** `int`-Cluster sind vom Gateway erreichbar, `corp` und Ethos ATS nicht. Der Namespace muss also auf einem `int`-Cluster liegen, wie `ethos105-stage-or2`.
-2. Ist aus diesem Namespace **ausgehender Internet-Zugriff** möglich? Das ist Pflicht, denn der Crawler lädt öffentliche Websites und ruft AWS Bedrock auf.
-3. Hostname-Konvention für die IngressRoute: Braucht `*.int.<cluster>.ethos.adobe.net` ein Ticket?
+Fragen und Hilfe: `#ethos-flex-explorers`.
 
 ## Einmalig: Ethos-Grundlagen
 
@@ -30,7 +39,7 @@ Das Vorgehen entspricht den Schritten 1–7 in `~/.copilot/knowledge/references/
 # kubelogin fragt per Device-Code → im eigenen Terminal ausführen
 GHCR_TOKEN=$(pbpaste) make ethos-image      # Image linux/amd64 → ghcr.io (Tag = Git-Commit)
 GHCR_TOKEN=$(pbpaste) make ethos-secrets    # Pull-Secret + App-Env (aus der .env der Corp-VM)
-make ethos-deploy                           # MariaDB + App + IngressRoute, Rollout, Health-/Commit-Check
+make ethos-deploy                           # MariaDB + App + HTTPProxy + NetworkPolicies, Rollout, Health-/Commit-Check
 make ethos-migrate-db                       # optional: Analysen der Corp-VM übernehmen (überschreibt!)
 ```
 
@@ -54,7 +63,11 @@ cd project && MCP_URL=https://<ETHOS_HOST>/mcp MCP_TOKEN="$(pbpaste | tr -d '[:s
   - 1 Replica, Requests 1 CPU / 2 Gi, Limits 2 CPU / 4 Gi.
   - `/dev/shm` als Memory-`emptyDir` mit 1 Gi. Chromium crasht sonst mit dem Default von 64 MB.
   - Probes auf `/api/health`, Ausführung als nicht-root (`node`, UID 1000).
-- **Traefik-IngressRoute** auf `websecure` mit TLS über den Cluster-Default.
+- **Contour-`HTTPProxy`** (`contour-internal`, TLS über `cluster-ssl-int`) mit einem Response-Timeout von 300 s. `analyze-url` braucht bis zu 100 s, der Contour-Default liegt bei 15 s.
+- **NetworkPolicies:** Erlaubt sind nur Ingress von `heptio-contour` auf Port 3001, DNS, App→MariaDB auf Port 3306 und der Internet-Egress über das EKO-Label (siehe oben).
+- **Troubleshooting:**
+  - Timeouts beim Crawlen oder bei Bedrock: `$KC get networkpolicy` prüfen und kontrollieren, ob das Label `use-default-egress-policy` am Pod hängt.
+  - Wenn `https://<host>` nicht antwortet: `$KC get httpproxy` ausführen; der Status muss `valid` sein.
 - **Secrets:**
   - Liegen nur im k8s-Secret `techstack-env`, nie im Repo.
   - `make ethos-secrets` liest die `.env` der Corp-VM per SSH oder alternativ `ETHOS_ENV_FILE`.

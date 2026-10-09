@@ -82,7 +82,9 @@ spec:
     matchLabels: { app: techstack }
   template:
     metadata:
-      labels: { app: techstack }
+      # use-default-egress-policy: EKO-Policy np-eko--default erlaubt dann Egress 0.0.0.0/0:80,443 (ohne RFC1918)
+      # → öffentliche Websites crawlen + Bedrock. Ingress/DNS/MariaDB regeln die Policies unten.
+      labels: { app: techstack, use-default-egress-policy: "true" }
     spec:
       imagePullSecrets: [{ name: ghcr-secret }]
       securityContext:
@@ -133,17 +135,74 @@ spec:
   selector: { app: techstack }
   ports: [{ port: 80, targetPort: 3001 }]
 ---
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+# Ethos int-Cluster: Contour (contour-internal) statt Traefik; TLS-Secret für *.int.ethos = cluster-ssl-int.
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
 metadata:
   name: techstack
   namespace: __NAMESPACE__
+  annotations:
+    kubernetes.io/ingress.class: contour-internal
 spec:
-  entryPoints: [websecure]
+  virtualhost:
+    fqdn: __HOST__
+    tls:
+      secretName: heptio-contour/cluster-ssl-int
   routes:
-    - match: Host(`__HOST__`)
-      kind: Rule
+    - conditions: [{ prefix: / }]
+      # analyze-url läuft 30–100 s (Headless-Browser + LLM); Contour-Default ist 15 s.
+      timeoutPolicy: { response: 300s, idle: 300s }
       services:
         - name: techstack
           port: 80
-  tls: {}
+---
+# Namespaces auf Ethos sind default-deny. Die folgenden Policies öffnen nur, was die App braucht.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: techstack-allow-ingress-contour
+  namespace: __NAMESPACE__
+spec:
+  podSelector: { matchLabels: { app: techstack } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: heptio-contour } }
+      ports: [{ protocol: TCP, port: 3001 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: techstack-allow-dns
+  namespace: __NAMESPACE__
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: techstack-allow-app-to-mariadb
+  namespace: __NAMESPACE__
+spec:
+  podSelector: { matchLabels: { app: techstack } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: techstack-mariadb } } }]
+      ports: [{ protocol: TCP, port: 3306 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: techstack-mariadb-allow-from-app
+  namespace: __NAMESPACE__
+spec:
+  podSelector: { matchLabels: { app: techstack-mariadb } }
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: techstack } } }]
+      ports: [{ protocol: TCP, port: 3306 }]
