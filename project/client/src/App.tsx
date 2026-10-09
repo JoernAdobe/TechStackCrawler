@@ -11,11 +11,14 @@ import PastAnalyses from './components/PastAnalyses';
 import AnimatedView from './components/AnimatedView';
 import DashboardLogin from './components/DashboardLogin';
 import Dashboard from './components/Dashboard';
+import BatchAssessment from './components/BatchAssessment';
+import ParityExtras from './components/ParityExtras';
+import DeckButton from './components/DeckButton';
 import { TooltipProvider } from './components/ui/tooltip';
 import { useAnalysis } from './hooks/useAnalysis';
 import { useUseCaseDiscovery } from './hooks/useUseCaseDiscovery';
 import { useStaticAudio } from './hooks/useStaticAudio';
-import { XCircle, Search, Clock } from 'lucide-react';
+import { XCircle, Search, Clock, Layers } from 'lucide-react';
 import { apiRequest, isAbortError } from './lib/apiClient';
 import type { AnalysisResult, ProgressEvent, AppState } from './types/analysis';
 
@@ -134,7 +137,7 @@ function Analyzer() {
   const welcomePlayedRef = useRef(false);
   const [userInteracted, setUserInteracted] = useState(false);
   const [analysesRefreshTrigger, setAnalysesRefreshTrigger] = useState(0);
-  const [activeTab, setActiveTab] = useState<'analyzer' | 'history'>('analyzer');
+  const [activeTab, setActiveTab] = useState<'analyzer' | 'history' | 'batch'>('analyzer');
   const { playStatic } = useStaticAudio();
 
   useEffect(() => {
@@ -207,6 +210,22 @@ function Analyzer() {
     setErrorMessage('');
   };
 
+  // EAA-Parität: Analyse aus einem Account-/Bulk-Assessment öffnen.
+  const handleOpenAnalysis = useCallback(
+    async (analysisId: number) => {
+      try {
+        const data = await apiRequest<AnalysisResult>(`/api/analyses/${analysisId}`);
+        resetUseCases();
+        setResults(data);
+        setState('results');
+      } catch (err) {
+        setErrorMessage(err instanceof Error ? err.message : String(err));
+        setState('error');
+      }
+    },
+    [resetUseCases],
+  );
+
   return (
     <div className="min-h-screen bg-ts-surface text-ts-text-primary">
       <Header />
@@ -238,10 +257,30 @@ function Analyzer() {
                 <Clock className="w-4 h-4" />
                 Past Analyses
               </button>
+              <button
+                onClick={() => setActiveTab('batch')}
+                className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold transition-all duration-200 border-b-2 -mb-px ${
+                  activeTab === 'batch'
+                    ? 'border-adobe-red text-ts-text-primary'
+                    : 'border-transparent text-ts-text-secondary hover:text-ts-text-primary hover:border-ts-border'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                Account / Bulk
+              </button>
             </div>
           </div>
 
-          {activeTab === 'analyzer' ? (
+          {activeTab === 'batch' ? (
+            <div className="max-w-6xl mx-auto px-6 py-8">
+              <BatchAssessment
+                onOpenAnalysis={handleOpenAnalysis}
+                renderExtraActions={(batch) => (
+                  <DeckButton href={`/api/batches/${batch.id}/deck.pptx`} label="Download Deck" />
+                )}
+              />
+            </div>
+          ) : activeTab === 'analyzer' ? (
             <div className="max-w-4xl mx-auto px-6 py-8">
               <UrlInput onSubmit={handleSubmit} />
             </div>
@@ -272,6 +311,7 @@ function Analyzer() {
           <TechCaseInsights
             analysis={useCaseResult ? { ...results, useCaseDiscovery: useCaseResult } : results}
           />
+          <ParityExtras analysis={results} />
           <DownloadButton results={results} onReset={handleReset} />
           <div className="h-20" />
         </AnimatedView>

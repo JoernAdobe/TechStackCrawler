@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import type { DbHandle } from './types.js';
 import { createMysqlHandle } from './mysql.js';
 import { toMysqlDatetime } from './analyses.js';
+import { initParityTables } from './parityTables.js';
 
 let db: DbHandle | null = null;
 
@@ -125,6 +126,8 @@ export async function initDb(): Promise<void> {
         )
       `);
     }
+
+    await initParityTables(p);
 
     // Migration: Lokale SQLite-Exporte in MariaDB importieren (falls DB leer)
     if (p.dialect === 'mysql') {

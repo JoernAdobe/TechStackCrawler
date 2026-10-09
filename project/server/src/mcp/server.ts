@@ -11,6 +11,7 @@ import { listAnalyses, getAnalysisById, updateAnalysis } from '../db/analyses.js
 import { discoverUseCases } from '../services/useCaseDiscovery.js';
 import type { AnalysisResult } from '../types/analysis.js';
 import { asyncHandler } from '../utils/http.js';
+import { registerParityTools } from './parityTools.js';
 
 /**
  * Aktive MCP-Transports. Ohne Aufräumen würde diese Map unbegrenzt wachsen, wenn
@@ -198,6 +199,8 @@ function createMcpServer(): McpServer {
       }
     },
   );
+
+  registerParityTools(server);
 
   return server;
 }

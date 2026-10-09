@@ -6,6 +6,7 @@ import type { AnalysisResult } from '../types/analysis';
 import ResultsTable from './ResultsTable';
 import UseCaseDiscovery from './UseCaseDiscovery';
 import DownloadButton from './DownloadButton';
+import ParityExtras from './ParityExtras';
 import SpotlightCard from './SpotlightCard';
 import { useUseCaseDiscovery } from '../hooks/useUseCaseDiscovery';
 import { apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
@@ -190,6 +191,7 @@ export default function PastAnalyses({
             result={useCaseResult}
             error={useCaseError}
           />
+          <ParityExtras analysis={selected} />
           <DownloadButton results={selected} onReset={() => setSelected(null)} />
           <div className="h-20" />
         </div>

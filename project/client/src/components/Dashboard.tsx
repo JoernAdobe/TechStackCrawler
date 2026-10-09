@@ -14,6 +14,7 @@ import {
   Cell,
 } from 'recharts';
 import ApiTokenManager from './ApiTokenManager';
+import FeedbackList from './FeedbackList';
 import { apiRequest, ApiError, isAbortError } from '../lib/apiClient';
 
 interface TechCount {
@@ -349,6 +350,9 @@ export default function Dashboard({ token, onLogout }: Props) {
 
         {/* API Token Management */}
         <ApiTokenManager token={token} onUnauthorized={onLogout} />
+
+        {/* EAA-Parität: Nutzer-Feedback */}
+        <FeedbackList token={token} />
 
         {/* Footer info */}
         <p className="text-center text-xs text-ts-text-secondary pb-4">

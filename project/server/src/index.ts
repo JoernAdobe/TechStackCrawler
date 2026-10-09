@@ -35,6 +35,12 @@ import { requireMcpAuth } from './mcp/auth.js';
 import { initDb, getPool, closeDb } from './db/index.js';
 import { config, validateConfig } from './config.js';
 import { asyncHandler, errorHandler, notFoundHandler } from './utils/http.js';
+import { createEnrichmentRoutes } from './routes/enrichments.js';
+import { createGeoRoutes } from './routes/geo.js';
+import { createBatchRoutes } from './routes/batches.js';
+import { createDeckRoutes } from './routes/deck.js';
+import { createFeedbackRoutes } from './routes/feedback.js';
+import { startBatchWorker } from './services/batchRunner.js';
 
 validateConfig();
 
@@ -131,6 +137,27 @@ await initDb().catch((err) => {
   console.error('DB init failed (weiter ohne DB):', err);
 });
 
+// EAA-Parität: Batch-Queue nach DB-Init starten (setzt hängende Items zurück).
+if (getPool()) {
+  startBatchWorker().catch((err) => console.error('Batch worker start failed:', err));
+}
+
+// EAA-Parität: eigene Limiter, damit der bestehende Analyse-Limiter unverändert bleibt.
+const enrichLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests – please try again later.', code: 'rate_limited' },
+});
+const lightLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests – please try again later.', code: 'rate_limited' },
+});
+
 // API routes
 app.post('/api/analyze-sync', analysisLimiter, asyncHandler(analyzeSyncRoute));
 app.post('/api/use-case-discovery', analysisLimiter, asyncHandler(useCaseDiscoveryRoute));
@@ -149,6 +176,13 @@ app.use(createAuthRoutes());
 app.post('/api/tokens', requireDashboardAuth, asyncHandler(createTokenRoute));
 app.get('/api/tokens', requireDashboardAuth, asyncHandler(listTokensRoute));
 app.delete('/api/tokens/:id', requireDashboardAuth, asyncHandler(revokeTokenRoute));
+
+// EAA-Parität: Enrichments, GEO-Score, Account-/Bulk-Assessments, Decks, Feedback
+app.use(createEnrichmentRoutes({ limiter: enrichLimiter }));
+app.use(createGeoRoutes({ limiter: enrichLimiter }));
+app.use(createBatchRoutes({ limiter: enrichLimiter }));
+app.use(createDeckRoutes({ limiter: lightLimiter }));
+app.use(createFeedbackRoutes({ limiter: lightLimiter }));
 
 // MCP endpoint (bearer-token protected)
 app.use('/mcp', mcpAuthLimiter, asyncHandler(requireMcpAuth), createMcpRoutes());

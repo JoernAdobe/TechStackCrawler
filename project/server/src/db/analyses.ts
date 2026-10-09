@@ -80,7 +80,7 @@ export async function getAnalysisById(
 export async function updateAnalysis(
   db: DbHandle,
   id: number,
-  updates: Partial<Pick<AnalysisResult, 'useCaseDiscovery' | 'sitemapUrls'>>,
+  updates: Partial<Pick<AnalysisResult, 'useCaseDiscovery' | 'sitemapUrls' | 'enrichments'>>,
 ): Promise<boolean> {
   const current = await getAnalysisById(db, id);
   if (!current) return false;

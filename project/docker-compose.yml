@@ -65,6 +65,13 @@ services:
       - DASHBOARD_PASSWORD_HASH=${DASHBOARD_PASSWORD_HASH:-}
       # CORS: leer = nur Same-Origin (Standard); sonst komma-getrennte Origin-Liste.
       - CORS_ORIGIN=${CORS_ORIGIN:-}
+      # EAA-Paritätsfeatures (alle optional).
+      - PAGESPEED_API_KEY=${PAGESPEED_API_KEY:-}
+      - SEMRUSH_API_KEY=${SEMRUSH_API_KEY:-}
+      - BATCH_APPROVAL_THRESHOLD=${BATCH_APPROVAL_THRESHOLD:-50}
+      - BATCH_ITEM_DELAY_MS=${BATCH_ITEM_DELAY_MS:-750}
+      - BATCH_MULTI_PAGE=${BATCH_MULTI_PAGE:-}
+      - DECK_FONT_FACE=${DECK_FONT_FACE:-Adobe Clean}
       - NODE_ENV=production
       - PORT=3001
       - DB_HOST=mariadb

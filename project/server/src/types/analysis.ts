@@ -1,3 +1,6 @@
+import type { AnalysisEnrichments } from './parity.js';
+export type * from './parity.js';
+
 /**
  * Canonical source: project/shared/types.ts
  * Keep in sync – or migrate to TypeScript project references.
@@ -36,6 +39,8 @@ export interface AnalysisResult {
   pageContentExcerpt?: string;
   useCaseDiscovery?: UseCaseDiscoveryResult;
   sitemapUrls?: string[];
+  /** On-Demand-Anreicherungen (EAA-Parität), werden nachträglich in result_json gemergt. */
+  enrichments?: AnalysisEnrichments;
 }
 
 export interface UseCaseItem {

@@ -16,6 +16,11 @@ Enter any URL, and the tool renders the site with Scrapling, detects its tech st
 - **Text-to-speech** — Optional ElevenLabs integration for audio walkthroughs.
 - **MCP server** — Model Context Protocol endpoint for AI-agent integration using database-backed bearer tokens.
 - **API token management** — Create, list, and revoke MCP bearer tokens from the authenticated dashboard.
+- **Account & bulk assessments** — Analyze up to 30 URLs per account (with AI) or bulk lists (detection only, admin approval above `BATCH_APPROVAL_THRESHOLD`), with a solution matrix mapped to 44 Adobe building blocks, key findings, CSV/XLSX export, and stack history per domain.
+- **Enrichments** — Lighthouse scores (PageSpeed Insights), traffic insights (Semrush), and mobile app discovery (website links + App Store lookup) per analysis.
+- **GEO score** — Generative Engine Optimization score (AI visibility, sentiment, competitor gap) via Claude on Bedrock.
+- **PPTX decks** — Adobe-branded slide decks for single analyses and account assessments.
+- **Feedback** — In-app feedback (rating, bug, missing solution) with an admin review list in the dashboard.
 
 ## Tech Stack
 
@@ -240,6 +245,12 @@ The server loads the first available `.env` file from the compiled server-relati
 | `SERVICE` | Makefile logs | Docker service suffix for remote logs | `mariadb` |
 | `LINES` | Makefile logs | Number of remote Docker log lines | `80` |
 | `SIZE` | Makefile tmp-resize | Remote tmpfs size for the diagnostic resize target | `2G` |
+| `PAGESPEED_API_KEY` | server/Docker | Google PageSpeed Insights key for Lighthouse enrichment | Empty; Google usually answers 429 without a key |
+| `SEMRUSH_API_KEY` | server/Docker | Semrush API key for traffic insights | Empty; traffic panel reports "not configured" |
+| `BATCH_APPROVAL_THRESHOLD` | server/Docker | Bulk batches above this URL count need admin approval | `50` |
+| `BATCH_ITEM_DELAY_MS` | server/Docker | Pause between batch items in milliseconds | `750` |
+| `BATCH_MULTI_PAGE` | server/Docker | Enable multi-page crawl for detection-only bulk items when set to `1` | Disabled |
+| `DECK_FONT_FACE` | server/Docker | Font used in generated PPTX decks | `Adobe Clean` |
 
 ## Auth Model
 
@@ -291,6 +302,24 @@ The server loads the first available `.env` file from the compiled server-relati
 | `DELETE` | `/mcp` | MCP bearer token | 50 failed auth attempts/15 minutes | Close an MCP session. |
 | `GET` | `/api/health` | Public | None | Health check with timestamp and commit hash. |
 | `GET` | `/api/bedrock-status` | Public | None | Report Bedrock auth mode (`api-key`, `iam`, or `none`) and model. |
+| `POST` | `/api/analyses/:id/enrich/lighthouse` | Public | 10/minute | Run PageSpeed/Lighthouse for the analysis URL and store the result. |
+| `POST` | `/api/analyses/:id/enrich/traffic` | Public | 10/minute | Fetch Semrush traffic insights and store them. |
+| `POST` | `/api/analyses/:id/enrich/mobile-apps` | Public | 10/minute | Discover iOS/Android apps and store them. |
+| `POST` | `/api/analyses/:id/enrich/geo` | Public | 10/minute | Compute the GEO score (synchronous, 1–3 minutes). |
+| `POST` | `/api/batches` | Public | 10/minute | Create an account (≤ 30 URLs, AI) or bulk (detection only) batch. |
+| `GET` | `/api/batches` | Public | None | List batches. |
+| `GET` | `/api/batches/:id` | Public | None | Batch details incl. items, solution matrix, and key findings. |
+| `POST` | `/api/batches/:id/cancel` | Public | None | Cancel a queued/running batch. |
+| `POST` | `/api/batches/:id/approve` / `reject` | Dashboard admin | None | Approve or reject a bulk batch above the threshold. |
+| `GET` | `/api/batches/:id/export.csv` | Public | None | CSV export (formula-injection safe). |
+| `GET` | `/api/stack-history?url=` | Public | None | Technology history across stored analyses of a domain. |
+| `GET` | `/api/analyses/:id/deck.pptx` | Public | 30/minute | Adobe-branded PPTX deck for one analysis. |
+| `GET` | `/api/batches/:id/deck.pptx` | Public | 30/minute | Adobe-branded PPTX deck for an account assessment. |
+| `POST` | `/api/feedback` | Public | 30/minute | Submit feedback (`type`, optional `rating`, `description`, `missingSolutions`). |
+| `GET` | `/api/feedback` | Dashboard admin | None | List feedback entries. |
+| `PATCH` | `/api/feedback/:id` | Dashboard admin | None | Update feedback status. |
+
+`/enrich/geo` runs synchronously for up to 3 minutes; any reverse proxy in front of the app needs a read timeout of at least 180 s.
 
 Unknown `/api/*` paths return JSON 404. In production, non-API paths fall through to the built React app.
 
@@ -306,6 +335,17 @@ The TechStack Analyzer exposes a [Model Context Protocol](https://modelcontextpr
 | `list-analyses` | List saved analyses | `{ limit?: number }` |
 | `get-analysis` | Get full analysis details by ID | `{ id: number }` |
 | `use-case-discovery` | Generate Adobe use cases for an analysis | `{ analysisId: number }` |
+| `get-assessment-types` | List supported assessment types | `{}` |
+| `create-assessment` | Create an account or bulk assessment | `{ kind, title, urls: [{ url, label? }], ... }` |
+| `get-assessment` / `list-assessments` | Read assessments with status, matrix, and key findings | `{ id }` / `{ limit? }` |
+| `solution-mapping` | Map analyses to the Adobe building blocks incl. key findings | `{ analysisIds: number[] }` |
+| `lighthouse` / `traffic-insights` / `mobile-apps` | Run an enrichment for an analysis | `{ analysisId: number }` |
+| `geo-score` | Compute the GEO score for an analysis | `{ analysisId: number }` |
+| `stack-history` | Technology history of a domain | `{ url: string }` |
+| `generate-deck` | Return a PPTX deck as embedded resource | `{ analysisId?, assessmentId? }` |
+| `submit-feedback` | Submit feedback | `{ type, description, ... }` |
+
+Prompts: `assessment-workflow`, `key-findings-guide`.
 
 ### Setup
 

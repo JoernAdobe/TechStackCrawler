@@ -59,6 +59,7 @@ RUN npm ci --workspace=server --omit=dev --omit=optional
 
 COPY --from=server-build /app/server/dist server/dist/
 COPY server/python/ server/python/
+COPY server/assets/ server/assets/
 
 # Copy frontend build
 COPY --from=client-build /app/client/dist client/dist/
