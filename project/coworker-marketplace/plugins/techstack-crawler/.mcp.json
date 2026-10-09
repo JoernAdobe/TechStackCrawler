@@ -14,7 +14,7 @@
     "servers": [
       {
         "name": "techstack-crawler",
-        "source": "https://techstack.corp.adobe.com/mcp",
+        "source": "https://cx-coworker-gateway-stage.adobe.io/mcp/collection/techstack_crawler?manifest_id=techstack_crawler",
         "transport": "streamable_http",
         "auth": "techstack-ims",
         "tool_timeout_seconds": 180

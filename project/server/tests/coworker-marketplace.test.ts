@@ -38,7 +38,7 @@ test('Coworker marketplace points to a matching, installable plugin', async () =
   assert.equal(mcp.mcp_servers.servers.length, 1);
   const server = mcp.mcp_servers.servers[0];
   assert.equal(server.name, 'techstack-crawler');
-  assert.match(server.source, /^https:\/\/[^/]+\/mcp$/);
+  assert.match(server.source, /^https:\/\/[^/]+\/mcp(\/|\?|$)/);
   assert.equal(server.transport, 'streamable_http');
   const provider = mcp.auth_providers.find((p) => p.name === server.auth)?.provider;
   assert.equal(provider?.type, 'passthrough');
