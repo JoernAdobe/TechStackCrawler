@@ -114,7 +114,7 @@ spec:
             failureThreshold: 5
           resources:
             # Chromium-Worker (Scrapling) brauchen je ~300–500 MB; Multi-Page-Crawl läuft 2-fach parallel.
-            requests: { cpu: "1", memory: 2Gi }
+            requests: { cpu: 500m, memory: 1Gi }
             limits: { cpu: "2", memory: 4Gi }
           volumeMounts:
             - { name: dshm, mountPath: /dev/shm }

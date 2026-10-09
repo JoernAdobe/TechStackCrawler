@@ -99,4 +99,4 @@ Ablauf: `make ethos-image` → `make ethos-secrets` → `IMAGE=… make ethos-de
 ## Arbeitsweise mit Jörn
 
 - Jörn ist kein Engineer: Er führt Terminal-Befehle selbst aus (docker, kubectl, kubelogin, brew und der Schlüsselbund sind in der Agent-Session blockiert). Immer **vollständige, einzeln kopierbare** Befehle geben, ohne „…“.
-- Kosten Ethos: Showback, grob 30–60 $/Monat für 1 App-Pod plus kleine DB.
+- Kosten Ethos (Wiki „Ethos Cost and Resource Optimization“): Showback auch auf Stage, nach **`requests`** (bzw. höherer Ist-Nutzung), `limits` zählen nicht. Deshalb `requests` knapp und `limits` großzügig setzen. TechStackCrawler: 0,75 CPU / 1,5 GiB / 10 GiB PVC, geschätzt 25–40 $/Monat. Ist-Kosten: cloudmanagement.corp.adobe.com/dashboards/ethos_spend_utilization_detail (Namespace-Filter), Preis pro Einheit: …/ethos_operator_kubecost („Unit Cost by Segment“).
