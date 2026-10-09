@@ -288,7 +288,7 @@ ethos-deploy:
 	$$KC rollout status deployment/techstack-mariadb --timeout=300s && \
 	$$KC rollout status deployment/techstack --timeout=600s || { $$KC get pods; exit 1; }; \
 	HEALTH=$$(curl -sf "https://$$ETHOS_HOST/api/health"); \
-	if [ -z "$$HEALTH" ]; then echo ">>> Health-Check: https://$$ETHOS_HOST/api/health nicht erreichbar (VPN? HTTPProxy-Status: $$KC get httpproxy)"; exit 1; fi; \
+	if [ -z "$$HEALTH" ]; then echo ">>> Health-Check: https://$$ETHOS_HOST/api/health nicht erreichbar (VPN? HTTPProxy-Status prüfen: make ethos-status)"; exit 1; fi; \
 	REMOTE_COMMIT=$$(echo "$$HEALTH" | grep -o '"commit":"[^"]*"' | cut -d'"' -f4); \
 	echo ">>> Health-Check: OK, Server-Commit $$REMOTE_COMMIT"; \
 	[ "$$REMOTE_COMMIT" = "$$GIT_COMMIT" ] && echo ">>> Commit-Check: OK" || echo ">>> Commit-Check: MISMATCH (lokal=$$GIT_COMMIT)"; \
