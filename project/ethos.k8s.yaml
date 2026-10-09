@@ -216,6 +216,21 @@ spec:
     - to: [{ podSelector: { matchLabels: { app: techstack-mariadb } } }]
       ports: [{ protocol: TCP, port: 3306 }]
 ---
+# Crawler (Scrapling/Chromium) und LLM (Bedrock) brauchen ausgehendes HTTP(S) ins Internet.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: techstack-allow-web-egress
+  namespace: __NAMESPACE__
+spec:
+  podSelector: { matchLabels: { app: techstack } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+      ports:
+        - { protocol: TCP, port: 80 }
+        - { protocol: TCP, port: 443 }
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
