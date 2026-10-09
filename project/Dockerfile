@@ -23,6 +23,8 @@ RUN npm run build --workspace=server
 
 # Stage 3: Production runtime with Chromium and Scrapling
 FROM node:20-slim AS production
+# Verknüpft das ghcr-Package mit dem Repo (erscheint dort unter "Packages")
+LABEL org.opencontainers.image.source="https://github.com/JoernAdobe/TechStackCrawler"
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=$GIT_COMMIT
