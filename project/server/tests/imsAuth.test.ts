@@ -73,3 +73,21 @@ test('does not cache beyond token expiry', async () => {
   assert.equal(await validateImsToken(shortLived, fn, NOW + 20_000), null);
   assert.equal(calls.length, 1);
 });
+
+test('routes tokens to the issuing IMS (prod vs. stage) via the "as" claim', async () => {
+  clearImsCache();
+  const { fn, calls } = mockFetch(200, { email: 'jane@adobe.com', email_verified: true });
+
+  assert.ok(await validateImsToken(jwt({ ...validPayload, as: 'ims-na1' }), fn, NOW));
+  assert.ok(await validateImsToken(jwt({ ...validPayload, as: 'ims-na1-stg1', client_id: 'stage' }), fn, NOW));
+
+  assert.match(calls[0].url, /^https:\/\/ims-na1\.adobelogin\.com\/ims\/userinfo\/v2$/);
+  assert.match(calls[1].url, /^https:\/\/ims-na1-stg1\.adobelogin\.com\/ims\/userinfo\/v2$/);
+});
+
+test('rejects tokens from an IMS instance that is not configured', async () => {
+  clearImsCache();
+  const { fn, calls } = mockFetch(200, { email: 'jane@adobe.com', email_verified: true });
+  assert.equal(await validateImsToken(jwt({ ...validPayload, as: 'evil.example.com/x' }), fn, NOW), null);
+  assert.equal(calls.length, 0);
+});

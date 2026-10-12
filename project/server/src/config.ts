@@ -59,7 +59,11 @@ export const config = {
   /** IMS-Passthrough für /mcp (Coworker reicht den IMS-User-Token durch). */
   ims: {
     enabled: process.env.MCP_IMS_AUTH_ENABLED !== 'false',
-    baseUrl: (process.env.IMS_BASE_URL || 'https://ims-na1.adobelogin.com').replace(/\/$/, ''),
+    /** Erlaubte IMS-Instanzen (Prod + Stage); der Token-Claim `as` wählt die passende. */
+    baseUrls: (process.env.IMS_BASE_URLS || process.env.IMS_BASE_URL || 'https://ims-na1.adobelogin.com,https://ims-na1-stg1.adobelogin.com')
+      .split(',')
+      .map((u) => u.trim().replace(/\/$/, ''))
+      .filter(Boolean),
     allowedEmailDomains: (process.env.MCP_IMS_ALLOWED_EMAIL_DOMAINS || 'adobe.com')
       .split(',')
       .map((d) => d.trim().toLowerCase())
@@ -129,8 +133,8 @@ export function validateConfig(): void {
   }
 
   if (config.ims.enabled) {
-    if (!/^https:\/\//.test(config.ims.baseUrl)) {
-      errors.push('IMS_BASE_URL muss eine https-URL sein.');
+    if (config.ims.baseUrls.length === 0 || config.ims.baseUrls.some((u) => !/^https:\/\//.test(u))) {
+      errors.push('IMS_BASE_URLS muss eine oder mehrere https-URLs enthalten.');
     }
     if (config.ims.allowedEmailDomains.length === 0) {
       errors.push('MCP_IMS_ALLOWED_EMAIL_DOMAINS darf bei aktivem IMS-Passthrough nicht leer sein.');

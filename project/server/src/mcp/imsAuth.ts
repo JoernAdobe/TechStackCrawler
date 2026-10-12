@@ -49,6 +49,17 @@ function emailAllowed(email: string): boolean {
   return !!domain && config.ims.allowedEmailDomains.includes(domain);
 }
 
+/**
+ * Wählt anhand des Claims `as` (z. B. "ims-na1" oder "ims-na1-stg1") die ausstellende IMS-Instanz,
+ * aber nur, wenn sie konfiguriert ist. Ohne `as` gilt die erste konfigurierte Instanz.
+ */
+function imsBaseUrlFor(payload: Record<string, unknown>): string | null {
+  const urls = config.ims.baseUrls;
+  if (typeof payload.as !== 'string' || !payload.as) return urls[0] ?? null;
+  const host = `${payload.as.toLowerCase()}.adobelogin.com`;
+  return urls.find((u) => URL.canParse(u) && new URL(u).hostname === host) ?? null;
+}
+
 export function clearImsCache(): void {
   cache.clear();
 }
@@ -78,9 +89,15 @@ export async function validateImsToken(
   if (cached && cached.expiresAt > now) return cached.identity;
   if (cached) cache.delete(key);
 
+  const baseUrl = imsBaseUrlFor(payload);
+  if (!baseUrl) {
+    console.warn(`[ims] token rejected: issuing IMS "${String(payload.as)}" not allowed`);
+    return null;
+  }
+
   let res: Response;
   try {
-    res = await fetchFn(`${config.ims.baseUrl}/ims/userinfo/v2`, {
+    res = await fetchFn(`${baseUrl}/ims/userinfo/v2`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(USERINFO_TIMEOUT_MS),
     });
@@ -89,7 +106,7 @@ export async function validateImsToken(
     return null;
   }
   if (!res.ok) {
-    console.warn(`[ims] userinfo rejected token (HTTP ${res.status})`);
+    console.warn(`[ims] userinfo rejected token (HTTP ${res.status}, ${baseUrl})`);
     return null;
   }
 
