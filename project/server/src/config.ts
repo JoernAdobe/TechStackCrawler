@@ -60,7 +60,7 @@ export const config = {
   ims: {
     enabled: process.env.MCP_IMS_AUTH_ENABLED !== 'false',
     /** Erlaubte IMS-Instanzen (Prod + Stage); der Token-Claim `as` wählt die passende. */
-    baseUrls: (process.env.IMS_BASE_URLS || process.env.IMS_BASE_URL || 'https://ims-na1.adobelogin.com,https://ims-na1-stg1.adobelogin.com')
+    baseUrls: (process.env.IMS_BASE_URLS || 'https://ims-na1.adobelogin.com,https://ims-na1-stg1.adobelogin.com')
       .split(',')
       .map((u) => u.trim().replace(/\/$/, ''))
       .filter(Boolean),
