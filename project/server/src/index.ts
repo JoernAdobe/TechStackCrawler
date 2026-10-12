@@ -150,6 +150,14 @@ const enrichLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests – please try again later.', code: 'rate_limited' },
 });
+// Batch-Anlage reiht bis zu 1.000 URLs ein → deutlich enger als die Enrichments.
+const batchCreateLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many assessments created – please try again later.', code: 'rate_limited' },
+});
 const lightLimiter = rateLimit({
   windowMs: 60_000,
   max: 30,
@@ -180,7 +188,7 @@ app.delete('/api/tokens/:id', requireDashboardAuth, asyncHandler(revokeTokenRout
 // EAA-Parität: Enrichments, GEO-Score, Account-/Bulk-Assessments, Decks, Feedback
 app.use(createEnrichmentRoutes({ limiter: enrichLimiter }));
 app.use(createGeoRoutes({ limiter: enrichLimiter }));
-app.use(createBatchRoutes({ limiter: enrichLimiter }));
+app.use(createBatchRoutes({ limiter: batchCreateLimiter }));
 app.use(createDeckRoutes({ limiter: lightLimiter }));
 app.use(createFeedbackRoutes({ limiter: lightLimiter }));
 

@@ -5,7 +5,15 @@
 import { Router, type Request, type RequestHandler } from 'express';
 import { z } from 'zod';
 import { getPool } from '../db/index.js';
-import { createBatch, getBatch, getBatchHeader, listBatches, skipQueuedItems, updateBatchStatus } from '../db/batches.js';
+import {
+  countOpenItems,
+  createBatch,
+  getBatch,
+  getBatchHeader,
+  listBatches,
+  skipQueuedItems,
+  updateBatchStatus,
+} from '../db/batches.js';
 import type { DbHandle } from '../db/types.js';
 import { enqueueBatch } from '../services/batchRunner.js';
 import { MAX_ACCOUNT_URLS, MAX_BULK_URLS, normalizeBatchItems, parseBatchInput } from '../services/batchInput.js';
@@ -14,8 +22,10 @@ import { getStackHistory, normalizeHostname } from '../services/stackHistory.js'
 import { getSession } from '../services/sessionStore.js';
 import { requireDashboardAuth } from './dashboard.js';
 import {
+  AppError,
   BadRequestError,
   DbUnavailableError,
+  ForbiddenError,
   NotFoundError,
   asyncHandler,
   parseBody,
@@ -29,6 +39,12 @@ const WORD_START = /^[\p{L}\p{N}_]/u;
 export function batchApprovalThreshold(): number {
   const v = Number(process.env.BATCH_APPROVAL_THRESHOLD);
   return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 50;
+}
+
+/** Obergrenze für offene Items in der Queue (alle Batches), schützt vor Queue-Flooding. */
+export function maxOpenBatchItems(): number {
+  const v = Number(process.env.BATCH_MAX_OPEN_ITEMS);
+  return Number.isFinite(v) && v > 0 ? Math.floor(v) : 2000;
 }
 
 const optionalText = (max: number) =>
@@ -64,13 +80,20 @@ function requireDb(): DbHandle {
   return db;
 }
 
-function currentUser(req: Request): string | undefined {
+function currentSession(req: Request) {
   const tokens: string[] = [];
   const auth = req.headers.authorization;
   if (auth?.startsWith('Bearer ')) tokens.push(auth.slice(7).trim());
   const cookie = (req as Request & { cookies?: Record<string, string> }).cookies?.[SESSION_COOKIE];
   if (cookie) tokens.push(cookie);
-  return tokens.map((t) => getSession(t)).find((s) => s !== null)?.email;
+  return tokens.map((t) => getSession(t)).find((s) => s !== null) ?? null;
+}
+
+/** createdBy (E-Mail) nur für Admins und den Ersteller selbst sichtbar. */
+function redactCreator<T extends { createdBy?: string }>(batch: T, req: Request): T {
+  const session = currentSession(req);
+  if (session?.isAdmin || (session && batch.createdBy === session.email)) return batch;
+  return { ...batch, createdBy: undefined };
 }
 
 async function loadHeader(db: DbHandle, id: number) {
@@ -102,8 +125,15 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
       }
 
       const db = requireDb();
+      const session = currentSession(req);
+      const open = await countOpenItems(db);
+      if (open + parsed.items.length > maxOpenBatchItems()) {
+        throw new AppError(429, 'queue_full', 'The assessment queue is full – please try again later.');
+      }
       const aiAnalysis = body.aiAnalysis ?? body.kind === 'account';
-      const needsApproval = body.kind === 'bulk' && parsed.items.length > batchApprovalThreshold();
+      // Anonyme Bulk-Batches mit KI-Analyse verursachen Bedrock-Kosten pro URL → immer Admin-Freigabe.
+      const needsApproval =
+        body.kind === 'bulk' && (parsed.items.length > batchApprovalThreshold() || (aiAnalysis && !session));
       const status: BatchStatus = needsApproval ? 'pending_approval' : 'queued';
 
       const id = await createBatch(db, {
@@ -115,7 +145,7 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
         industry: body.industry,
         opportunityId: body.opportunityId,
         aiAnalysis,
-        createdBy: currentUser(req),
+        createdBy: session?.email,
         items: parsed.items,
       });
       if (status === 'queued') enqueueBatch(id);
@@ -131,7 +161,7 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
       const { limit: n } = parseParams(listSchema, req.query);
       const db = getPool();
       res.setHeader('Cache-Control', 'no-store');
-      res.json(db ? await listBatches(db, n) : []);
+      res.json(db ? (await listBatches(db, n)).map((b) => redactCreator(b, req)) : []);
     }),
   );
 
@@ -142,7 +172,7 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
       const batch = await getBatch(requireDb(), id);
       if (!batch) throw new NotFoundError('Batch not found');
       res.setHeader('Cache-Control', 'no-store');
-      res.json(batch);
+      res.json(redactCreator(batch, req));
     }),
   );
 
@@ -152,6 +182,11 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
       const { id } = parseParams(idSchema, req.params);
       const db = requireDb();
       const batch = await loadHeader(db, id);
+      const session = currentSession(req);
+      const isOwner = Boolean(session && batch.createdBy && batch.createdBy === session.email);
+      if (!session?.isAdmin && !isOwner) {
+        throw new ForbiddenError('Only the creator or an admin can cancel this batch');
+      }
       if (!['pending_approval', 'queued', 'running'].includes(batch.status)) {
         throw new BadRequestError(`Batch cannot be cancelled in status "${batch.status}"`);
       }

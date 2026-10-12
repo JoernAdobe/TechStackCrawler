@@ -260,6 +260,14 @@ export async function updateBatchItem(db: DbHandle, itemId: number, patch: ItemU
   );
 }
 
+/** Anzahl noch offener Items (wartend/laufend) über alle Batches – für den Queue-Deckel. */
+export async function countOpenItems(db: DbHandle): Promise<number> {
+  const { rows } = await db.execute(
+    `SELECT COUNT(*) AS n FROM batch_items WHERE status IN ('queued', 'running')`,
+  );
+  return Number((rows as Array<{ n: number | string }>)[0]?.n ?? 0);
+}
+
 /** Nach einem Neustart: hängengebliebene running-Items wieder einreihen. */
 export async function requeueRunningItems(db: DbHandle): Promise<void> {
   await db.execute(`UPDATE batch_items SET status = 'queued', started_at = NULL WHERE status = 'running'`);
