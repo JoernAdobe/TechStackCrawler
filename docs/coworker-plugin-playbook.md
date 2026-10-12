@@ -95,6 +95,7 @@ Ablauf: `make ethos-image` → `make ethos-secrets` → `IMAGE=… make ethos-de
 2. Smoke-Test des MCP-Servers mit API-Token: Tools listen + ein Tool aufrufen.
 3. Ohne Token liefert `/mcp` den Wert `401`.
 4. **Erst nach Merge + Rollout des Gateway-PRs** in Coworker testen: Plugin-Version hochzählen, den Marketplace synchronisieren, einen Prompt mit Tool-Aufruf schicken und in den Server-Logs nach `ims ok` suchen.
+5. **Umgebung muss zusammenpassen.** Eine Stage-Card im Gateway lässt sich nur aus **Stage-Coworker** testen: `https://experience-stage.adobe.com/#/@<stage-org>/coworker` (z. B. `@cjmstage`, alternativ `https://coworker.experience-stage.adobe.com`). Prod-Coworker (`experience.adobe.com`) schickt Prod-IMS-Tokens, und die nimmt das Stage-Gateway nicht an. Symptom: Der Skill lädt, aber das Tool meldet „Dienst nicht verfügbar“. Der MCP-Server muss deshalb Stage-IMS (`ims-na1-stg1`) **und** Prod-IMS (`ims-na1`) validieren können (`IMS_BASE_URLS`, Auswahl per Token-Claim `as`). Für Prod-Coworker braucht man eine Prod-Card (mit ARB) und im Plugin die Prod-Gateway-URL.
 
 ## Arbeitsweise mit Jörn
 
