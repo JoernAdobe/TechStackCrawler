@@ -96,6 +96,14 @@ Ablauf: `make ethos-image` → `make ethos-secrets` → `IMAGE=… make ethos-de
 3. Ohne Token liefert `/mcp` den Wert `401`.
 4. **Erst nach Merge + Rollout des Gateway-PRs** in Coworker testen: Plugin-Version hochzählen, den Marketplace synchronisieren, einen Prompt mit Tool-Aufruf schicken und in den Server-Logs nach `ims ok` suchen.
 5. **Umgebung muss zusammenpassen.** Eine Stage-Card im Gateway lässt sich nur aus **Stage-Coworker** testen: `https://experience-stage.adobe.com/#/@<stage-org>/coworker` (z. B. `@cjmstage`, alternativ `https://coworker.experience-stage.adobe.com`). Prod-Coworker (`experience.adobe.com`) schickt Prod-IMS-Tokens, und die nimmt das Stage-Gateway nicht an. Symptom: Der Skill lädt, aber das Tool meldet „Dienst nicht verfügbar“. Der MCP-Server muss deshalb Stage-IMS (`ims-na1-stg1`) **und** Prod-IMS (`ims-na1`) validieren können (`IMS_BASE_URLS`, Auswahl per Token-Claim `as`). Für Prod-Coworker braucht man eine Prod-Card (mit ARB) und im Plugin die Prod-Gateway-URL.
+6. **Segment-Gating prüfen.** `required_segments: [internal-orgs]` blendet den Server für Orgs außerhalb des Segments aus. Symptom: Der Skill lädt, das Tool fehlt, und im Server-Log steht kein `[mcp-auth]`. Die Segmente sind pro Umgebung getrennt (`config/cxo-ai-gateway/environments/<env>/segments/internal-orgs.yaml`). **Stage enthält nur 2 Orgs**: CJM Stage `745F37C35E4B776E0A49421B@AdobeOrg` (`@cjmstage`) und AEP Quality VA7 Stage. Prod enthält rund 360 Orgs, darunter demoemea. Schnellster Test: Stage-Coworker in `@cjmstage`. Alternativ die eigene Org per PR ins Segment aufnehmen (`project/scripts/open-gateway-segment-pr.sh`).
+
+## 6. Prod-Weg (offen)
+
+- Vorlage für interne Tools: `prod/mcp_servers/fluffyjaws_mcp.yaml` + `prod/manifests/cx_coworker_fluffyjaws.yaml` (`exposure: internal`, eigenes Manifest, per `?manifest_id=` angepinnt).
+- Prod-Gateway für Plugins: `https://cx-coworker-gateway.adobe.io/mcp/collection/<id>?manifest_id=<id>`.
+- Prod-Upstreams laufen auf `*.adobe.io`, `*.private.adobe.io` oder eigenen Prod-Hosts. Eine Ethos-**Stage**-Ingress-Adresse ist für Prod nicht vorgesehen. Dafür braucht es einen Prod-Cluster oder eine Adobe-I/O-Route.
+- Zur Checkliste gehören: Lint ohne Fehler (`readOnlyHint`/`destructiveHint`/`openWorldHint`), ein Golden-Eval-Datensatz, ein CODEOWNERS-Eintrag und gegebenenfalls ARB bzw. ein Security-Review.
 
 ## Arbeitsweise mit Jörn
 
