@@ -275,7 +275,7 @@ ethos-secrets:
 	else : "$${SSH_HOST:?SSH_HOST fehlt (.env.deploy)}"; \
 		ssh $$SSH_OPTS "$$SSH_HOST" "cat $${REMOTE_DIR:-/opt/techstack-crawler}/.env" > $$TMP || exit 1; fi; \
 	grep -E '^[A-Za-z_][A-Za-z0-9_]*=|^export ' $$TMP | sed -E -e 's/^export +//' -e "s/^([A-Za-z0-9_]+)=[\"'](.*)[\"']$$/\1=\2/" \
-		| grep -vE '^(DB_HOST|DB_PORT|DB_NAME|PORT|NODE_ENV|HOST_PORT|HOST_PORT_HTTP|HOST_BIND|CONTAINER_PREFIX|OKTA_REDIRECT_URI|GIT_COMMIT)=' > $$TMP.f; \
+		| grep -vE '^(DB_TYPE|DB_PATH|DB_HOST|DB_PORT|DB_NAME|PORT|NODE_ENV|HOST_PORT|HOST_PORT_HTTP|HOST_BIND|CONTAINER_PREFIX|OKTA_REDIRECT_URI|GIT_COMMIT)=' > $$TMP.f; \
 	grep -q '^DB_USER=' $$TMP.f || echo "DB_USER=techstack" >> $$TMP.f; \
 	for k in DB_PASSWORD DB_ROOT_PASSWORD; do grep -q "^$$k=." $$TMP.f || { echo "Fehler: $$k fehlt in der Env-Quelle"; exit 1; }; done; \
 	echo "OKTA_REDIRECT_URI=https://$$ETHOS_CORP_HOST/auth/callback" >> $$TMP.f; \

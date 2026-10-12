@@ -103,6 +103,9 @@ spec:
             - { name: DB_HOST, value: techstack-mariadb }
             - { name: DB_PORT, value: "3306" }
             - { name: DB_NAME, value: techstack_crawler }
+            # Überschreibt evtl. aus der Env-Quelle ins Secret gerutschte SQLite-Schalter
+            - { name: DB_TYPE, value: mariadb }
+            - { name: DB_PATH, value: "" }
           readinessProbe:
             httpGet: { path: /api/health, port: 3001 }
             initialDelaySeconds: 10
