@@ -54,6 +54,7 @@ Struktur (Ordner im **öffentlichen** GitHub-Repo; private Repos kann Coworker o
 - Transport: Streamable HTTP auf `/mcp`.
 - Den `Authorization: Bearer <IMS-Token>` per IMS-Userinfo validieren und nur `@adobe.com` zulassen. Das Ergebnis cachen (Vorlage `imsAuth.ts`). Über das Gateway kommt ein OBO-Token mit `client_id` `gpt_power_client`, deshalb **keine** Client-Allowlist setzen.
 - Optional für Skripte und Tests: zusätzlich app-eigene API-Tokens zulassen (Präfix `tsa_`).
+- **Achtung, E-Mail fehlt in userinfo:** Aus dem Stage-Coworker kommt ein Token mit `client_id=exc_app` (`as=ims-na1-stg1`) **ohne** Scope `email`. `/ims/userinfo/v2` liefert dann nur `sub`. Lösung: als Fallback `/ims/profile/v1` abfragen (Scope `AdobeID` ist vorhanden), dort `email` und `emailVerified` prüfen. Ablehnungen mit Grund, Domain, Scopes und userinfo-Feldnamen loggen (keine PII), sonst stochert man blind.
 - Ohne Token muss der Server `401` liefern. Das ist der erste Erreichbarkeits-Check.
 - Lange Tools (Crawler + LLM): in der Card `timeout.read` (z. B. 180 s) setzen, im Contour-`HTTPProxy` `timeoutPolicy.response` auf 300 s (Default 15 s).
 
