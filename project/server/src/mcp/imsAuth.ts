@@ -119,7 +119,13 @@ export async function validateImsToken(
 
   const email = typeof info.email === 'string' ? info.email.trim().toLowerCase() : '';
   if (!email || info.email_verified === false || !emailAllowed(email)) {
-    console.warn('[ims] token rejected: email missing, unverified or outside allowed domains');
+    const reason = !email ? 'email missing' : info.email_verified === false ? 'email unverified' : 'domain not allowed';
+    const domain = email.split('@')[1] ?? '-';
+    const scope = typeof payload.scope === 'string' ? payload.scope : '-';
+    console.warn(
+      `[ims] token rejected: ${reason} (domain=${domain}, as=${String(payload.as ?? '-')}, ` +
+        `client_id=${clientId ?? '-'}, scope=${scope}, userinfo_keys=${Object.keys(info).sort().join(',')})`,
+    );
     return null;
   }
 
