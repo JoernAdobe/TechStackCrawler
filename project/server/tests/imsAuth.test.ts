@@ -85,6 +85,48 @@ test('routes tokens to the issuing IMS (prod vs. stage) via the "as" claim', asy
   assert.match(calls[1].url, /^https:\/\/ims-na1-stg1\.adobelogin\.com\/ims\/userinfo\/v2$/);
 });
 
+function routedFetch(routes: Record<string, { status: number; body: unknown }>) {
+  const calls: string[] = [];
+  const fn = (async (url: string) => {
+    calls.push(url);
+    const hit = Object.entries(routes).find(([suffix]) => url.endsWith(suffix));
+    if (!hit) return new Response('{}', { status: 404 });
+    return new Response(JSON.stringify(hit[1].body), { status: hit[1].status });
+  }) as unknown as typeof fetch;
+  return { fn, calls };
+}
+
+test('falls back to the IMS profile when userinfo has no email (exc_app token without email scope)', async () => {
+  clearImsCache();
+  const { fn, calls } = routedFetch({
+    '/ims/userinfo/v2': { status: 200, body: { sub: 'u1' } },
+    '/ims/profile/v1': { status: 200, body: { email: 'Jane@adobe.com', emailVerified: 'true', userId: 'u1@AdobeID' } },
+  });
+  const identity = await validateImsToken(jwt({ ...validPayload, client_id: 'exc_app' }), fn, NOW);
+  assert.deepEqual(identity, { email: 'jane@adobe.com', userId: 'u1', clientId: 'exc_app' });
+  assert.equal(calls.length, 2);
+});
+
+test('rejects when the profile fallback yields a foreign or unverified email', async () => {
+  clearImsCache();
+  const foreign = routedFetch({
+    '/ims/userinfo/v2': { status: 200, body: { sub: 'u1' } },
+    '/ims/profile/v1': { status: 200, body: { email: 'x@example.com', emailVerified: 'true' } },
+  });
+  assert.equal(await validateImsToken(jwt(validPayload), foreign.fn, NOW), null);
+
+  clearImsCache();
+  const unverified = routedFetch({
+    '/ims/userinfo/v2': { status: 200, body: { sub: 'u1' } },
+    '/ims/profile/v1': { status: 200, body: { email: 'jane@adobe.com', emailVerified: 'false' } },
+  });
+  assert.equal(await validateImsToken(jwt(validPayload), unverified.fn, NOW), null);
+
+  clearImsCache();
+  const noProfile = routedFetch({ '/ims/userinfo/v2': { status: 200, body: { sub: 'u1' } } });
+  assert.equal(await validateImsToken(jwt(validPayload), noProfile.fn, NOW), null);
+});
+
 test('rejects tokens from an IMS instance that is not configured', async () => {
   clearImsCache();
   const { fn, calls } = mockFetch(200, { email: 'jane@adobe.com', email_verified: true });

@@ -60,6 +60,34 @@ function imsBaseUrlFor(payload: Record<string, unknown>): string | null {
   return urls.find((u) => URL.canParse(u) && new URL(u).hostname === host) ?? null;
 }
 
+async function fetchImsJson(
+  fetchFn: FetchFn,
+  url: string,
+  token: string,
+  label: string,
+): Promise<Record<string, unknown> | null> {
+  let res: Response;
+  try {
+    res = await fetchFn(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(USERINFO_TIMEOUT_MS),
+    });
+  } catch (err) {
+    console.warn(`[ims] ${label} request failed:`, err instanceof Error ? err.message : err);
+    return null;
+  }
+  if (!res.ok) {
+    console.warn(`[ims] ${label} rejected token (HTTP ${res.status}, ${url})`);
+    return null;
+  }
+  try {
+    const body = await res.json();
+    return body && typeof body === 'object' ? (body as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function clearImsCache(): void {
   cache.clear();
 }
@@ -95,43 +123,41 @@ export async function validateImsToken(
     return null;
   }
 
-  let res: Response;
-  try {
-    res = await fetchFn(`${baseUrl}/ims/userinfo/v2`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(USERINFO_TIMEOUT_MS),
-    });
-  } catch (err) {
-    console.warn('[ims] userinfo request failed:', err instanceof Error ? err.message : err);
-    return null;
-  }
-  if (!res.ok) {
-    console.warn(`[ims] userinfo rejected token (HTTP ${res.status}, ${baseUrl})`);
-    return null;
+  const info = await fetchImsJson(fetchFn, `${baseUrl}/ims/userinfo/v2`, token, 'userinfo');
+  if (!info) return null;
+
+  let email = typeof info.email === 'string' ? info.email.trim().toLowerCase() : '';
+  let verified = info.email_verified !== false;
+  let userId = typeof info.sub === 'string' ? info.sub : null;
+  let profileKeys = '-';
+
+  // Coworker reicht exc_app-Tokens ohne Scope "email" durch; userinfo liefert dann nur "sub".
+  // Mit Scope "AdobeID" gibt das IMS-Profil die E-Mail trotzdem heraus.
+  if (!email) {
+    const profile = await fetchImsJson(fetchFn, `${baseUrl}/ims/profile/v1`, token, 'profile');
+    if (profile) {
+      profileKeys = Object.keys(profile).sort().join(',');
+      email = typeof profile.email === 'string' ? profile.email.trim().toLowerCase() : '';
+      verified = profile.emailVerified !== false && profile.emailVerified !== 'false';
+      if (!userId && typeof profile.userId === 'string') userId = profile.userId;
+    }
   }
 
-  let info: Record<string, unknown>;
-  try {
-    info = (await res.json()) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-
-  const email = typeof info.email === 'string' ? info.email.trim().toLowerCase() : '';
-  if (!email || info.email_verified === false || !emailAllowed(email)) {
-    const reason = !email ? 'email missing' : info.email_verified === false ? 'email unverified' : 'domain not allowed';
+  if (!email || !verified || !emailAllowed(email)) {
+    const reason = !email ? 'email missing' : !verified ? 'email unverified' : 'domain not allowed';
     const domain = email.split('@')[1] ?? '-';
     const scope = typeof payload.scope === 'string' ? payload.scope : '-';
     console.warn(
       `[ims] token rejected: ${reason} (domain=${domain}, as=${String(payload.as ?? '-')}, ` +
-        `client_id=${clientId ?? '-'}, scope=${scope}, userinfo_keys=${Object.keys(info).sort().join(',')})`,
+        `client_id=${clientId ?? '-'}, scope=${scope}, userinfo_keys=${Object.keys(info).sort().join(',')}, ` +
+        `profile_keys=${profileKeys})`,
     );
     return null;
   }
 
   const identity: ImsIdentity = {
     email,
-    userId: typeof info.sub === 'string' ? info.sub : null,
+    userId,
     clientId,
   };
 
