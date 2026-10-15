@@ -183,7 +183,9 @@ export function initialEnrichmentState(items: BatchItem[]): BatchEnrichmentState
     for (const src of COSTLY_SOURCES) {
       const attempted =
         Boolean(e.errors?.[src]) ||
-        (src === 'semrush' ? e.traffic?.visits !== undefined : Boolean(e[src as 'lighthouse' | 'geo' | 'useCases']));
+        (src === 'semrush'
+          ? e.traffic?.visits !== undefined || Boolean(e.traffic?.sources?.includes('semrush'))
+          : Boolean(e[src as 'lighthouse' | 'geo' | 'useCases']));
       if (attempted) state.used[src] = (state.used[src] ?? 0) + 1;
     }
   }

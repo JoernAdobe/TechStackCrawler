@@ -299,6 +299,8 @@ export interface TrafficResult {
   /** Globaler Tranco-Popularitätsrang (frei verfügbar, ohne Key). */
   trancoRank?: number;
   semrush?: {
+    /** trends = Trends API (echte Visits); seo = Fallback Domain Overview (organische Schätzung). */
+    source?: 'trends' | 'seo';
     displayDate?: string;
     visits?: number;
     desktopVisits?: number;
@@ -307,6 +309,10 @@ export interface TrafficResult {
     bounceRatePct?: number;
     avgVisitDurationSec?: number;
     uniqueVisitors?: number;
+    /** Nur SEO-Fallback: Summe über die Top-Länder-Datenbanken (geschätzter organischer Traffic/Monat). */
+    organicTraffic?: number;
+    organicKeywords?: number;
+    paidTraffic?: number;
     topCountries: TrafficCountryShare[];
     topPages: Array<{ page: string; trafficSharePct?: number }>;
   };

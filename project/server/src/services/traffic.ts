@@ -3,6 +3,8 @@ import type { TrafficCountryShare, TrafficResult } from '../types/parity.js';
 /**
  * Traffic-Insights. Quellen:
  * - Semrush Trends API v3 (summary / geo / toppages) – nur mit SEMRUSH_API_KEY.
+ *   Ist die Trends API für den Key nicht freigeschaltet (ERROR 130), Fallback auf die SEO API
+ *   (domain_ranks: geschätzter organischer Traffic je Länder-Datenbank, keine echten Visits).
  *   Antworten sind CSV mit ';' als Trenner, Fehler kommen als Text "ERROR <n> :: <msg>".
  * - Tranco-Liste (https://tranco-list.eu/api_documentation) – frei, ohne Key,
  *   GET /api/ranks/domain/<domain> → { ranks: [{ date, rank }] }.
@@ -10,6 +12,8 @@ import type { TrafficCountryShare, TrafficResult } from '../types/parity.js';
  */
 
 const SEMRUSH_BASE = 'https://api.semrush.com/analytics/ta/api/v3';
+/** SEO API (Domain Overview, alle Datenbanken) – Fallback, wenn die Trends API für den Key nicht freigeschaltet ist. */
+const SEMRUSH_SEO_BASE = 'https://api.semrush.com/';
 const TRANCO_BASE = 'https://tranco-list.eu/api/ranks/domain';
 const TIMEOUT_MS = 30_000;
 const TOP_LIMIT = 5;
@@ -109,6 +113,49 @@ export function parseSemrushTopPages(
     .slice(0, limit);
 }
 
+/** Semrush-Datenbank → ISO-Ländercode ("uk" → "GB", "mobile-us"/"us-es" → "US"). */
+function semrushDbToCountry(db: string): string {
+  const code = db.toLowerCase().replace(/^mobile-/, '').split('-')[0];
+  return (code === 'uk' ? 'gb' : code).toUpperCase();
+}
+
+/**
+ * Parst domain_ranks (Spalten Db,Ot,Or,At → Header "Database;Organic Traffic;Organic Keywords;Adwords Traffic").
+ * Länderanteile beziehen sich auf die Summe der gelieferten Datenbanken.
+ */
+export function parseSemrushDomainRanks(rows: SemrushRow[], limit = TOP_LIMIT): SemrushData | null {
+  const dbs = rows
+    .map((r) => ({
+      db: (r.Database ?? '').trim(),
+      organic: toNum(r['Organic Traffic']) ?? 0,
+      keywords: toNum(r['Organic Keywords']) ?? 0,
+      paid: toNum(r['Adwords Traffic']) ?? 0,
+    }))
+    .filter((r) => r.db)
+    .sort((a, b) => b.organic - a.organic)
+    .slice(0, limit);
+  if (dbs.length === 0) return null;
+  const organicTraffic = dbs.reduce((n, r) => n + r.organic, 0);
+  // Desktop- und Mobile-Datenbank desselben Landes (z. B. "de" + "mobile-de") zusammenfassen.
+  const byCountry = new Map<string, number>();
+  for (const r of dbs) {
+    if (r.organic <= 0) continue;
+    const c = semrushDbToCountry(r.db);
+    byCountry.set(c, (byCountry.get(c) ?? 0) + r.organic);
+  }
+  const topCountries: TrafficCountryShare[] = [...byCountry.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([country, visits]) => ({ country, sharePct: Math.round((visits / organicTraffic) * 1000) / 10, visits }));
+  return {
+    source: 'seo',
+    organicTraffic,
+    organicKeywords: dbs.reduce((n, r) => n + r.keywords, 0),
+    paidTraffic: dbs.reduce((n, r) => n + r.paid, 0),
+    topCountries,
+    topPages: [],
+  };
+}
+
 /** Neuester Rang aus der Tranco-Antwort ({ ranks: [{date, rank}] }), sonst undefined. */
 export function parseTrancoRanks(json: unknown): number | undefined {
   const ranks = (json as { ranks?: Array<{ date?: string; rank?: unknown }> } | null)?.ranks;
@@ -135,6 +182,27 @@ async function semrushGet(endpoint: string, params: Record<string, string>): Pro
   const text = await res.text();
   if (!res.ok && !/^ERROR/i.test(text.trim())) throw new Error(`Semrush ${endpoint} HTTP ${res.status}`);
   return parseSemrushCsv(text);
+}
+
+/** Domain Overview über alle Datenbanken, Top-N nach organischem Traffic (10 Units pro Zeile). */
+async function fetchSemrushSeo(domain: string, apiKey: string): Promise<SemrushData | null> {
+  const params = new URLSearchParams({
+    type: 'domain_ranks',
+    key: apiKey,
+    domain,
+    export_columns: 'Db,Ot,Or,At',
+    display_sort: 'ot_desc',
+    display_limit: String(TOP_LIMIT),
+  });
+  const res = await fetch(`${SEMRUSH_SEO_BASE}?${params.toString()}`, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const text = await res.text();
+  if (!res.ok && !/^ERROR/i.test(text.trim())) throw new Error(`Semrush domain_ranks HTTP ${res.status}`);
+  return parseSemrushDomainRanks(parseSemrushCsv(text));
+}
+
+/** ERROR 130 "API DISABLED" = Trends API für diesen Key nicht freigeschaltet. */
+export function isTrendsApiDisabled(reasons: unknown[]): boolean {
+  return reasons.length > 0 && reasons.every((r) => /ERROR 130\b|API DISABLED/i.test(errText(r)));
 }
 
 async function fetchSemrush(domain: string, apiKey: string, notes: string[]): Promise<SemrushData | null> {
@@ -168,6 +236,23 @@ async function fetchSemrush(domain: string, apiKey: string, notes: string[]): Pr
     }),
   ]);
 
+  const settled = [summary, geo, pages];
+  if (settled.every((s) => s.status === 'rejected')) {
+    const reasons = settled.map((s) => (s as PromiseRejectedResult).reason);
+    if (isTrendsApiDisabled(reasons)) {
+      // Formulierung bewusst ohne "units/limit/quota/ERROR 13…", sonst schaltet der Batch Semrush komplett ab.
+      notes.push('Semrush Trends API not enabled for this key – showing organic search estimates (SEO API) instead');
+      try {
+        const seo = await fetchSemrushSeo(domain, apiKey);
+        if (!seo) notes.push(`Semrush: no organic data for ${domain}`);
+        return seo;
+      } catch (err) {
+        notes.push(`Semrush SEO fallback failed: ${errText(err)}`);
+        return null;
+      }
+    }
+  }
+
   if (summary.status === 'rejected') notes.push(`Semrush summary failed: ${errText(summary.reason)}`);
   if (geo.status === 'rejected') notes.push(`Semrush geo failed: ${errText(geo.reason)}`);
   if (pages.status === 'rejected') notes.push(`Semrush top pages failed: ${errText(pages.reason)}`);
@@ -179,7 +264,7 @@ async function fetchSemrush(domain: string, apiKey: string, notes: string[]): Pr
     if (summary.status === 'fulfilled') notes.push(`Semrush: no traffic data for ${domain}`);
     return null;
   }
-  return { displayDate, ...(base ?? {}), topCountries, topPages };
+  return { source: 'trends', displayDate, ...(base ?? {}), topCountries, topPages };
 }
 
 async function fetchTranco(domain: string): Promise<number | undefined> {

@@ -3,8 +3,10 @@ import test from 'node:test';
 import { buildPsiUrl, friendlyPsiError, parsePsiResponse } from '../src/services/lighthouse.js';
 import {
   defaultDisplayDate,
+  isTrendsApiDisabled,
   normalizeDomain,
   parseSemrushCsv,
+  parseSemrushDomainRanks,
   parseSemrushGeo,
   parseSemrushSummary,
   parseSemrushTopPages,
@@ -214,4 +216,29 @@ test('brand matching + iTunes mapping', () => {
     foundVia: 'store-search',
   });
   assert.equal(mapItunesApp({ trackName: 'x' }, 'website-link'), null);
+});
+
+test('Semrush SEO fallback: domain_ranks → organic estimate + country shares', () => {
+  const rows = parseSemrushCsv(
+    'Database;Organic Traffic;Organic Keywords;Adwords Traffic\nde;400;1000;50\nuk;300;400;0\nmobile-de;200;5;0\nmobile-us;100;80;0\nfr;0;0;0\n',
+  );
+  const r = parseSemrushDomainRanks(rows);
+  assert.equal(r?.source, 'seo');
+  assert.equal(r?.organicTraffic, 1000);
+  assert.equal(r?.organicKeywords, 1485);
+  assert.equal(r?.paidTraffic, 50);
+  assert.equal(r?.visits, undefined);
+  assert.deepEqual(r?.topCountries, [
+    { country: 'DE', sharePct: 60, visits: 600 },
+    { country: 'GB', sharePct: 30, visits: 300 },
+    { country: 'US', sharePct: 10, visits: 100 },
+  ]);
+  assert.equal(parseSemrushDomainRanks([]), null);
+});
+
+test('Semrush: Trends API disabled detection (ERROR 130 only)', () => {
+  const disabled = new Error('Semrush: ERROR 130 :: API DISABLED');
+  assert.equal(isTrendsApiDisabled([disabled, disabled, disabled]), true);
+  assert.equal(isTrendsApiDisabled([disabled, new Error('Semrush: ERROR 132 :: API UNITS BALANCE IS ZERO')]), false);
+  assert.equal(isTrendsApiDisabled([]), false);
 });

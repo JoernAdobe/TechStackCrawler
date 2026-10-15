@@ -52,6 +52,15 @@ export default function TrafficPanel({ data }: { data: TrafficResult }) {
         <>
           <div className="grid grid-cols-2 gap-2">
             {s.visits !== undefined && <Stat label="Monthly visits" value={compact.format(s.visits)} />}
+            {s.organicTraffic !== undefined && (
+              <Stat label="Organic search traffic / mo (est.)" value={compact.format(s.organicTraffic)} />
+            )}
+            {s.organicKeywords !== undefined && (
+              <Stat label="Organic keywords" value={compact.format(s.organicKeywords)} />
+            )}
+            {s.paidTraffic !== undefined && s.paidTraffic > 0 && (
+              <Stat label="Paid search traffic / mo (est.)" value={compact.format(s.paidTraffic)} />
+            )}
             {s.uniqueVisitors !== undefined && (
               <Stat label="Unique visitors" value={compact.format(s.uniqueVisitors)} />
             )}
@@ -77,7 +86,7 @@ export default function TrafficPanel({ data }: { data: TrafficResult }) {
           {countries.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-wide text-ts-text-secondary mb-2">
-                Top countries
+                {s.source === 'seo' ? 'Top countries (organic search)' : 'Top countries'}
               </h4>
               <div className="flex items-center gap-4">
                 <div className="h-32 w-32 shrink-0">
@@ -136,7 +145,9 @@ export default function TrafficPanel({ data }: { data: TrafficResult }) {
         </>
       ) : (
         <p className="text-xs text-ts-text-secondary">
-          Visit metrics require a Semrush API key on the server (SEMRUSH_API_KEY).
+          {data.notes?.some((n) => /SEMRUSH_API_KEY not configured/.test(n))
+            ? 'Visit metrics require a Semrush API key on the server (SEMRUSH_API_KEY).'
+            : 'No Semrush data available – see notes below.'}
         </p>
       )}
 
@@ -151,7 +162,7 @@ export default function TrafficPanel({ data }: { data: TrafficResult }) {
       )}
       <p className="text-[11px] text-ts-text-secondary">
         Sources: {data.sources.length ? data.sources.join(', ') : 'none'}
-        {s?.displayDate ? ` · Semrush month ${s.displayDate}` : ''} · {new Date(data.fetchedAt).toLocaleString()}
+        {s?.source === 'seo' ? ' · Semrush SEO estimate (latest)' : s?.displayDate ? ` · Semrush month ${s.displayDate}` : ''} · {new Date(data.fetchedAt).toLocaleString()}
       </p>
     </div>
   );

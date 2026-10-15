@@ -137,9 +137,15 @@ function addLighthouseSlide(pptx: PptxGenJS, lh: LighthouseResult): void {
 function addTrafficSlide(pptx: PptxGenJS, t: TrafficResult): void {
   const s = t.semrush;
   if (!s && typeof t.trancoRank !== 'number') return;
-  const slide = addContentSlide(pptx, 'Traffic Insights', [s?.displayDate && `Semrush ${s.displayDate}`, t.sources.join(' + ')].filter(Boolean).join(' · '));
+  const seo = s?.source === 'seo';
+  const slide = addContentSlide(pptx, 'Traffic Insights', [seo ? 'Semrush organic search estimate' : s?.displayDate && `Semrush ${s.displayDate}`, t.sources.join(' + ')].filter(Boolean).join(' · '));
   const cards = [
-    ...(s ? [
+    ...(s && seo ? [
+      { label: 'Organic search traffic / mo (est.)', value: fmtInt(s.organicTraffic) },
+      { label: 'Organic keywords', value: fmtInt(s.organicKeywords) },
+      { label: 'Paid search traffic / mo (est.)', value: fmtInt(s.paidTraffic) },
+    ] : []),
+    ...(s && !seo ? [
       { label: 'Monthly visits', value: fmtInt(s.visits) },
       { label: 'Unique visitors', value: fmtInt(s.uniqueVisitors) },
       { label: 'Pages / visit', value: typeof s.pagesPerVisit === 'number' ? s.pagesPerVisit.toFixed(1) : '—' },
@@ -154,7 +160,7 @@ function addTrafficSlide(pptx: PptxGenJS, t: TrafficResult): void {
     const rest = Math.max(0, 100 - countries.reduce((sum, c) => sum + c.sharePct, 0));
     const labels = [...countries.map((c) => clean(c.country, 30)), ...(rest >= 1 ? ['Other'] : [])];
     const values = [...countries.map((c) => Number(c.sharePct.toFixed(1))), ...(rest >= 1 ? [Number(rest.toFixed(1))] : [])];
-    slide.addText('Top countries (share of traffic)', { x: 7.2, y: CONTENT.y, w: 5.7, h: 0.4, fontFace: FONT, fontSize: 14, bold: true, color: BRAND.black });
+    slide.addText(seo ? 'Top countries (share of organic search traffic)' : 'Top countries (share of traffic)', { x: 7.2, y: CONTENT.y, w: 5.7, h: 0.4, fontFace: FONT, fontSize: 14, bold: true, color: BRAND.black });
     slide.addChart(pptx.ChartType.pie, [{ name: 'Traffic share', labels, values }], {
       x: 7.2, y: CONTENT.y + 0.45, w: 5.7, h: 4.6,
       chartColors: CHART_COLORS.slice(0, labels.length),
