@@ -116,3 +116,18 @@ test('auto-scan: resume picks up pending scans after a restart', async () => {
   await until(() => (rows.get(7)!.json as any).enrichments.observepoint.status === 'done');
   assert.ok(!calls.includes('POST /v2/web-audits/99/runs'), 'a known run is only polled, not restarted');
 });
+
+test('auto-scan: finished scratch run for the domain is reused (stale audit list) → no new scan', async () => {
+  auto.__setAutoScanDeps({ sleep: () => Promise.resolve(), pollMs: 0, busyWaitMs: 0 });
+  const { calls } = fakeOp();
+  // Erster Runs-Abruf liefert bereits einen fertigen Run.
+  await fetch('https://api.observepoint.com/v2/web-audits/99/runs');
+  const rows = new Map([[1, { url: 'https://www.example.org/', json: analysis('https://www.example.org/') as unknown }]]);
+  const db = fakeDb(rows);
+
+  await auto.autoObservePoint(db, 1, 'https://www.example.org/');
+  await until(() => (rows.get(1)!.json as any).enrichments?.observepoint?.status === 'done');
+
+  assert.equal((rows.get(1)!.json as any).enrichments.observepoint.auditId, 99);
+  assert.equal(calls.filter((c) => c === 'POST /v2/web-audits/99/runs').length, 0, 'no scan started');
+});

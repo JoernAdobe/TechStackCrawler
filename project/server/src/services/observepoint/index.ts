@@ -137,10 +137,24 @@ function base(url: string, domain: string, status: ObservePointResult['status'],
   return { url, domain, fetchedAt: new Date().toISOString(), status, reused, tags: [] };
 }
 
+/** Scratch-Audit live (ungecacht) prüfen: Es wird pro Scan umbenannt, die gecachte Audit-Liste kennt den neuen Namen noch nicht. */
+async function liveScratchFor(domain: string, scratchId: number): Promise<OpAuditSummary | undefined> {
+  if (!scratchId) return undefined;
+  try {
+    const audit = await getAudit(scratchId);
+    const summary: OpAuditSummary = { auditId: scratchId, auditName: audit.name };
+    return findAuditsForDomain(domain, [summary], []).length ? summary : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function reuse(url: string, domain: string): Promise<ObservePointResult> {
   const [audits, domains] = await Promise.all([listAudits(), listDomains()]);
-  const candidates = findAuditsForDomain(domain, audits, domains).slice(0, MAX_CANDIDATE_AUDITS);
   const scratchId = config.observepoint.scratchAuditId;
+  const candidates = findAuditsForDomain(domain, audits.filter((a) => a.auditId !== scratchId), domains).slice(0, MAX_CANDIDATE_AUDITS);
+  const scratch = await liveScratchFor(domain, scratchId);
+  if (scratch) candidates.push(scratch);
   if (!candidates.length) {
     return {
       ...base(url, domain, 'not_found', true),
@@ -155,7 +169,8 @@ async function reuse(url: string, domain: string): Promise<ObservePointResult> {
     // Beim Scratch-Audit gehört nur der jüngste Run zur aktuellen Ziel-URL.
     const scoped = audit.auditId === scratchId ? runs.slice().sort((a, b) => b.id - a.id).slice(0, 1) : runs;
     const pick = pickRun(scoped, config.observepoint.maxRunAgeDays);
-    if (pick.running && !running) running = audit;
+    // Laufender Scratch-Run → über die Queue gehen (dedupliziert), sonst pollt niemand nach.
+    if (pick.running && !running && audit.auditId !== scratchId) running = audit;
     if (pick.run && (!best || Date.parse(pick.run.completed!) > Date.parse(best.run.completed!))) {
       best = { audit, run: pick.run };
     }
