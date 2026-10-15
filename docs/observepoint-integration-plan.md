@@ -65,6 +65,8 @@ Quelle für den Schreibweg: ObservePoint Help Center, [API Recipe: Update Audit 
 
 **Scratch-Audit für frische Scans:** Nur mit `OBSERVEPOINT_ALLOW_CREATE=1` und `OBSERVEPOINT_SCRATCH_AUDIT_ID`. Das eigene, in der ObservePoint-UI angelegte Audit wird per `GET` geladen, per `PUT` auf Start-URL, Include-Filter (Host + Subdomains) und `OBSERVEPOINT_MAX_PAGES` umgestellt (Name = URL, damit der spätere Reuse-Abruf es findet) und per `POST …/runs` gestartet. Ist das Audit gerade belegt, kommt `running` zurück. Das Ergebnis liest der nächste Reuse-Abruf; beim Scratch-Audit zählt dabei nur der jüngste Run.
 
+**Automatik (`autoScan.ts`):** Nach jeder gespeicherten Einzelanalyse gleicht der Server im Hintergrund automatisch ab (reuse). Gibt es kein Audit und sind Fresh-Scans aktiv, landet die Domain in einer seriellen Queue (ein Scratch-Audit = ein Scan gleichzeitig, max. 25 Jobs, gleiche Domain wird zusammengelegt). Der Worker wartet, bis das Scratch-Audit frei ist, startet den Scan, pollt genau seinen Run (1 min, Timeout 90 min) und schreibt Ergebnis + Evidence Matrix in alle wartenden Analysen. Offene Jobs (`observepoint.auto=true`, `status=running`) werden beim Serverstart wieder aufgenommen. Das Panel lädt sich selbst nach. Bulk-Läufe lösen keine Fresh-Scans aus (Kontingent). Pro Instanz (V-Server, Ethos) ein eigenes Scratch-Audit verwenden.
+
 **Namensabgleich & Konsens:**
 
 - 215 von 548 TechStack-Detektorregeln lassen sich auf die ObservePoint-Tag-Bibliothek abbilden; der Rest (Frameworks, CMS, CDN …) ist für ObservePoint unsichtbar und wird als `not-comparable` geführt – fehlende Abdeckung zählt also nicht als Widerspruch.

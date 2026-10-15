@@ -40,6 +40,8 @@ export interface ObservePointResult {
   pagesScanned?: number;
   tags: ObservePointTag[];
   note?: string;
+  /** true = vom Hintergrund-Worker verwaltet (Auto-Abgleich bzw. automatischer Fresh-Scan). */
+  auto?: boolean;
   /** Zusatz-Insights aus demselben Run (Versionen, Adobe-Footprint, Quality, Privacy, Findings). */
   insights?: ObservePointInsights;
 }

@@ -270,7 +270,7 @@ The server loads the first available `.env` file from the compiled server-relati
 | `OBSERVEPOINT_API_KEY` | server/Docker | ObservePoint API key (header `Authorization: api_key …`) | Empty; ObservePoint source disabled |
 | `OBSERVEPOINT_BASE_URL` | server/Docker | ObservePoint API base URL | `https://api.observepoint.com` |
 | `OBSERVEPOINT_MAX_RUN_AGE_DAYS` | server/Docker | Only reuse audit runs younger than N days | `365` |
-| `OBSERVEPOINT_ALLOW_CREATE` | server/Docker | Allow fresh scans (consumes page-scan quota) when set to `1` | Disabled |
+| `OBSERVEPOINT_ALLOW_CREATE` | server/Docker | Allow fresh scans (consumes page-scan quota) when set to `1`; together with `OBSERVEPOINT_SCRATCH_AUDIT_ID`, single analyses without an existing audit are scanned automatically in the background | Disabled |
 | `OBSERVEPOINT_SCRATCH_AUDIT_ID` | server/Docker | Own audit (created in the OP UI) reconfigured via `PUT /v2/web-audits/{id}` for fresh scans | Empty; fresh scans unavailable |
 | `OBSERVEPOINT_MAX_PAGES` | server/Docker | Page limit per fresh scan | `5` |
 | `BATCH_APPROVAL_THRESHOLD` | server/Docker | Bulk batches above this URL count need admin approval | `50` |

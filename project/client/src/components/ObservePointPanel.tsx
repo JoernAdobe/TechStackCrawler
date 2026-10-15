@@ -14,6 +14,7 @@ interface ObservePointPanelProps {
 interface ObservePointStatusInfo {
   configured: boolean;
   freshScans: boolean;
+  autoFresh?: boolean;
   maxPages: number;
   maxRunAgeDays: number;
 }
@@ -35,6 +36,8 @@ export default function ObservePointPanel({ analysis, onUpdate }: ObservePointPa
   const abortRef = useRef<AbortController | null>(null);
   const latest = useRef(analysis);
   latest.current = analysis;
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -50,6 +53,40 @@ export default function ObservePointPanel({ analysis, onUpdate }: ObservePointPa
 
   const op = analysis.enrichments?.observepoint;
   const matrix = analysis.enrichments?.evidenceMatrix;
+
+  // Der Server gleicht nach jeder Analyse automatisch ab (und startet bei Bedarf einen Fresh-Scan).
+  // Solange noch kein Ergebnis da ist bzw. ein Scan läuft, hier still nachladen.
+  const awaitingAuto = !op && Boolean(analysis.id) && Boolean(status?.configured);
+  const pollActive = (awaitingAuto || op?.status === 'running') && loading === null;
+  const opKey = op ? `${op.status}|${op.fetchedAt}` : 'none';
+  useEffect(() => {
+    if (!pollActive || !analysis.id) return;
+    const id = analysis.id;
+    const controller = new AbortController();
+    const startedAt = Date.now();
+    const timer = window.setInterval(async () => {
+      // Ohne Auto-Ergebnis nach 5 Minuten aufgeben (z. B. Server neu gestartet) – der Button bleibt.
+      if (awaitingAuto && Date.now() - startedAt > 5 * 60_000) return window.clearInterval(timer);
+      try {
+        const fresh = await apiRequest<AnalysisResult>(`/api/analyses/${id}`, { signal: controller.signal });
+        const next = fresh.enrichments?.observepoint;
+        if (!next || `${next.status}|${next.fetchedAt}` === opKey) return;
+        const updated: AnalysisResult = {
+          ...latest.current,
+          enrichments: { ...latest.current.enrichments, observepoint: next, evidenceMatrix: fresh.enrichments?.evidenceMatrix },
+        };
+        latest.current = updated;
+        onUpdateRef.current(updated);
+        if (next.status === 'done') setAnnouncement('ObservePoint results arrived and the evidence matrix was updated.');
+      } catch {
+        // Polling ist best effort; nächster Tick versucht es erneut.
+      }
+    }, awaitingAuto ? 8_000 : 20_000);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [pollActive, awaitingAuto, analysis.id, opKey]);
 
   const run = async (mode: Mode) => {
     if (!analysis.id) return;
@@ -158,11 +195,20 @@ export default function ObservePointPanel({ analysis, onUpdate }: ObservePointPa
             <p className="text-xs text-ts-text-secondary">ObservePoint status unavailable: {statusError}</p>
           )}
 
+          {awaitingAuto && !busy && (
+            <p className="text-sm text-ts-text-secondary flex items-start gap-2 rounded-xl border border-ts-border bg-ts-surface-light/30 px-4 py-3">
+              <Loader2 className="w-4 h-4 shrink-0 mt-0.5 animate-spin" />
+              Checking ObservePoint automatically – results appear here as soon as they are available.
+            </p>
+          )}
+
           {analysis.id && status && configured && (
             <p className="text-xs text-ts-text-secondary">
               Uses existing audits from the shared account (runs no older than {status.maxRunAgeDays} days).
-              {status.freshScans &&
-                ` A fresh scan consumes page quota of the shared account (max. ${status.maxPages} pages).`}
+              {status.autoFresh
+                ? ` If no audit exists, a fresh scan (max. ${status.maxPages} pages) starts automatically in the background.`
+                : status.freshScans &&
+                  ` A fresh scan consumes page quota of the shared account (max. ${status.maxPages} pages).`}
             </p>
           )}
 

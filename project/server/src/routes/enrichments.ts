@@ -7,8 +7,7 @@ import { runLighthouse } from '../services/lighthouse.js';
 import { getTraffic } from '../services/traffic.js';
 import { findMobileApps } from '../services/mobileApps.js';
 import { getObservePoint, isObservePointConfigured, ObservePointError } from '../services/observepoint/index.js';
-import { getTagLibrary } from '../services/observepoint/client.js';
-import { buildEvidenceMatrix, observePointCoverage } from '../services/evidenceMatrix.js';
+import { autoFreshEnabled, autoScanQueueSize, enqueueFreshScan, saveObservePointResult } from '../services/observepoint/autoScan.js';
 import { config } from '../config.js';
 import type { AnalysisResult } from '../types/analysis.js';
 import type { AnalysisEnrichments } from '../types/parity.js';
@@ -132,6 +131,8 @@ export function createEnrichmentRoutes(opts: { limiter?: RequestHandler } = {}):
     res.json({
       configured: isObservePointConfigured(),
       freshScans: isObservePointConfigured() && allowCreate && scratchAuditId > 0,
+      autoFresh: autoFreshEnabled(),
+      queue: autoScanQueueSize(),
       maxPages,
       maxRunAgeDays,
     });
@@ -147,17 +148,23 @@ export function createEnrichmentRoutes(opts: { limiter?: RequestHandler } = {}):
       const url = await targetUrl(analysis);
       const mode = parseBody(observePointBodySchema, req.body)?.mode ?? 'reuse';
       try {
-        const [observepoint, library] = await Promise.all([getObservePoint(url, mode), getTagLibrary()]);
-        const evidenceMatrix = buildEvidenceMatrix({
-          detections: analysis.rawDetections ?? [],
-          observepoint,
-          opCoverage: observePointCoverage(library),
-        });
-        const saved =
-          (await saveEnrichment(pool, id, 'observepoint', observepoint)) &&
-          (await saveEnrichment(pool, id, 'evidenceMatrix', evidenceMatrix));
+        // Fresh-Scans (manuell oder automatisch bei fehlendem Audit) laufen immer über die serielle Queue.
+        if (mode === 'fresh' || autoFreshEnabled()) {
+          const op = mode === 'fresh' ? null : await getObservePoint(url, 'reuse');
+          if (!op || op.status === 'not_found') {
+            if (!autoFreshEnabled()) await getObservePoint(url, 'fresh'); // wirft die passende 403/400-Meldung
+            const observepoint = await enqueueFreshScan(pool, id, url);
+            const fresh = await getAnalysisById(pool, id);
+            return void res.json({ observepoint, evidenceMatrix: fresh?.enrichments?.evidenceMatrix });
+          }
+          const saved = await saveObservePointResult(pool, id, op);
+          if (!saved) throw new NotFoundError('Analysis not found');
+          return void res.json(saved);
+        }
+        const observepoint = await getObservePoint(url, 'reuse');
+        const saved = await saveObservePointResult(pool, id, observepoint);
         if (!saved) throw new NotFoundError('Analysis not found');
-        res.json({ observepoint, evidenceMatrix });
+        res.json(saved);
       } catch (err) {
         throw toHttpError(err);
       }

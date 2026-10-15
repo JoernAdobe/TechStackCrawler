@@ -8,6 +8,7 @@ import type { DetectedTech } from './customDetectors.js';
 import type { ScrapedData } from './scraper.js';
 import { getPool } from '../db/index.js';
 import { saveAnalysis } from '../db/analyses.js';
+import { autoObservePoint } from './observepoint/autoScan.js';
 import type { AnalysisResult, ScanWarning } from '../types/analysis.js';
 
 /** Wartezeit vor dem automatischen Re-Scan einer Fehler-/Leerseite (per Env abschaltbar mit 0). */
@@ -78,7 +79,11 @@ export interface AnalysisWriter {
   close(): void;
 }
 
-export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void> {
+export async function analyzeUrl(
+  url: string,
+  sse: AnalysisWriter,
+  opts: { autoObservePoint?: boolean } = {},
+): Promise<void> {
   sse.sendProgress('scraping', `Fetching ${url}…`);
 
   const { scraped, health } = await scrapeWithHealthCheck(url, (msg) =>
@@ -196,7 +201,11 @@ export async function analyzeUrl(url: string, sse: AnalysisWriter): Promise<void
   if (pool) {
     try {
       const id = await saveAnalysis(pool, result);
-      if (id) result.id = id;
+      if (id) {
+        result.id = id;
+        // ObservePoint-Abgleich im Hintergrund (Batch macht das selbst und ohne Fresh-Scans).
+        if (opts.autoObservePoint !== false) void autoObservePoint(pool, id, result.finalUrl ?? result.url);
+      }
     } catch (err) {
       console.error('Failed to save analysis to DB:', err);
     }

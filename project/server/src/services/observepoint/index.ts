@@ -175,15 +175,26 @@ async function reuse(url: string, domain: string): Promise<ObservePointResult> {
         };
   }
 
-  const { tags, raw } = await readRun(best.audit.auditId, best.run);
-  const insights = await readInsights(best.audit.auditId, best.run, raw);
+  return resultFromRun(url, domain, best.audit, best.run, best.audit.auditId !== scratchId);
+}
+
+/** Abgeschlossenen Run vollständig auslesen (Tags, Accounts, Insights). */
+export async function resultFromRun(
+  url: string,
+  domain: string,
+  audit: Pick<OpAuditSummary, 'auditId' | 'auditName'>,
+  run: OpRun,
+  reused: boolean,
+): Promise<ObservePointResult> {
+  const { tags, raw } = await readRun(audit.auditId, run);
+  const insights = await readInsights(audit.auditId, run, raw);
   return {
-    ...base(url, domain, 'done', best.audit.auditId !== scratchId),
-    auditId: best.audit.auditId,
-    auditName: best.audit.auditName,
-    runId: best.run.id,
-    runCompletedAt: best.run.completed ?? undefined,
-    pagesScanned: best.run.totalUrl,
+    ...base(url, domain, 'done', reused),
+    auditId: audit.auditId,
+    auditName: audit.auditName,
+    runId: run.id,
+    runCompletedAt: run.completed ?? undefined,
+    pagesScanned: run.totalUrl,
     tags,
     insights,
   };
@@ -194,7 +205,7 @@ export function includeFilterFor(domain: string): string {
   return `^https?://([^/:\\?]*\\.)?${domain.replace(/\./g, '\\.')}([^.]|$)`;
 }
 
-async function fresh(url: string, domain: string): Promise<ObservePointResult> {
+export async function startFreshScan(url: string, domain: string): Promise<ObservePointResult> {
   const { allowCreate, scratchAuditId, maxPages } = config.observepoint;
   if (!allowCreate) {
     throw new ObservePointError('Fresh ObservePoint scans are disabled (set OBSERVEPOINT_ALLOW_CREATE=1).', 403, true);
@@ -231,7 +242,7 @@ async function fresh(url: string, domain: string): Promise<ObservePointResult> {
 
 export async function getObservePoint(url: string, mode: ObservePointMode = 'reuse'): Promise<ObservePointResult> {
   const domain = normalizeDomain(url);
-  return mode === 'fresh' ? fresh(url, domain) : reuse(url, domain);
+  return mode === 'fresh' ? startFreshScan(url, domain) : reuse(url, domain);
 }
 
 export { ObservePointError, isObservePointConfigured } from './client.js';

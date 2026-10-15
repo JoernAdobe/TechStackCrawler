@@ -2,7 +2,7 @@
 # Verwendung: make start | stop | deploy | ...
 
 PROJECT_DIR := project
-.PHONY: start stop deploy deploy-hub install build dev-start dev-stop docker-up docker-down docker-build logs status tmp-inspect tmp-clean restart server-mem tmp-resize
+.PHONY: start stop deploy deploy-hub install build dev-start dev-stop docker-up docker-down docker-build logs status tmp-inspect tmp-clean restart server-mem tmp-resize server-prune
 
 # Standard-Ziel
 .DEFAULT_GOAL := help
@@ -18,6 +18,7 @@ help:
 	@echo "  make docker-down - Docker-Container stoppen"
 	@echo "  make deploy     - Auf Server deployen (Docker)"
 	@echo "  make deploy-hub - Hub-Seite deployen (Adobe AI Tools)"
+	@echo "  make server-prune - Dangling Docker-Images auf dem Server entfernen (läuft auch nach deploy)"
 	@echo "  make ethos-image | ethos-secrets | ethos-deploy | ethos-status - Ethos (Coworker-Gateway), siehe docs/ethos-deployment.md"
 	@echo ""
 
@@ -128,7 +129,8 @@ deploy:
 	else \
 		echo ">>> Frontend: $$DEPLOY_URL"; \
 		echo ">>> Health-Check: noch nicht bereit (Container startet evtl. noch)"; \
-	fi
+	fi; \
+	[ -n "$$DEPLOY_SKIP_PRUNE" ] || $(MAKE) --no-print-directory server-prune || echo ">>> Hinweis: Server-Aufräumen fehlgeschlagen (Deploy ist trotzdem durch)."
 
 # Server-Diagnose: Container-Status + Logs holen
 status:
@@ -191,6 +193,15 @@ tmp-clean:
 	if [ -z "$$SSH_HOST" ]; then echo "Fehler: SSH_HOST fehlt"; exit 1; fi; \
 	echo ">>> Räume nur Deploy-Artefakte aus /tmp auf (hubblestack bleibt unangetastet)..."; \
 	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "df -h /tmp | tail -1; rm -fv /tmp/.deploy.tar.gz /tmp/.deploy-techstack.tar /tmp/.deploy*.tar* 2>/dev/null; rm -fv /tmp/runc-process* 2>/dev/null; df -h /tmp | tail -1"
+
+# Docker-Aufräumen auf dem Server: nur dangling (ungetaggte) Images + Build-Cache.
+# Getaggte Images anderer Projekte (rfp-tool, battlemind, genesis …) bleiben unangetastet.
+server-prune:
+	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
+	ROOT_DIR=$$(pwd); \
+	if [ -z "$$SSH_HOST" ]; then echo "Fehler: SSH_HOST fehlt"; exit 1; fi; \
+	echo ">>> Entferne dangling Docker-Images + Build-Cache auf dem Server..."; \
+	ssh $$([ -n "$$SSH_KEY" ] && echo "-i $$ROOT_DIR/$$SSH_KEY -o IdentitiesOnly=yes" || true) "$$SSH_HOST" "df -h / | tail -1; docker image prune -f | tail -1; docker builder prune -f | tail -1; df -h / | tail -1"
 
 # Deploy Hub Page (Adobe AI Tools landing page)
 HUB_DIR := hub

@@ -93,7 +93,7 @@ interface ItemScan {
 async function runFullAnalysis(url: string): Promise<ItemScan> {
   let result: AnalysisResult | null = null;
   // analyzeUrl speichert das Ergebnis selbst (saveAnalysis) und setzt result.id.
-  await analyzeUrl(url, noopWriter((r) => { result = r; }));
+  await analyzeUrl(url, noopWriter((r) => { result = r; }), { autoObservePoint: false });
   const final = result as AnalysisResult | null;
   if (!final) throw new Error('No analysis result');
   const raw = final.rawDetections ?? [];

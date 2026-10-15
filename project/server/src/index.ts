@@ -33,6 +33,7 @@ import { createTokenRoute, listTokensRoute, revokeTokenRoute } from './routes/ap
 import { createMcpRoutes } from './mcp/server.js';
 import { requireMcpAuth } from './mcp/auth.js';
 import { initDb, getPool, closeDb } from './db/index.js';
+import { resumeAutoScans } from './services/observepoint/autoScan.js';
 import { config, validateConfig } from './config.js';
 import { asyncHandler, errorHandler, notFoundHandler } from './utils/http.js';
 import { createEnrichmentRoutes } from './routes/enrichments.js';
@@ -143,6 +144,7 @@ await initDb().catch((err) => {
 // EAA-Parität: Batch-Queue nach DB-Init starten (setzt hängende Items zurück).
 if (getPool()) {
   startBatchWorker().catch((err) => console.error('Batch worker start failed:', err));
+  resumeAutoScans(getPool()!).catch((err) => console.error('ObservePoint auto-scan resume failed:', err));
 }
 
 // EAA-Parität: eigene Limiter, damit der bestehende Analyse-Limiter unverändert bleibt.
