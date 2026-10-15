@@ -2,12 +2,243 @@
  * EAA-Parität: Typen für Enrichments, Batch-/Account-Assessments und Feedback.
  * Identische Kopie liegt in client/src/types/parity.ts – synchron halten.
  */
+import type { AccountView, BatchEnrichmentOptions, BatchItemEnrichments } from './batchAccount.js';
 
 export interface AnalysisEnrichments {
   lighthouse?: LighthouseResult;
   traffic?: TrafficResult;
   mobileApps?: MobileAppsResult;
   geo?: GeoScoreResult;
+  observepoint?: ObservePointResult;
+  evidenceMatrix?: EvidenceMatrix;
+}
+
+// ── ObservePoint (zweite, unabhängige Erkennungsquelle) ───────────────────
+export interface ObservePointTag {
+  tagId: number;
+  name: string;
+  category: string;
+  /** Seiten des Runs, auf denen der Tag gefeuert hat. */
+  pagesPresent: number;
+  /** Tag-Accounts (z. B. Report-Suite, GA4-Measurement-ID, Launch-Property). */
+  accounts?: string[];
+}
+
+export type ObservePointStatus = 'done' | 'running' | 'not_found';
+
+export interface ObservePointResult {
+  url: string;
+  domain: string;
+  fetchedAt: string;
+  status: ObservePointStatus;
+  /** true = bestehendes Audit aus dem geteilten Account wiederverwendet, false = von uns gestartet. */
+  reused: boolean;
+  auditId?: number;
+  auditName?: string;
+  runId?: number;
+  runCompletedAt?: string;
+  pagesScanned?: number;
+  tags: ObservePointTag[];
+  note?: string;
+  /** Zusatz-Insights aus demselben Run (Versionen, Adobe-Footprint, Quality, Privacy, Findings). */
+  insights?: ObservePointInsights;
+}
+
+// ── ObservePoint-Insights (aus dem gewählten Run, jeder Block fehlertolerant) ─
+export type OpFindingType = 'technical' | 'privacy' | 'version';
+export type OpFindingSeverity = 'high' | 'medium' | 'low';
+/** Thema, über das ein Finding mit Use Cases verknüpft wird. */
+export type OpFindingTheme = 'web-sdk' | 'tag-governance' | 'performance' | 'privacy' | 'analytics';
+
+export interface OpFinding {
+  id: string;
+  type: OpFindingType;
+  severity: OpFindingSeverity;
+  theme: OpFindingTheme;
+  title: string;
+  /** Gemessene Evidenz aus dem OP-Run (kurz, zitierfähig). */
+  evidence: string;
+  /** Adobe-Gesprächsaufhänger. */
+  adobeAngle: string;
+  adobeProducts: string[];
+}
+
+export interface OpTagVersion {
+  tag: string;
+  version: string;
+  pages?: number;
+}
+
+export interface OpUpgradeOpportunity {
+  id: string;
+  title: string;
+  evidence: string;
+  recommendation: string;
+  severity: OpFindingSeverity;
+  theme: OpFindingTheme;
+  adobeProducts: string[];
+}
+
+export interface OpLaunchBuild {
+  propertyName?: string;
+  propertyId?: string;
+  environment?: string;
+  environmentId?: string;
+  buildDate?: string;
+  turbineVersion?: string;
+  /** Alter des Builds in Tagen relativ zum Run-Ende. */
+  buildAgeDays?: number;
+}
+
+export interface OpVersionsInsight {
+  tags: OpTagVersion[];
+  launch?: OpLaunchBuild;
+  upgrades: OpUpgradeOpportunity[];
+}
+
+export interface OpAdobeFootprint {
+  imsOrgIds: string[];
+  reportSuites: string[];
+  trackingServers: string[];
+  targetClientCodes: string[];
+  launch?: OpLaunchBuild;
+  /** Distinct eVars/props/list vars in den AA-Beacons der Stichprobenseite. */
+  evarCount?: number;
+  propCount?: number;
+  webSdk: boolean;
+  appMeasurement: boolean;
+  adobeTags: string[];
+  /** Seite, deren Beacons ausgewertet wurden. */
+  sampledPage?: string;
+}
+
+export interface OpWebVitals {
+  lcpMs?: number;
+  fcpMs?: number;
+  ttfbMs?: number;
+  cls?: number;
+  /** Bewertung nach Google-Schwellen (good / needs-improvement / poor). */
+  ratings: Partial<Record<'lcp' | 'fcp' | 'ttfb' | 'cls', 'good' | 'needs-improvement' | 'poor'>>;
+}
+
+export interface OpQualityInsight {
+  brokenTags: Array<{ name: string; instances: number }>;
+  duplicateTags: Array<{ name: string; duplicates: number; pages: number }>;
+  slowTags: Array<{ name: string; medianMs?: number; slowInstances: number }>;
+  slowestTags: Array<{ name: string; medianMs: number }>;
+  consoleErrorCount?: number;
+  consoleWarnCount?: number;
+  consoleMessages: Array<{ level: string; message: string; count: number; pages: number; tag?: string }>;
+  webVitals?: OpWebVitals;
+  avgPageLoadMs?: number;
+}
+
+export interface OpCookieInfo {
+  name: string;
+  domain: string;
+  party: '1st' | '3rd';
+  durationDays?: number;
+  initiatorTags: string[];
+}
+
+export interface OpPrivacyInsight {
+  cookies: {
+    total: number;
+    firstParty: number;
+    thirdParty: number;
+    nonSecure?: number;
+    sameSiteEmpty?: number;
+    /** Laufzeit > 13 Monate. */
+    longLived: number;
+  };
+  topCookies: OpCookieInfo[];
+  consentTool?: { name: string; version?: string };
+  googleConsentMode?: { detected: boolean; gcs?: string; gcd?: string };
+  requests?: {
+    total: number;
+    nonEu: number;
+    /** Non-EU-Requests an fremde Domains (ohne die eigene Site-Domain). */
+    nonEuThirdParty?: number;
+    countries: Array<{ code: string; name: string; count: number; eu: boolean }>;
+    topNonEuHosts: Array<{ host: string; country: string; count: number }>;
+  };
+  runContext: { consentActions?: boolean; gpcEnabled?: boolean; blockThirdPartyCookies?: boolean };
+}
+
+export interface ObservePointInsights {
+  generatedAt: string;
+  runCompletedAt?: string;
+  pages?: number;
+  /** true = Run lief mit Consent-Pre-Audit-Actions (Banner wurde vermutlich akzeptiert). */
+  consentAccepted?: boolean;
+  versions: OpVersionsInsight | null;
+  adobeFootprint: OpAdobeFootprint | null;
+  quality: OpQualityInsight | null;
+  privacy: OpPrivacyInsight | null;
+  findings: OpFinding[];
+  /** Hinweise zu fehlgeschlagenen/leeren Blöcken. */
+  notes: string[];
+}
+
+// ── Evidence Matrix (Technologie × Quelle, Konsens) ───────────────────────
+export type EvidenceSourceId = 'techstack' | 'observepoint';
+
+/**
+ * confirmed: beide Quellen sehen die Technologie.
+ * techstack-only / observepoint-only: nur eine Quelle, obwohl beide sie erkennen könnten.
+ * not-comparable: nur eine Quelle, die andere kann diese Technologie grundsätzlich nicht erkennen.
+ */
+export type ConsensusStatus = 'confirmed' | 'techstack-only' | 'observepoint-only' | 'not-comparable';
+
+export interface EvidenceCell {
+  name: string;
+  confidence?: number;
+  weak?: boolean;
+  category?: string;
+  pagesPresent?: number;
+  pagesScanned?: number;
+  accounts?: string[];
+  evidence?: string[];
+}
+
+export interface EvidenceMatrixRow {
+  key: string;
+  technology: string;
+  buildingBlock?: string;
+  isAdobe: boolean;
+  status: ConsensusStatus;
+  /** Kombinierte Konfidenz 0–1 (Noisy-OR über gewichtete Quellen). */
+  confidence: number;
+  /** Schwache TechStack-Erkennung, die durch ObservePoint bestätigt wurde. */
+  upgradedFromWeak?: boolean;
+  sources: Partial<Record<EvidenceSourceId, EvidenceCell>>;
+}
+
+export interface BuildingBlockAgreement {
+  buildingBlock: string;
+  techstack: string[];
+  observepoint: string[];
+  /** agree: gleiche Lösungen; partial: Überschneidung; conflict: disjunkt; single: nur eine Quelle. */
+  verdict: 'agree' | 'partial' | 'conflict' | 'single';
+}
+
+export interface EvidenceMatrixStats {
+  /** Technologien, die beide Quellen erkennen könnten. */
+  comparable: number;
+  confirmed: number;
+  techstackOnly: number;
+  observepointOnly: number;
+  notComparable: number;
+  /** confirmed / comparable in Prozent; null, wenn nichts vergleichbar ist. */
+  agreementRate: number | null;
+}
+
+export interface EvidenceMatrix {
+  generatedAt: string;
+  sources: Array<{ id: EvidenceSourceId; label: string; available: boolean; detail?: string }>;
+  rows: EvidenceMatrixRow[];
+  blocks: BuildingBlockAgreement[];
+  stats: EvidenceMatrixStats;
 }
 
 // ── Lighthouse (EAA: lighthouse-score Azure Function) ─────────────────────
@@ -193,7 +424,9 @@ export interface BatchItem {
   analysisId?: number;
   error?: string;
   /** Kompakte Detektionen für Matrix/CSV (auch ohne KI-Analyse). */
-  detections?: Array<{ name: string; categories: string[]; confidence: number; weak?: boolean }>;
+  detections?: Array<{ name: string; categories: string[]; confidence: number; weak?: boolean; preConsent?: boolean }>;
+  /** Kompakte Enrichment-Ergebnisse (Traffic, Lighthouse, ObservePoint …), siehe batchAccount.ts. */
+  enrichments?: BatchItemEnrichments;
   startedAt?: string;
   finishedAt?: string;
 }
@@ -217,6 +450,8 @@ export interface BatchJob {
   failed: number;
   items?: BatchItem[];
   matrix?: SolutionMappingMatrix;
+  enrichmentOptions?: BatchEnrichmentOptions;
+  accountView?: AccountView;
 }
 
 // ── Feedback (EAA: feedback form → Jira) ──────────────────────────────────

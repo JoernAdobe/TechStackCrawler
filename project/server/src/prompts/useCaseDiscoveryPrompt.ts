@@ -1,4 +1,10 @@
 import type { AnalysisResult } from '../types/analysis.js';
+import { MAX_FINDINGS, formatFindingsForPrompt } from '../services/observepoint/findings.js';
+
+/** OP-Findings der gespeicherten Analyse (falls angereichert), max. MAX_FINDINGS. */
+export function observePointFindings(analysis: AnalysisResult) {
+  return analysis.enrichments?.observepoint?.insights?.findings?.slice(0, MAX_FINDINGS) ?? [];
+}
 
 export function buildUseCaseDiscoveryPrompt(
   analysis: AnalysisResult,
@@ -14,6 +20,17 @@ export function buildUseCaseDiscoveryPrompt(
   const rawTechs = analysis.rawDetections
     .map((t) => `${t.name}${t.version ? ` ${t.version}` : ''}`)
     .join(', ');
+
+  const insights = analysis.enrichments?.observepoint?.insights;
+  const findings = observePointFindings(analysis);
+  const findingsBlock = findings.length
+    ? `
+## Measured Implementation Findings (Source: ObservePoint)
+${formatFindingsForPrompt(findings, insights ?? {})}
+
+Use these measured findings: at least 2 use cases should address the most severe findings (e.g. Web SDK migration, tag governance, server-side data collection, privacy/first-party data, page performance). For every use case that is based on one or more findings, list their IDs in "evidenceFindingIds" and mention the concrete evidence in plain language in the description.
+`
+    : '';
 
   const pageExcerpt = analysis.pageContentExcerpt
     ? `\n## Page Content Excerpt\n${analysis.pageContentExcerpt}`
@@ -36,7 +53,7 @@ ${techStack}
 ## All Detected Technologies
 ${rawTechs}
 ${pageExcerpt}
-${sitemapUrls.length > 0 ? `
+${findingsBlock}${sitemapUrls.length > 0 ? `
 ## Sitemap URLs (sample)
 The following URLs were found in the site's sitemap. Use them to identify interesting page types (product detail, company info, category pages, etc.) and make use cases more concrete.
 
@@ -57,7 +74,8 @@ Generate exactly 10 use cases. For each use case provide:
 7. **effort** – Implementation effort: exactly one of "Low", "Medium", or "High".
 8. **timeToValue** – Rough time to first measurable value (e.g. "4–8 weeks", "1–2 quarters").
 9. **impact** – Business impact: exactly one of "Low", "Medium", or "High".
-10. **implementationHint** (optional) – Brief tip in plain language on how to get started
+10. **implementationHint** (optional) – Brief tip in plain language on how to get started${findings.length ? `
+11. **evidenceFindingIds** (optional) – Array of finding IDs from "Measured Implementation Findings" this use case is based on (e.g. ["${findings[0]!.id}"]); omit or [] if none` : ''}
 
 ## Adobe Product Reference
 - CMS: Adobe Experience Manager (AEM)
@@ -91,7 +109,8 @@ Respond with ONLY a raw JSON object (no code fences, no markdown):
       "effort": "Medium",
       "timeToValue": "4–8 weeks",
       "impact": "High",
-      "implementationHint": "Optional tip..."
+      "implementationHint": "Optional tip..."${findings.length ? `,
+      "evidenceFindingIds": []` : ''}
     }
   ]
 }
@@ -100,7 +119,7 @@ Rules:
 - Exactly 10 use cases, ranked by relevance/impact.
 - Be specific to the site's industry and tech stack – avoid generic use cases.
 - When sitemap URLs are provided, reference concrete page types (e.g. product detail pages, category landing pages) in your use cases.
-- Prioritize use cases where Adobe has a clear advantage over their current stack.
+${findings.length ? '- Only use finding IDs that appear in the findings list; never invent IDs or evidence.\n' : ''}- Prioritize use cases where Adobe has a clear advantage over their current stack.
 - ALWAYS include quantifiedRoi, industryBenchmark, effort, timeToValue and impact for every use case.
 - quantifiedRoi MUST contain a number or range. Keep ranges realistic and conservative; never fabricate a precise single figure.
 - effort and impact MUST be exactly one of "Low", "Medium", or "High".

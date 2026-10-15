@@ -3,6 +3,11 @@ import { config } from '../config.js';
 
 let instance: AnthropicBedrock | null = null;
 
+/** Nur für Tests: eigenen (Mock-)Client einsetzen bzw. mit `null` zurücksetzen. */
+export function setBedrockClientForTests(client: AnthropicBedrock | null): void {
+  instance = client;
+}
+
 export function getBedrockClient(): AnthropicBedrock {
   if (instance) return instance;
 

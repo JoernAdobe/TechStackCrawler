@@ -85,6 +85,9 @@ const analysisLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  // Abgelehnte Eingaben (400 ungültige URL, 422 Preflight/Tippfehler) kosten nichts und zählen nicht.
+  skipFailedRequests: true,
+  requestWasSuccessful: (_req, res) => res.statusCode !== 400 && res.statusCode !== 422,
   message: { error: 'Too many requests – please try again later.', code: 'rate_limited' },
 });
 
@@ -243,11 +246,40 @@ const server = app.listen(config.port, host, () => {
   console.log(`Datenbank: ${db ? (db.dialect === 'sqlite' ? 'SQLite' : 'MariaDB') : 'keine'}`);
 });
 
-async function shutdown() {
-  await closeDb();
+// Analyse (Scrape + Unterseiten + KI inkl. Retries) kann mehrere Minuten dauern – Node-Default
+// (300 s) würde den Sync-Request vorher kappen. Keep-Alive > typischer Proxy-Idle-Timeout.
+server.requestTimeout = 10 * 60_000;
+server.headersTimeout = 65_000;
+server.keepAliveTimeout = 61_000;
+server.on('error', (err) => {
+  console.error('HTTP server error:', err);
+  if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE') process.exit(1);
+});
+
+let shuttingDown = false;
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received – shutting down`);
+  setTimeout(() => process.exit(1), 5000).unref();
   server.close(() => process.exit(0));
-  setTimeout(() => process.exit(1), 3000);
+  await closeDb().catch((err) => console.error('DB close failed:', err));
 }
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
+
+// Letztes Netz: verlorene Promises nur loggen (Request-Fehler laufen über errorHandler),
+// damit ein einzelner vergessener catch nicht den ganzen Server beendet.
+process.on('unhandledRejection', (reason) => {
+  console.error('[process] Unhandled promise rejection:', reason);
+});
+// Netzwerkfehler auf bereits geschlossenen Sockets sind harmlos; alles andere hinterlässt
+// einen undefinierten Zustand → in Production sauber beenden (Orchestrator startet neu),
+// lokal weiterlaufen lassen, damit `tsx watch` nicht stehen bleibt.
+const BENIGN_ERROR_CODES = new Set(['EPIPE', 'ECONNRESET', 'ERR_STREAM_DESTROYED', 'ERR_STREAM_WRITE_AFTER_END']);
+process.on('uncaughtException', (err) => {
+  const code = (err as NodeJS.ErrnoException).code ?? '';
+  console.error(`[process] Uncaught exception${code ? ` (${code})` : ''}:`, err);
+  if (config.nodeEnv === 'production' && !BENIGN_ERROR_CODES.has(code)) void shutdown('uncaughtException');
+});

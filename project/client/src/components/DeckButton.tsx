@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LoaderCircle, Presentation } from 'lucide-react';
-import { ApiError, toErrorMessage } from '../lib/apiClient';
+import { apiErrorFromResponse, toErrorMessage, toNetworkError } from '../lib/apiClient';
 
 interface DeckButtonProps {
   href: string;
@@ -21,18 +21,13 @@ export default function DeckButton({ href, label = 'Download PowerPoint' }: Deck
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(href, { credentials: 'same-origin' });
-      if (!res.ok) {
-        let message = `Request failed (HTTP ${res.status})`;
-        try {
-          const data = (await res.json()) as { error?: string; code?: string };
-          if (data.error) message = data.error;
-          throw new ApiError(res.status, message, data.code);
-        } catch (err) {
-          if (err instanceof ApiError) throw err;
-          throw new ApiError(res.status, message);
-        }
+      let res: Response;
+      try {
+        res = await fetch(href, { credentials: 'same-origin' });
+      } catch (err) {
+        throw toNetworkError(err);
       }
+      if (!res.ok) throw await apiErrorFromResponse(res);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

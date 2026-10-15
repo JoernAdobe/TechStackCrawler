@@ -4,6 +4,7 @@
  */
 import { buildingBlocksFor } from '../data/buildingBlocks.js';
 import type { BatchJob, SolutionMappingMatrix } from '../types/parity.js';
+import { accountTables } from './accountExport.js';
 
 const SOLUTION_SEPARATOR = ' | ';
 
@@ -91,10 +92,14 @@ export function batchToCsv(batch: BatchJob): string {
   if (batch.matrix?.otherTechnologies.length) {
     parts.push([], ['Other Technologies'], ...batch.matrix.otherTechnologies.map((t) => [t]));
   }
+  // Account-Sicht (nur Sektionen mit Daten).
+  for (const t of batch.accountView ? accountTables(batch.accountView) : []) {
+    parts.push([], [t.name], t.header, ...t.rows);
+  }
   return '\uFEFF' + toCsv(parts) + '\r\n';
 }
 
-export function exportFilename(batch: BatchJob, ext: 'csv' | 'xlsx'): string {
+export function exportFilename(batch: BatchJob, ext: 'csv' | 'xlsx' | 'md'): string {
   const base = (batch.accountName || batch.title || `batch-${batch.id}`)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')

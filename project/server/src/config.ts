@@ -35,6 +35,20 @@ export const config = {
     voiceId: process.env.ELEVENLABS_VOICE_ID || '',
     modelId: process.env.ELEVENLABS_MODEL || 'eleven_v3',
   },
+  observepoint: {
+    apiKey: (process.env.OBSERVEPOINT_API_KEY || '').trim(),
+    baseUrl: (process.env.OBSERVEPOINT_BASE_URL || 'https://api.observepoint.com').replace(/\/$/, ''),
+    /** Bestehende Runs älter als N Tage gelten als veraltet und werden nicht wiederverwendet. */
+    maxRunAgeDays: parseInt(process.env.OBSERVEPOINT_MAX_RUN_AGE_DAYS || '365', 10),
+    /** Frische Scans starten (verbraucht Page-Scan-Kontingent im geteilten Account) – nur mit explizitem Opt-in. */
+    allowCreate: process.env.OBSERVEPOINT_ALLOW_CREATE === '1',
+    /**
+     * Eigenes, in der OP-UI angelegtes Audit, das für Domains ohne bestehendes Audit per PUT auf die Ziel-URL
+     * umkonfiguriert und gestartet wird (dokumentierter Weg; ein Create-Endpoint ist nicht dokumentiert).
+     */
+    scratchAuditId: parseInt(process.env.OBSERVEPOINT_SCRATCH_AUDIT_ID || '0', 10),
+    maxPages: parseInt(process.env.OBSERVEPOINT_MAX_PAGES || '5', 10),
+  },
   database: {
     /** SQLite für lokal (Default in development wenn keine MariaDB-Credentials) */
     useSqlite:

@@ -35,7 +35,7 @@ export default function SolutionMatrix({ matrix }: { matrix: SolutionMappingMatr
     <div className="space-y-6">
       <section>
         <h3 className="text-sm font-semibold text-ts-text-primary mb-3">Solution Mapping</h3>
-        <div className="overflow-x-auto rounded-xl border border-ts-border">
+        <div className="relative overflow-x-auto rounded-xl border border-ts-border">
           <table className="min-w-full text-xs border-collapse">
             <thead>
               <tr className="bg-ts-surface-light">

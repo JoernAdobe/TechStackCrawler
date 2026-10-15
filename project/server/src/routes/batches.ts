@@ -18,6 +18,9 @@ import type { DbHandle } from '../db/types.js';
 import { enqueueBatch } from '../services/batchRunner.js';
 import { MAX_ACCOUNT_URLS, MAX_BULK_URLS, normalizeBatchItems, parseBatchInput } from '../services/batchInput.js';
 import { batchToCsv, exportFilename } from '../services/batchExport.js';
+import { batchToMarkdown } from '../services/accountExport.js';
+import { MAX_COSTLY_ITEMS_LIMIT, resolveEnrichmentOptions } from '../services/batchEnrichment.js';
+import { isObservePointConfigured } from '../services/observepoint/index.js';
 import { getStackHistory, normalizeHostname } from '../services/stackHistory.js';
 import { getSession } from '../services/sessionStore.js';
 import { requireDashboardAuth } from './dashboard.js';
@@ -59,6 +62,20 @@ const createSchema = z
     industry: optionalText(255),
     opportunityId: optionalText(64),
     aiAnalysis: z.boolean().optional(),
+    /** Optionale Enrichments pro Item; fehlende Felder → Defaults (resolveEnrichmentOptions). */
+    enrichments: z
+      .object({
+        traffic: z.boolean().optional(),
+        semrush: z.boolean().optional(),
+        observepoint: z.boolean().optional(),
+        mobileApps: z.boolean().optional(),
+        lighthouse: z.boolean().optional(),
+        geo: z.boolean().optional(),
+        useCases: z.boolean().optional(),
+        multiPage: z.boolean().optional(),
+        maxCostlyItems: z.coerce.number().int().min(1).max(MAX_COSTLY_ITEMS_LIMIT).optional(),
+      })
+      .optional(),
     input: z.string().max(2_000_000).optional(),
     items: z
       .array(z.object({ url: z.string().max(2048), label: z.string().max(255).optional() }))
@@ -131,9 +148,12 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
         throw new AppError(429, 'queue_full', 'The assessment queue is full – please try again later.');
       }
       const aiAnalysis = body.aiAnalysis ?? body.kind === 'account';
-      // Anonyme Bulk-Batches mit KI-Analyse verursachen Bedrock-Kosten pro URL → immer Admin-Freigabe.
+      const enrichmentOptions = resolveEnrichmentOptions(body.kind, aiAnalysis, body.enrichments ?? {});
+      // Anonyme Bulk-Batches mit KI-Analyse oder LLM-Enrichments (GEO, Use Cases) verursachen
+      // Bedrock-Kosten pro URL → immer Admin-Freigabe.
+      const usesLlm = aiAnalysis || enrichmentOptions.geo || enrichmentOptions.useCases;
       const needsApproval =
-        body.kind === 'bulk' && (parsed.items.length > batchApprovalThreshold() || (aiAnalysis && !session));
+        body.kind === 'bulk' && (parsed.items.length > batchApprovalThreshold() || (usesLlm && !session));
       const status: BatchStatus = needsApproval ? 'pending_approval' : 'queued';
 
       const id = await createBatch(db, {
@@ -145,6 +165,7 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
         industry: body.industry,
         opportunityId: body.opportunityId,
         aiAnalysis,
+        enrichmentOptions,
         createdBy: session?.email,
         items: parsed.items,
       });
@@ -154,6 +175,21 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
       res.status(201).json({ batch, warnings: parsed.errors });
     }),
   );
+
+  /** Welche Enrichment-Quellen sind auf diesem Server nutzbar (nur Flags, nie Werte)? */
+  router.get('/api/batches/sources', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      observepoint: isObservePointConfigured(),
+      semrush: Boolean(process.env.SEMRUSH_API_KEY?.trim()),
+      pagespeedKey: Boolean(process.env.PAGESPEED_API_KEY?.trim()),
+      maxCostlyItemsLimit: MAX_COSTLY_ITEMS_LIMIT,
+      defaults: {
+        account: resolveEnrichmentOptions('account', true),
+        bulk: resolveEnrichmentOptions('bulk', false),
+      },
+    });
+  });
 
   router.get(
     '/api/batches',
@@ -238,6 +274,19 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
       res.setHeader('Content-Disposition', `attachment; filename="${exportFilename(batch, 'csv')}"`);
       res.setHeader('Cache-Control', 'no-store');
       res.send(batchToCsv(batch));
+    }),
+  );
+
+  router.get(
+    '/api/batches/:id(\\d+)/export.md',
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(idSchema, req.params);
+      const batch = await getBatch(requireDb(), id);
+      if (!batch) throw new NotFoundError('Batch not found');
+      res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${exportFilename(batch, 'md')}"`);
+      res.setHeader('Cache-Control', 'no-store');
+      res.send(batchToMarkdown(redactCreator(batch, req)));
     }),
   );
 

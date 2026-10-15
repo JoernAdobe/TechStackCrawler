@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildPsiUrl, parsePsiResponse } from '../src/services/lighthouse.js';
+import { buildPsiUrl, friendlyPsiError, parsePsiResponse } from '../src/services/lighthouse.js';
 import {
   defaultDisplayDate,
   normalizeDomain,
@@ -77,6 +77,14 @@ test('parsePsiResponse: limits to 5 opportunities and throws on error payloads',
   assert.deepEqual(r.vitals, {});
   assert.throws(() => parsePsiResponse({ error: { code: 429, message: 'Quota exceeded' } }), /Quota exceeded/);
   assert.throws(() => parsePsiResponse({}), /lighthouseResult/);
+});
+
+test('friendlyPsiError: Quota-Fehler ohne Projektnummer, verständlich', () => {
+  const raw =
+    "Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis.com' for consumer 'project_number:583797351490'.";
+  const msg = friendlyPsiError(raw);
+  assert.match(msg, /quota exhausted/i);
+  assert.doesNotMatch(msg, /583797351490/);
 });
 
 test('buildPsiUrl: strategy, all four categories, optional key', () => {

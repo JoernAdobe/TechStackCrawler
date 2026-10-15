@@ -6,6 +6,8 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { analyzeUrl, type AnalysisWriter } from '../services/analyzer.js';
 import { sanitizeUrlWithDns } from '../utils/sanitize.js';
+import { validateUrlInput } from '../utils/urlInput.js';
+import { preflightUrl } from '../services/urlPreflight.js';
 import { getPool } from '../db/index.js';
 import { listAnalyses, getAnalysisById, updateAnalysis } from '../db/analyses.js';
 import { discoverUseCases } from '../services/useCaseDiscovery.js';
@@ -87,7 +89,15 @@ function createMcpServer(): McpServer {
     'Analyze a website\'s technology stack using Scrapling browser scraping and Claude AI. Returns detected technologies, Adobe opportunities, and a summary.',
     { url: z.string().describe('The URL of the website to analyze') },
     async ({ url }) => {
-      const sanitized = await sanitizeUrlWithDns(url);
+      const input = validateUrlInput(url);
+      if (!input.ok) {
+        return { content: [{ type: 'text', text: [input.message, input.hint].filter(Boolean).join(' ') }], isError: true };
+      }
+      const preflight = await preflightUrl(input.url);
+      if (!preflight.ok) {
+        return { content: [{ type: 'text', text: `${preflight.message} ${preflight.hint}` }], isError: true };
+      }
+      const sanitized = await sanitizeUrlWithDns(input.url);
       if (!sanitized) {
         return { content: [{ type: 'text', text: 'Invalid or disallowed URL' }], isError: true };
       }

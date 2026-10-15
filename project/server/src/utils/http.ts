@@ -1,5 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { ZodError, type ZodType } from 'zod';
+import { LlmError } from '../services/llmCall.js';
 
 /**
  * Basisklasse für erwartete (fachliche) Fehler. Alles, was hiervon erbt, wird von
@@ -102,8 +103,14 @@ export function notFoundHandler(_req: Request, _res: Response, next: NextFunctio
  * Zentrale Express-Error-Middleware. Liefert für alle Routen dasselbe Format
  * `{ error, code, details? }`. Muss als letztes registriert werden.
  */
-export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
-  if (res.headersSent) return;
+export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
+  // Antwort läuft schon (Stream/Download): Express' Default-Handler beendet die Verbindung sauber,
+  // statt den Request hängen zu lassen.
+  if (res.headersSent) {
+    console.error(`[${req.method} ${req.path}] Error after headers were sent:`, err instanceof Error ? err.message : err);
+    next(err);
+    return;
+  }
 
   if (err instanceof AppError) {
     if (err.status >= 500) {
@@ -123,6 +130,24 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
       code: 'bad_request',
       details: formatZodIssues(err),
     });
+    return;
+  }
+
+  // Endgültiger LLM-Fehler: klassifizierte, geheimnisfreie Meldung statt generischer 500.
+  if (err instanceof LlmError) {
+    const status = err.kind === 'throttled' ? 429 : err.kind === 'auth' ? 502 : 503;
+    res.status(status).json({ error: err.message, code: `ai_${err.kind}` });
+    return;
+  }
+
+  // body-parser: kaputtes JSON bzw. zu großer Body sind Client-Fehler, keine 500.
+  const bodyErr = err as { type?: string; status?: number } | null;
+  if (bodyErr?.type === 'entity.parse.failed') {
+    res.status(400).json({ error: 'Request body is not valid JSON', code: 'bad_request' });
+    return;
+  }
+  if (bodyErr?.type === 'entity.too.large') {
+    res.status(413).json({ error: 'Request body is too large', code: 'payload_too_large' });
     return;
   }
 

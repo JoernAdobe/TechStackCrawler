@@ -2,9 +2,11 @@ import { useState } from 'react';
 import type { AnalysisResult } from '../types/analysis';
 import EnrichmentPanels from './EnrichmentPanels';
 import GeoScorePanel from './GeoScorePanel';
+import ObservePointPanel from './ObservePointPanel';
 import StackHistory from './StackHistory';
 import FeedbackWidget from './FeedbackWidget';
 import DeckButton from './DeckButton';
+import ErrorBoundary from './ErrorBoundary';
 
 /**
  * EAA-Parität: zusätzliche Bausteine unter einer Analyse (Deck, Enrichments, GEO, History, Feedback).
@@ -16,17 +18,30 @@ export default function ParityExtras({ analysis }: { analysis: AnalysisResult })
   const setCurrent = (value: AnalysisResult) => setOverride({ base: analysis, value });
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
       {current.id && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div id="section-deep-dive" className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-ts-text-primary">Deep Dive &amp; Export</h2>
           <DeckButton href={`/api/analyses/${current.id}/deck.pptx`} />
         </div>
       )}
-      <EnrichmentPanels analysis={current} onUpdate={setCurrent} />
-      <GeoScorePanel analysis={current} onUpdate={setCurrent} />
-      <StackHistory url={current.finalUrl ?? current.url} />
-      {current.id && <FeedbackWidget analysisId={current.id} />}
+      <ErrorBoundary label="Enrichments" compact resetKey={current}>
+        <EnrichmentPanels analysis={current} onUpdate={setCurrent} />
+      </ErrorBoundary>
+      <ErrorBoundary label="ObservePoint" compact resetKey={current}>
+        <ObservePointPanel analysis={current} onUpdate={setCurrent} />
+      </ErrorBoundary>
+      <ErrorBoundary label="GEO score" compact resetKey={current}>
+        <GeoScorePanel analysis={current} onUpdate={setCurrent} />
+      </ErrorBoundary>
+      <ErrorBoundary label="Stack history" compact resetKey={current.url}>
+        <StackHistory url={current.finalUrl ?? current.url} />
+      </ErrorBoundary>
+      {current.id && (
+        <ErrorBoundary label="Feedback" compact>
+          <FeedbackWidget analysisId={current.id} />
+        </ErrorBoundary>
+      )}
     </div>
   );
 }

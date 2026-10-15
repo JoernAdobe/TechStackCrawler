@@ -1,0 +1,1227 @@
+[
+  {
+    "name": "Google Tag (gtag.js)",
+    "category": "Tag Management",
+    "buildingBlock": "Tag Management",
+    "signals": {
+      "scriptSrc": [
+        "/googletagmanager\\.com\\/gtag\\/js\\?id=(G|AW|DC|GT)-/"
+      ],
+      "requests": [
+        "/googletagmanager\\.com\\/gtag\\/(js|destination)\\b/",
+        "/googletagmanager\\.com\\/td\\?/"
+      ],
+      "cookies": [
+        "_gcl_au"
+      ],
+      "jsGlobals": [
+        "gtag",
+        "google_tag_data"
+      ]
+    },
+    "evidence": "#655 „Google Tag“ [Tag Management]: 338 Domains; Hosts www.googletagmanager.com(338), www.google.com(1), googletagmanager.com(1); Cookies _ga, _gcl_au",
+    "frequency": 338,
+    "opTagIds": [
+      655
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "OP zählt den gtag.js-Loader als eigenes Tag. Bei uns steckt gtag/js nur als Teil-Signal in GA4/Google Ads. Eigene, schwache Regel oder `Google Tag` in IGNORED_OP_TAGS; ohne eine von beiden bleibt das häufigste OP-Tag eine Dauer-Lücke."
+  },
+  {
+    "name": "Google Fonts",
+    "category": "Other",
+    "signals": {
+      "requests": [
+        "/fonts\\.googleapis\\.com\\/css2?\\?/",
+        "/fonts\\.gstatic\\.com\\/s\\//"
+      ],
+      "html": [
+        "/fonts\\.googleapis\\.com\\/css/"
+      ]
+    },
+    "evidence": "#1167 „Google Fonts“ [Content & Asset Management]: 212 Domains; Hosts fonts.gstatic.com(183), fonts.googleapis.com(159)",
+    "frequency": 212,
+    "opTagIds": [
+      1167
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Kein Martech, aber DSGVO-relevant (LG München 2022) und sehr verbreitet."
+  },
+  {
+    "name": "The Trade Desk",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/(insight|match)\\.adsrvr\\.org\\/track\\//",
+        "/js\\.adsrvr\\.org\\/(up_loader|universal_pixel)/"
+      ],
+      "cookies": [
+        "TDID",
+        "TDCPM"
+      ]
+    },
+    "evidence": "#158 „TradeDesk“ [Advertising & Paid Media]: 84 Domains; Hosts insight.adsrvr.org(73), match.adsrvr.org(67), eb2.3lift.com(3); Cookies TDCPM, TDID, tluid | #668 „Trade Desk Universal“ [Advertising & Paid Media]: 65 Domains; Hosts js.adsrvr.org(65)",
+    "frequency": 88,
+    "opTagIds": [
+      158,
+      668
+    ],
+    "proposalType": "alias",
+    "existingRule": "The Trade Desk",
+    "canonicalAliases": [
+      "TradeDesk",
+      "Trade Desk Universal"
+    ],
+    "note": "Unsere Regel (`adsrvr\\.org` in scriptSrc) greift bereits; es fehlt nur der Name. Die Requests-Signale machen aus „geladen“ ein „gefeuert“."
+  },
+  {
+    "name": "Twitter / X Pixel",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/analytics\\.twitter\\.com\\/(1\\/)?i\\/adsct/",
+        "/\\bt\\.co\\/(1\\/)?i\\/adsct/"
+      ],
+      "cookies": [
+        "_twpid"
+      ]
+    },
+    "evidence": "#551 „X Analytics Conversion“ [Advertising & Paid Media]: 48 Domains; Hosts analytics.twitter.com(48), t.co(47); Cookies guest_id, guest_id_marketing, muc_ads, personalization_id | #1688 „X Analytics Loader“ [Social Media]: 14 Domains; Hosts static.ads-twitter.com(14); Cookies _twpid, _twsid | #542 „X Conversion Tracker“ [Social Media]: 1 Domains; Hosts platform.twitter.com(1)",
+    "frequency": 49,
+    "opTagIds": [
+      551,
+      1688,
+      542
+    ],
+    "proposalType": "alias+signal",
+    "existingRule": "Twitter / X Pixel",
+    "canonicalAliases": [
+      "X Analytics",
+      "X Analytics Conversion",
+      "X Analytics Loader",
+      "X Conversion Tracker"
+    ],
+    "note": "OP-Familie heißt seit dem Rebranding „X …“. Der Conversion-Beacon (`i/adsct`, 48 Domains) wird von unserer Regel nicht erfasst."
+  },
+  {
+    "name": "BidSwitch",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/x\\.bidswitch\\.net\\/(ul_cb\\/)?syncd?\\b/"
+      ],
+      "cookies": [
+        "tuuid",
+        "tuuid_lu"
+      ]
+    },
+    "evidence": "#424 „BidSwitch“ [Advertising & Paid Media]: 49 Domains; Hosts x.bidswitch.net(49); Cookies c, tuuid, tuuid_lu",
+    "frequency": 49,
+    "opTagIds": [
+      424
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Reiner SSP/DSP-Cookie-Sync, kein vom Kunden bewusst eingebautes Tag (kommt über Ketten). Schwach gewichten oder nur als Ad-Tech-Indikator zählen."
+  },
+  {
+    "name": "AWS CloudFront",
+    "category": "CDN/Infrastructure",
+    "signals": {},
+    "evidence": "#596 „Amazon CloudFront CDN“ [Site Infrastructure & Security]: 45 Domains; Hosts d22xmn10vbouk4.cloudfront.net(4), d35vb5cccm4xzp.cloudfront.net(3), d3e54v103j8qbb.cloudfront.net(3); Cookies bx_bucket_number, bx_guest_ref, s_cc, z_idsyncs",
+    "frequency": 45,
+    "opTagIds": [
+      596
+    ],
+    "proposalType": "alias",
+    "existingRule": "AWS CloudFront",
+    "canonicalAliases": [
+      "Amazon CloudFront CDN"
+    ],
+    "note": "Nur Alias – KEIN `*.cloudfront.net`-Request-Signal: OP zählt jedes Drittanbieter-Asset auf CloudFront (z. B. jQuery-, Boomerang-Kopien), das sagt nichts über das CDN der Site. Unsere Header-Erkennung ist präziser; die OP-Bestätigung wird dadurch tendenziell zu hoch."
+  },
+  {
+    "name": "Yahoo Advertising (Yahoo DSP / DOT)",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "scriptSrc": [
+        "/s\\.yimg\\.com\\/wi\\/ytc\\.js/"
+      ],
+      "requests": [
+        "/sp\\.analytics\\.yahoo\\.com\\/spp?\\.pl/",
+        "/s\\.yimg\\.com\\/wi\\/config\\/\\d+\\.json/"
+      ],
+      "cookies": [
+        "A3"
+      ]
+    },
+    "evidence": "#987 „Yahoo Rapid“ [Advertising & Paid Media]: 17 Domains; Hosts s.yimg.com(17) | #292 „Yahoo Analytics“ [Web Analytics]: 28 Domains; Hosts sp.analytics.yahoo.com(19), ups.analytics.yahoo.com(12), cms.analytics.yahoo.com(5); Cookies A3, IDSYNC | #438 „Yahoo Tracker Loader“ [Advertising & Paid Media]: 30 Domains; Hosts s.yimg.jp(17), s.yimg.com(15); Cookies _yjsu_yjad",
+    "frequency": 41,
+    "opTagIds": [
+      987,
+      292,
+      438
+    ],
+    "proposalType": "alias+signal",
+    "existingRule": "Yahoo Advertising",
+    "canonicalAliases": [
+      "Yahoo Rapid",
+      "Yahoo Analytics",
+      "Yahoo Tracker"
+    ],
+    "note": "Unsere Regel (ads.yahoo.com, verizonmedia.com) hat im Sample 0 Treffer; der Yahoo-Dot-Tag läuft über `s.yimg.com/wi/ytc.js` und `sp.analytics.yahoo.com`. Achtung: `s.yimg.jp` aus #438 gehört zu Yahoo! JAPAN (eigene Regel)."
+  },
+  {
+    "name": "Tapad (Experian)",
+    "category": "Profile Resolution",
+    "buildingBlock": "Profile Resolution",
+    "signals": {
+      "requests": [
+        "/pixel\\.tapad\\.com\\/idsync\\//",
+        "/tag\\.tapad\\.com\\//"
+      ],
+      "cookies": [
+        "TapAd_DID",
+        "TapAd_TS",
+        "TapAd_3WAY_SYNCS"
+      ]
+    },
+    "evidence": "#416 „TapAd Pixel“ [Data Management (DMP)]: 41 Domains; Hosts pixel.tapad.com(40), tag.tapad.com(2); Cookies TapAd_3WAY_SYNCS, TapAd_DID, TapAd_TS",
+    "frequency": 41,
+    "opTagIds": [
+      416
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Mapping in buildingBlocks.ts (`Tapad` → Profile Resolution) existiert bereits, die Regel fehlt. Das Signal ist ein reiner Third-Party-ID-Sync (kommt meist über DSP/DMP-Ketten), daher schwach gewichten."
+  },
+  {
+    "name": "ZoomInfo (WebSights)",
+    "category": "3rd Party Data",
+    "buildingBlock": "3rd Party Data",
+    "signals": {
+      "scriptSrc": [
+        "/js\\.zi-scripts\\.com\\/zi-tag\\.js/"
+      ],
+      "requests": [
+        "/ws\\.zoominfo\\.com\\/pixel\\//"
+      ],
+      "cookies": [
+        "_zitok"
+      ],
+      "jsGlobals": [
+        "ZIProjectKey"
+      ]
+    },
+    "evidence": "#1242 „ZoomInfo Analytics“ [Digital Measurement & Attribution]: 34 Domains; Hosts ws.zoominfo.com(34); Cookies __cf_bm, _cfuvid, visitorId | #1334 „Zoominfo Loader“ [Digital Measurement & Attribution]: 29 Domains; Hosts js.zi-scripts.com(29); Cookies _zitok",
+    "frequency": 34,
+    "opTagIds": [
+      1242,
+      1334
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "buildingBlocks.ts mappt `ZoomInfo` bereits auf „3rd Party Data“, es fehlt nur die Regel. B2B-Intent-Daten sind ein starker Hinweis für einen RT-CDP-B2B-Pitch."
+  },
+  {
+    "name": "Snapchat Pixel",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/sc-static\\.net\\/scevent(-dh)?\\.min\\.js/",
+        "/tr\\.snapchat\\.com\\//"
+      ],
+      "cookies": [
+        "_scid",
+        "_scid_r",
+        "_sctr"
+      ]
+    },
+    "evidence": "#1201 „Snapchat Event Loader JS“ [Advertising & Paid Media]: 32 Domains; Hosts sc-static.net(32); Cookies X-AB, _scid, _scid_r, _sctr",
+    "frequency": 32,
+    "opTagIds": [
+      1201
+    ],
+    "proposalType": "alias",
+    "existingRule": "Snapchat Pixel",
+    "canonicalAliases": [
+      "Snapchat Event Loader JS"
+    ],
+    "note": "Alternativ `event loader js` in OP_QUALIFIERS aufnehmen."
+  },
+  {
+    "name": "Adobe Dynamic Media",
+    "category": "DAM",
+    "buildingBlock": "DAM",
+    "signals": {
+      "requests": [
+        "/\\/is\\/image\\/[A-Za-z0-9_-]+\\//",
+        "/assetsadobe\\d?\\.com\\/is\\/(image|content)\\//"
+      ]
+    },
+    "evidence": "#1262 „AEM Dynamic Media“ [Content & Asset Management]: 28 Domains; Hosts s7d9.scene7.com(6), kao-h.assetsadobe3.com(2), cache.marriott.com(1); Cookies __COM_SPEED",
+    "frequency": 28,
+    "opTagIds": [
+      1262
+    ],
+    "proposalType": "alias+signal",
+    "existingRule": "Adobe Dynamic Media",
+    "canonicalAliases": [
+      "AEM Dynamic Media"
+    ],
+    "note": "Adobe-relevant. OP findet Dynamic Media auch auf CNAME-Hosts (z. B. images.<kunde>.com/is/image/…, *.assetsadobe3.com); unsere Regel prüft nur `*.scene7.com`. Das generische `/is/image/<company>/` als schwaches Signal ergänzen."
+  },
+  {
+    "name": "6sense",
+    "category": "3rd Party Data",
+    "buildingBlock": "3rd Party Data",
+    "signals": {
+      "scriptSrc": [
+        "/j\\.6sc\\.co\\/(6si\\.min\\.js|j\\/)/"
+      ],
+      "requests": [
+        "/(b|c)\\.6sc\\.co\\//",
+        "/epsilon\\.6sense\\.com\\//"
+      ],
+      "cookies": [
+        "_gd_visitor",
+        "_gd_session",
+        "_gd_svisitor"
+      ],
+      "jsGlobals": [
+        "_6si"
+      ]
+    },
+    "evidence": "#334 „6sense Loader“ [Digital Measurement & Attribution]: 28 Domains; Hosts j.6sc.co(28); Cookies _an_uid, _gd_session, _gd_svisitor, _gd_visitor",
+    "frequency": 28,
+    "opTagIds": [
+      334
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "B2B-ABM-Intent, 28 Domains. Die Cookies `_gd_*` sind 6sense-spezifisch (Erbe der Übernahme von Bombora-Partner GrowthIntel)."
+  },
+  {
+    "name": "jQuery",
+    "category": "JavaScript Framework",
+    "signals": {
+      "scriptSrc": [
+        "/ajax\\.googleapis\\.com\\/ajax\\/libs\\/jquery\\//"
+      ]
+    },
+    "evidence": "#1582 „Google APIs jQuery“ [Content & Asset Management]: 26 Domains; Hosts ajax.googleapis.com(26)",
+    "frequency": 26,
+    "opTagIds": [
+      1582
+    ],
+    "proposalType": "alias",
+    "existingRule": "jQuery",
+    "canonicalAliases": [
+      "Google APIs jQuery"
+    ],
+    "note": ""
+  },
+  {
+    "name": "StackAdapt",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "scriptSrc": [
+        "/tags\\.srv\\.stackadapt\\.com\\/events\\.js/"
+      ],
+      "requests": [
+        "/tags\\.srv\\.stackadapt\\.com\\/saq_pxl/"
+      ],
+      "cookies": [
+        "sa-user-id",
+        "sa-user-id-v2",
+        "sa-user-id-v3"
+      ],
+      "jsGlobals": [
+        "saq"
+      ]
+    },
+    "evidence": "#1013 „StackAdapt“ [Advertising & Paid Media]: 25 Domains; Hosts tags.srv.stackadapt.com(25); Cookies sa-user-id, sa-user-id-v2, sa-user-id-v3",
+    "frequency": 25,
+    "opTagIds": [
+      1013
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "TripleLift",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/\\.3lift\\.com\\/(xuid|sync|getuid)/"
+      ],
+      "cookies": [
+        "tluid"
+      ]
+    },
+    "evidence": "#426 „Triple Lift“ [Advertising & Paid Media]: 22 Domains; Hosts eb2.3lift.com(22); Cookies sync, tluid, tluidp",
+    "frequency": 22,
+    "opTagIds": [
+      426
+    ],
+    "proposalType": "alias+signal",
+    "existingRule": "TripleLift",
+    "canonicalAliases": [
+      "Triple Lift"
+    ],
+    "note": "Unsere Regel sucht nur `triplelift.com`; TripleLift lädt/synchronisiert aber über `*.3lift.com` (22 Domains). Im Flotten-Sample kein einziger Host-Treffer der bestehenden Regel."
+  },
+  {
+    "name": "Demandbase",
+    "category": "3rd Party Data",
+    "buildingBlock": "3rd Party Data",
+    "signals": {
+      "scriptSrc": [
+        "/(tag|scripts)\\.demandbase\\.com\\//"
+      ],
+      "requests": [
+        "/api\\.company-target\\.com\\/api\\/v\\d\\/ip\\.json/"
+      ],
+      "jsGlobals": [
+        "Demandbase"
+      ]
+    },
+    "evidence": "#360 „Demandbase Script“ [Advertising & Paid Media]: 21 Domains; Hosts tag.demandbase.com(19), scripts.demandbase.com(2)",
+    "frequency": 21,
+    "opTagIds": [
+      360
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Mapping in buildingBlocks.ts existiert bereits, die Regel fehlt. `api.company-target.com` ist der bekannte IP-Lookup (Hersteller-Doku), im OP-Sample nicht gesondert gezählt."
+  },
+  {
+    "name": "HubSpot Marketing",
+    "category": "ESP/Marketing Automation",
+    "buildingBlock": "Campaign Orchestration",
+    "signals": {
+      "scriptSrc": [
+        "/js(-[a-z]{2}\\d)?\\.hs-scripts\\.com\\/\\d+\\.js/",
+        "/js(-[a-z]{2}\\d)?\\.hs-analytics\\.net\\/analytics\\//"
+      ],
+      "requests": [
+        "/track\\.hubspot\\.com\\/__ptq\\.gif/",
+        "/forms(-[a-z]{2}\\d)?\\.hsforms\\.com\\/embed\\//"
+      ],
+      "cookies": [
+        "__hstc",
+        "__hssc",
+        "hubspotutk"
+      ]
+    },
+    "evidence": "#1351 „HubSpot Script Loader“ [Marketing Automation & Email]: 17 Domains; Hosts js.hs-scripts.com(15), js-na2.hs-scripts.com(3), js-na1.hs-scripts.com(2) | #1352 „HubSpot Analytics Loader“ [Digital Measurement & Attribution]: 15 Domains; Hosts js.hs-analytics.net(14), js-na2.hs-analytics.net(1); Cookies __hssc, __hssrc, __hstc, hubspotutk | #236 „HubSpot Analytics“ [Web Analytics]: 14 Domains; Hosts track.hubspot.com(14); Cookies __cf_bm, _cfuvid | #1614 „HubSpot Form Counter“ [Marketing Automation & Email]: 9 Domains; Hosts forms.hsforms.com(4), forms-na1.hsforms.com(4), forms-eu1.hsforms.com(2); Cookies _cfuvid | #1613 „HubSpot Form“ [Marketing Automation & Email]: 4 Domains; Hosts forms.hsforms.com(4); Cookies _cfuvid | #1612 „HubSpot Forms Loader“ [Marketing Automation & Email]: 1 Domains; Hosts js.hsforms.net(1) | #1667 „HubSpot Chat“ [Customer Support & Chat]: 1 Domains; Hosts js.usemessages.com(1)",
+    "frequency": 20,
+    "opTagIds": [
+      1351,
+      1352,
+      236,
+      1614,
+      1613,
+      1612,
+      1667
+    ],
+    "proposalType": "alias+signal",
+    "existingRule": "HubSpot Marketing",
+    "canonicalAliases": [
+      "HubSpot Script Loader",
+      "HubSpot Analytics",
+      "HubSpot Analytics Loader",
+      "HubSpot Form",
+      "HubSpot Forms Loader",
+      "HubSpot Form Counter",
+      "HubSpot Chat"
+    ],
+    "note": "Unsere Regel greift für `js.hs-scripts.com`, aber nicht für die regionalen Hosts (`js-na1/na2/eu1`) und nicht für `hs-analytics.net`."
+  },
+  {
+    "name": "Font Awesome",
+    "category": "CSS Framework",
+    "signals": {
+      "scriptSrc": [
+        "/kit\\.fontawesome\\.com\\/[0-9a-f]+\\.js/"
+      ],
+      "requests": [
+        "/(use|ka-f)\\.fontawesome\\.com\\//",
+        "/bootstrapcdn\\.com\\/font-awesome\\//"
+      ],
+      "html": [
+        "/(use|kit)\\.fontawesome\\.com/",
+        "/font-awesome(\\.min)?\\.css/"
+      ]
+    },
+    "evidence": "#1395 „Font Awesome“ [Content & Asset Management]: 19 Domains; Hosts use.fontawesome.com(9), maxcdn.bootstrapcdn.com(8), kit.fontawesome.com(2)",
+    "frequency": 19,
+    "opTagIds": [
+      1395
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "LiveIntent",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "scriptSrc": [
+        "/b-code\\.liadm\\.com\\//"
+      ],
+      "requests": [
+        "/i\\.liadm\\.com\\/s\\/\\d+/"
+      ],
+      "cookies": [
+        "_li_ss",
+        "lidid",
+        "_lc2_fpi"
+      ]
+    },
+    "evidence": "#1408 „LiveIntent“ [Marketing Automation & Email]: 16 Domains; Hosts i.liadm.com(16); Cookies _li_ss, lidid | #935 „LiveIntent Loader“ [Marketing Automation & Email]: 3 Domains; Hosts b-code.liadm.com(3); Cookies _lc2_fpi, _lc2_fpi_js, _li_dcdm_c, _li_ss",
+    "frequency": 17,
+    "opTagIds": [
+      1408,
+      935
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Email-basierte Identity/Ads (Newsletter-Monetarisierung); `_lc2_fpi` ist First-Party."
+  },
+  {
+    "name": "Google Maps JavaScript API",
+    "category": "Other",
+    "signals": {
+      "scriptSrc": [
+        "/maps\\.googleapis\\.com\\/maps\\/api\\/js/"
+      ],
+      "jsGlobals": [
+        "google.maps"
+      ]
+    },
+    "evidence": "#1675 „Google Maps“ [Content & Asset Management]: 15 Domains; Hosts maps.googleapis.com(15)",
+    "frequency": 15,
+    "opTagIds": [
+      1675
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "Claritas (Barometric / ArtsAI)",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/trkn\\.us\\/pixel\\/conv\\//",
+        "/arttrk\\.com\\/pixel\\//"
+      ],
+      "cookies": [
+        "barometric[cuid]"
+      ]
+    },
+    "evidence": "#1197 „Claritas Analytics“ [Digital Measurement & Attribution]: 9 Domains; Hosts trkn.us(9); Cookies barometric[cuid] | #1311 „Claritas ArtsAI“ [Personalization]: 9 Domains; Hosts arttrk.com(9)",
+    "frequency": 15,
+    "opTagIds": [
+      1197,
+      1311
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "Moment.js",
+    "category": "JavaScript Framework",
+    "signals": {
+      "scriptSrc": [
+        "/\\/moment(-with-locales)?(\\.min)?\\.js/"
+      ],
+      "jsGlobals": [
+        "moment"
+      ]
+    },
+    "evidence": "#1265 „Moment JS“ [JavaScript Libraries]: 13 Domains; Hosts media.ruthschris.com(1), www.jdirving.com(1), media.thecapitalgrille.com(1)",
+    "frequency": 13,
+    "opTagIds": [
+      1265
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "OP erkennt Moment.js über Dateinamen auf First-Party-Hosts; Wert gering (Library-Inventar)."
+  },
+  {
+    "name": "HubSpot Cookie Banner",
+    "category": "Consent Management",
+    "buildingBlock": "Consent Management",
+    "signals": {
+      "scriptSrc": [
+        "/js(-[a-z]{2}\\d)?\\.hs-banner\\.com\\/v2\\/\\d+\\/banner\\.js/"
+      ],
+      "cookies": [
+        "__hs_cookie_cat_pref",
+        "__hs_opt_out"
+      ]
+    },
+    "evidence": "#1353 „HubSpot CMP Banner“ [Privacy & Consent]: 13 Domains; Hosts js.hs-banner.com(12), js-na2.hs-banner.com(1)",
+    "frequency": 13,
+    "opTagIds": [
+      1353
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [
+      "HubSpot CMP Banner"
+    ],
+    "note": "HubSpot als CMP gehört in den Consent-Block; ohne eigene Regel fällt die CMP-Erkennung bei HubSpot-Sites weg."
+  },
+  {
+    "name": "VWO",
+    "category": "Personalization & Optimization",
+    "buildingBlock": "Personalization & Optimization",
+    "signals": {
+      "cookies": [
+        "_vwo_uuid_v2"
+      ]
+    },
+    "evidence": "#14 „Visual Website Optimizer“ [A/B Testing & Optimization]: 12 Domains; Hosts dev.visualwebsiteoptimizer.com(12), r2.visualwebsiteoptimizer.com(1), r1.visualwebsiteoptimizer.com(1); Cookies _vwo_uuid_v2 | #997 „Visual Website Optimizer - Sampling“ [A/B Testing & Optimization]: 3 Domains; Hosts dev.visualwebsiteoptimizer.com(3)",
+    "frequency": 12,
+    "opTagIds": [
+      14,
+      997
+    ],
+    "proposalType": "alias",
+    "existingRule": "VWO",
+    "canonicalAliases": [
+      "Visual Website Optimizer"
+    ],
+    "note": ""
+  },
+  {
+    "name": "G2 Buyer Intent",
+    "category": "3rd Party Data",
+    "buildingBlock": "3rd Party Data",
+    "signals": {
+      "scriptSrc": [
+        "/tracking(-api)?\\.g2(crowd)?\\.com\\/attribution_tracking\\/conversions\\/\\d+\\.js/"
+      ]
+    },
+    "evidence": "#910 „G2 Attribution Tracking“ [Digital Measurement & Attribution]: 12 Domains; Hosts tracking.g2crowd.com(9), tracking-api.g2.com(3); Cookies __cf_bm",
+    "frequency": 12,
+    "opTagIds": [
+      910
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "Simpli.fi",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/(tag|i|um)\\.simpli\\.fi\\//"
+      ],
+      "cookies": [
+        "suid"
+      ]
+    },
+    "evidence": "#614 „Simpli.fi“ [Advertising & Paid Media]: 12 Domains; Hosts tag.simpli.fi(8), i.simpli.fi(6), um.simpli.fi(4); Cookies suid, uid_syncd_secure",
+    "frequency": 12,
+    "opTagIds": [
+      614
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "Spotify Ad Analytics (Podsights)",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "scriptSrc": [
+        "/pixel\\.byspotify\\.com\\/ping\\.min\\.js/",
+        "/cdn\\.pdst\\.fm\\/ping\\.min\\.js/"
+      ],
+      "requests": [
+        "/pixels\\.spotify\\.com\\/v1\\/ingest/"
+      ],
+      "cookies": [
+        "__spdt",
+        "__pdst"
+      ]
+    },
+    "evidence": "#1108 „Spotify Ad Analytics Loader“ [Digital Measurement & Attribution]: 12 Domains; Hosts pixel.byspotify.com(10), cdn.pdst.fm(2); Cookies __pdst, __spdt | #1343 „Spotify Ad Analytics“ [Digital Measurement & Attribution]: 12 Domains; Hosts pixels.spotify.com(12)",
+    "frequency": 12,
+    "opTagIds": [
+      1108,
+      1343
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "Yahoo! JAPAN Ads",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "scriptSrc": [
+        "/s\\.yimg\\.jp\\/images\\/listing\\/tool\\/cv\\/ytag\\.js/"
+      ],
+      "requests": [
+        "/b\\d+\\.yahoo\\.co\\.jp\\/pagead\\/conversion\\//"
+      ],
+      "cookies": [
+        "_yjsu_yjad"
+      ],
+      "jsGlobals": [
+        "ytag"
+      ]
+    },
+    "evidence": "#518 „Yahoo Remarketing Japan“ [Retargeting]: 12 Domains; Hosts b99.yahoo.co.jp(11), b0.yahoo.co.jp(1), b98.yahoo.co.jp(1)",
+    "frequency": 12,
+    "opTagIds": [
+      518
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Eigenes Unternehmen (LY Corp.), nicht Yahoo Inc. – nicht unter Yahoo Advertising aliasieren. Zusätzlich läuft ein Teil von OP #438 „Yahoo Tracker Loader“ über s.yimg.jp/ytag.js (17 von 32 Requests). Die Häufigkeit zählt hier nur #518, damit nichts doppelt gezählt wird."
+  },
+  {
+    "name": "Siteimprove Analytics",
+    "category": "Analytics",
+    "buildingBlock": "Analytics",
+    "signals": {
+      "scriptSrc": [
+        "/siteimproveanalytics\\.com\\/js\\/siteanalyze_\\d+\\.js/"
+      ],
+      "requests": [
+        "/\\.siteimproveanalytics\\.io\\/image\\.aspx/"
+      ],
+      "cookies": [
+        "nmstat"
+      ]
+    },
+    "evidence": "#1056 „Siteimprove Analytics“ [Web Analytics]: 12 Domains; Hosts siteimproveanalytics.com(12), 6016578.global.siteimproveanalytics.io(2), 465884.global.siteimproveanalytics.io(1); Cookies nmstat",
+    "frequency": 12,
+    "opTagIds": [
+      1056
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Häufig im öffentlichen Sektor und bei Banken. Begleitender Fix: `Lytics` (`/lytics\\.io/`) trifft fälschlich `siteimproveanalytics.io`."
+  },
+  {
+    "name": "Basis (Centro / SiteScout)",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/pixel(-sync)?\\.sitescout\\.com\\//"
+      ],
+      "cookies": [
+        "ssi",
+        "_ssuma"
+      ]
+    },
+    "evidence": "#1168 „Basis DSP Pixel Sync“ [Advertising & Paid Media]: 6 Domains; Hosts pixel-sync.sitescout.com(6); Cookies _ssuma, ssi | #435 „Basis DSP“ [Advertising & Paid Media]: 5 Domains; Hosts pixel.sitescout.com(5); Cookies ssi",
+    "frequency": 11,
+    "opTagIds": [
+      1168,
+      435
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "Twitter / X Widgets",
+    "category": "Social",
+    "signals": {},
+    "evidence": "#322 „X Widget“ [Social Media]: 10 Domains; Hosts platform.twitter.com(10)",
+    "frequency": 10,
+    "opTagIds": [
+      322
+    ],
+    "proposalType": "alias",
+    "existingRule": "Twitter / X Widgets",
+    "canonicalAliases": [
+      "X Widget"
+    ],
+    "note": ""
+  },
+  {
+    "name": "Nielsen Digital Measurement (DCR/DAR)",
+    "category": "Analytics",
+    "buildingBlock": "Analytics",
+    "signals": {
+      "requests": [
+        "/(secure-[a-z]{2}\\.)?imrworldwide\\.com\\/cgi-bin\\/m\\?/",
+        "/imrworldwide\\.com\\/v60\\.js/"
+      ],
+      "cookies": [
+        "IMRID"
+      ]
+    },
+    "evidence": "#31 „NielsenOnline - Standard“ [Audience Research & Feedback]: 9 Domains; Hosts secure-gl.imrworldwide.com(9); Cookies IMRID | #477 „Nielsen DCR Loader“ [Audience Research & Feedback]: 1 Domains; Hosts secure-dcr.imrworldwide.com(1); Cookies IMRID",
+    "frequency": 10,
+    "opTagIds": [
+      31,
+      477
+    ],
+    "proposalType": "signal-fix",
+    "existingRule": "Nielsen DMP",
+    "canonicalAliases": [
+      "NielsenOnline",
+      "Nielsen DCR"
+    ],
+    "note": "`imrworldwide.com` ist Nielsens Reichweitenmessung (DCR/DAR), nicht der Nielsen-DMP (eXelate). Heute landet das Signal fälschlich im DMP-Block. Das Signal in eine eigene Analytics-Regel verschieben."
+  },
+  {
+    "name": "Dstillery",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/(idpix|action)\\.media6degrees\\.com\\/orbserv\\//",
+        "/action\\.dstillery\\.com\\/orbserv\\//"
+      ]
+    },
+    "evidence": "#145 „Dstillery“ [Advertising & Paid Media]: 10 Domains; Hosts idpix.media6degrees.com(10), action.media6degrees.com(3), action.dstillery.com(3); Cookies acs, clid, rdrlst, sglst",
+    "frequency": 10,
+    "opTagIds": [
+      145
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "RTB House",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "scriptSrc": [
+        "/tags\\.creativecdn\\.com\\/[A-Za-z0-9]+\\.js/"
+      ],
+      "cookies": [
+        "__rtbh.lid",
+        "__rtbh.uid"
+      ]
+    },
+    "evidence": "#594 „RTBHouse“ [Retargeting]: 10 Domains; Hosts tags.creativecdn.com(10); Cookies __rtbh.lid, __rtbh.uid",
+    "frequency": 10,
+    "opTagIds": [
+      594
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "LINE Tag",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "scriptSrc": [
+        "/d\\.line-scdn\\.net\\/n\\/line_tag\\/public\\/release\\/v\\d\\/lt\\.js/"
+      ],
+      "requests": [
+        "/tr\\.line\\.me\\/tag\\.gif/"
+      ],
+      "cookies": [
+        "__lt__cid",
+        "__lt__sid"
+      ],
+      "jsGlobals": [
+        "_ltq"
+      ]
+    },
+    "evidence": "#831 „Line Loader“ [Advertising & Paid Media]: 10 Domains; Hosts d.line-scdn.net(10); Cookies __lt__cid, __lt__sid | #1244 „Line Pixel“ [Advertising & Paid Media]: 10 Domains; Hosts tr.line.me(10); Cookies _ldbrbid",
+    "frequency": 10,
+    "opTagIds": [
+      831,
+      1244
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Relevant für Japan, Taiwan und Thailand."
+  },
+  {
+    "name": "Rakuten Advertising",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "scriptSrc": [
+        "/tag\\.rmp\\.rakuten\\.com\\/\\d+\\.ct\\.js/",
+        "/(intl)?js\\.rmtag\\.com\\/\\d+\\.ct\\.js/"
+      ],
+      "cookies": [
+        "rmStore"
+      ]
+    },
+    "evidence": "#213 „Rakuten Marketing“ [Affiliate & Partner]: 9 Domains; Hosts tag.rmp.rakuten.com(7), intljs.rmtag.com(1), js.rmtag.com(1); Cookies rmStore",
+    "frequency": 9,
+    "opTagIds": [
+      213
+    ],
+    "proposalType": "alias+signal",
+    "existingRule": "Rakuten Advertising",
+    "canonicalAliases": [
+      "Rakuten Marketing"
+    ],
+    "note": ""
+  },
+  {
+    "name": "Adara",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/tag\\.yieldoptimizer\\.com\\/ps\\/ps/"
+      ]
+    },
+    "evidence": "#138 „Adara Media“ [Advertising & Paid Media]: 9 Domains; Hosts tag.yieldoptimizer.com(9); Cookies ckid, dph, fbh0, rmxc",
+    "frequency": 9,
+    "opTagIds": [
+      138
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "MNTN (Mountain)",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/dx\\.mountain\\.com\\/spx/"
+      ]
+    },
+    "evidence": "#1504 „Mountain Insights“ [Advertising & Paid Media]: 9 Domains; Hosts dx.mountain.com(9)",
+    "frequency": 9,
+    "opTagIds": [
+      1504
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "CTV-Performance-Ads."
+  },
+  {
+    "name": "Consentmanager.net",
+    "category": "Consent Management",
+    "buildingBlock": "Consent Management",
+    "signals": {
+      "requests": [
+        "/\\.delivery\\.consentmanager\\.net\\/delivery\\/cmp\\.php/"
+      ],
+      "cookies": [
+        "__cmpcc",
+        "__cmpcvc"
+      ]
+    },
+    "evidence": "#1549 „consentmanager CMP“ [Privacy & Consent]: 8 Domains; Hosts d.delivery.consentmanager.net(4), a.delivery.consentmanager.net(2), b.delivery.consentmanager.net(1); Cookies __cmpcc, __cmpiuid | #1550 „consentmanager CMP Loader“ [Privacy & Consent]: 6 Domains; Hosts cdn.consentmanager.net(6); Cookies __cmpcpc, __cmpcvc, __cmpiab, __cmpiabli",
+    "frequency": 8,
+    "opTagIds": [
+      1549,
+      1550
+    ],
+    "proposalType": "alias",
+    "existingRule": "Consentmanager.net",
+    "canonicalAliases": [
+      "consentmanager CMP"
+    ],
+    "note": ""
+  },
+  {
+    "name": "TVSquared (Innovid)",
+    "category": "Analytics",
+    "buildingBlock": "Analytics",
+    "signals": {
+      "scriptSrc": [
+        "/collector-\\d+\\.(us\\.)?tvsquared\\.com\\/tv2track\\.js/"
+      ],
+      "requests": [
+        "/collector-\\d+\\.(us\\.)?tvsquared\\.com\\/tv2track\\.php/"
+      ],
+      "cookies": [
+        "_tq_id."
+      ]
+    },
+    "evidence": "#963 „TVSquared Loader“ [Digital Measurement & Attribution]: 8 Domains; Hosts collector-48530.us.tvsquared.com(1), collector-15930.us.tvsquared.com(1), collector-43043.us.tvsquared.com(1); Cookies _tq_id.TV-4554091809-1.69e2, _tq_id.TV-4554188145-1.30ab, _tq_id.TV-5463905463-1.c5b9, _tq_id.TV-6381909018-1.872f | #962 „TVSquared Tracker“ [Digital Measurement & Attribution]: 6 Domains; Hosts collector-43043.us.tvsquared.com(1), collector-31008.tvsquared.com(1), collector-15930.us.tvsquared.com(1)",
+    "frequency": 8,
+    "opTagIds": [
+      963,
+      962
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "TV-Attribution."
+  },
+  {
+    "name": "Sojern",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/(pixel|beacon)\\.sojern\\.com\\//"
+      ]
+    },
+    "evidence": "#267 „Sojern Pixel“ [Retargeting]: 5 Domains; Hosts pixel.sojern.com(5); Cookies cid, gadex, ttd, xdr | #272 „Sojern Beacon“ [Advertising & Paid Media]: 5 Domains; Hosts beacon.sojern.com(5); Cookies cid",
+    "frequency": 8,
+    "opTagIds": [
+      267,
+      272
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Travel-Retargeting."
+  },
+  {
+    "name": "Bombora",
+    "category": "3rd Party Data",
+    "buildingBlock": "3rd Party Data",
+    "signals": {
+      "requests": [
+        "/ml314\\.com\\/(ut|c|im)sync\\.ashx/",
+        "/ml314\\.com\\/tag\\.aspx/"
+      ]
+    },
+    "evidence": "#1686 „Bombora“ [Data Management (DMP)]: 7 Domains; Hosts ml314.com(7); Cookies pi, u",
+    "frequency": 7,
+    "opTagIds": [
+      1686
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Mapping in buildingBlocks.ts existiert bereits, die Regel fehlt."
+  },
+  {
+    "name": "Viant Adelphic",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "requests": [
+        "/ad\\.ipredictive\\.com\\/d\\/track\\//"
+      ]
+    },
+    "evidence": "#1212 „Adelphic Universal Pixel“ [Advertising & Paid Media]: 6 Domains; Hosts ad.ipredictive.com(6); Cookies cu | #1211 „Adelphic Universal Pixel Loader“ [Advertising & Paid Media]: 3 Domains; Hosts js.ipredictive.com(3)",
+    "frequency": 7,
+    "opTagIds": [
+      1212,
+      1211
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "Branch",
+    "category": "Analytics",
+    "buildingBlock": "Analytics",
+    "signals": {
+      "scriptSrc": [
+        "/cdn\\.branch\\.io\\/branch-latest\\.min\\.js/"
+      ],
+      "requests": [
+        "/api2?\\.branch\\.io\\/v1\\/(pageview|open)/"
+      ],
+      "jsGlobals": [
+        "branch"
+      ]
+    },
+    "evidence": "#289 „Branch“ [Digital Measurement & Attribution]: 7 Domains; Hosts api2.branch.io(6), protected-api.branch.io(1) | #1627 „Branch Web SDK“ [Digital Measurement & Attribution]: 6 Domains; Hosts cdn.branch.io(6)",
+    "frequency": 7,
+    "opTagIds": [
+      289,
+      1627
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "Mobile Deep Linking/Attribution, ein Indikator für eine App-Strategie (AJO Mobile)."
+  },
+  {
+    "name": "Securiti Consent",
+    "category": "Consent Management",
+    "buildingBlock": "Consent Management",
+    "signals": {
+      "scriptSrc": [
+        "/cdn-prod(\\.eu)?\\.securiti\\.ai\\/consent\\/cookie-consent-sdk/"
+      ],
+      "cookies": [
+        "__privaci_cookie_consent_uuid",
+        "__privaci_cookie_consents"
+      ]
+    },
+    "evidence": "#1126 „securiti CMP“ [Privacy & Consent]: 7 Domains; Hosts cdn-prod.securiti.ai(5), cdn-prod.eu.securiti.ai(2); Cookies __privaci_cookie_consent_generated, __privaci_cookie_consent_uuid, __privaci_cookie_no_action, __privaci_latest_published_version",
+    "frequency": 7,
+    "opTagIds": [
+      1126
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "Salesforce Commerce Cloud",
+    "category": "eCommerce",
+    "buildingBlock": "E-Commerce",
+    "signals": {
+      "scriptSrc": [
+        "/cdn\\.cquotient\\.com\\/js\\/v2\\/gretel\\.min\\.js/"
+      ],
+      "cookies": [
+        "__cq_uuid",
+        "__cq_seg"
+      ]
+    },
+    "evidence": "#862 „CQuotient JS“ [Ecommerce]: 6 Domains; Hosts cdn.cquotient.com(6); Cookies __cq_seg, __cq_uuid",
+    "frequency": 6,
+    "opTagIds": [
+      862
+    ],
+    "proposalType": "alias+signal",
+    "existingRule": "Salesforce Commerce Cloud",
+    "canonicalAliases": [
+      "CQuotient JS"
+    ],
+    "note": "CQuotient ist die Einstein-Recommendations-Komponente von SFCC. Sie ist auch ohne `demandware`-Pfade ein starker SFCC-Beleg."
+  },
+  {
+    "name": "Madison Logic",
+    "category": "3rd Party Data",
+    "buildingBlock": "3rd Party Data",
+    "signals": {
+      "requests": [
+        "/s\\.ml-attr\\.com\\/getuid/"
+      ]
+    },
+    "evidence": "#613 „Madison Logic“ [Digital Measurement & Attribution]: 6 Domains; Hosts s.ml-attr.com(6)",
+    "frequency": 6,
+    "opTagIds": [
+      613
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "Dun & Bradstreet Audience",
+    "category": "3rd Party Data",
+    "buildingBlock": "3rd Party Data",
+    "signals": {
+      "requests": [
+        "/ecf\\.d41\\.co\\/sync\\//",
+        "/api\\d+\\.d41\\.co\\/sync\\//"
+      ],
+      "cookies": [
+        "D41ID"
+      ]
+    },
+    "evidence": "#836 „Dunn & Bradstreet“ [Digital Measurement & Attribution]: 6 Domains; Hosts ecf.d41.co(6), api5137.d41.co(2); Cookies D41ID",
+    "frequency": 6,
+    "opTagIds": [
+      836
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  },
+  {
+    "name": "iSpot.tv",
+    "category": "Analytics",
+    "buildingBlock": "Analytics",
+    "signals": {
+      "requests": [
+        "/pt\\.ispot\\.tv\\/v2\\//"
+      ]
+    },
+    "evidence": "#533 „iSpot“ [Digital Measurement & Attribution]: 6 Domains; Hosts pt.ispot.tv(6); Cookies pt",
+    "frequency": 6,
+    "opTagIds": [
+      533
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": "TV-Attribution."
+  },
+  {
+    "name": "Nextdoor Pixel",
+    "category": "Advertising",
+    "buildingBlock": "Advertising",
+    "signals": {
+      "scriptSrc": [
+        "/ads\\.nextdoor\\.com\\/public\\/pixel\\/ndp\\.js/"
+      ],
+      "requests": [
+        "/flask\\.nextdoor\\.com\\/pixel/"
+      ],
+      "cookies": [
+        "ndp_session_id"
+      ],
+      "jsGlobals": [
+        "ndp"
+      ]
+    },
+    "evidence": "#1283 „Nextdoor Pixel Loader“ [Social Media]: 6 Domains; Hosts ads.nextdoor.com(6); Cookies ndp_session_id | #1284 „Nextdoor Pixel“ [Advertising & Paid Media]: 6 Domains; Hosts flask.nextdoor.com(6)",
+    "frequency": 6,
+    "opTagIds": [
+      1283,
+      1284
+    ],
+    "proposalType": "neu",
+    "existingRule": null,
+    "canonicalAliases": [],
+    "note": ""
+  }
+]

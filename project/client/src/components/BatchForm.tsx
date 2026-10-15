@@ -2,6 +2,9 @@ import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'rea
 import { Plus, Trash2, Upload, Send } from 'lucide-react';
 import type { AssessmentLens, BatchJob, BatchKind } from '../types/parity';
 import { apiRequest, toErrorMessage } from '../lib/apiClient';
+import { checkUrlInput } from '../lib/urlValidation';
+import type { BatchEnrichmentOptions } from '../types/batchAccount';
+import BatchSourcesPicker from './BatchSourcesPicker';
 
 const LENSES: AssessmentLens[] = ['Brand', 'Geo', 'Journey Stage', 'Competitors', 'Other'];
 const MAX_ACCOUNT_URLS = 30;
@@ -42,6 +45,41 @@ function countBulkLines(text: string): number {
   return lines.length;
 }
 
+/** Gleiche Duplikat-Logik wie der Server (batchInput.dedupeKey): ohne www., ohne Trailing Slash. */
+function dedupeKey(url: string): string {
+  const u = new URL(url);
+  return `${u.hostname.replace(/^www\./, '')}${u.pathname.replace(/\/+$/, '')}${u.search}`;
+}
+
+function describeProblem(input: string): string | null {
+  const c = checkUrlInput(input);
+  if (c.ok) return null;
+  return c.suggestion ? `${c.message} Did you mean ${c.suggestion}?` : c.message;
+}
+
+/** Vorschau der Bulk-Eingabe: ungültige Zeilen und Duplikate, die der Server überspringen würde. */
+function bulkIssues(text: string): { invalid: string[]; duplicates: number } {
+  const invalid: string[] = [];
+  const seen = new Set<string>();
+  let duplicates = 0;
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) return;
+    const cell = line.split(/[\t;,]/)[0].trim().replace(/^["']|["']$/g, '');
+    if (i === 0 && /^(url|urls|website|websites|domain|site|link)$/i.test(cell)) return;
+    if (!cell) return;
+    const c = checkUrlInput(cell);
+    if (!c.ok) {
+      invalid.push(`Line ${i + 1}: "${cell.slice(0, 60)}" – ${c.suggestion ? `did you mean ${c.suggestion}?` : c.message}`);
+      return;
+    }
+    const key = dedupeKey(c.url);
+    if (seen.has(key)) duplicates++;
+    else seen.add(key);
+  });
+  return { invalid, duplicates };
+}
+
 export default function BatchForm({ mode, onCreated }: BatchFormProps) {
   const [title, setTitle] = useState('');
   const [accountName, setAccountName] = useState('');
@@ -52,11 +90,29 @@ export default function BatchForm({ mode, onCreated }: BatchFormProps) {
   const [bulkText, setBulkText] = useState('');
   const [aiAccount, setAiAccount] = useState(true);
   const [aiBulk, setAiBulk] = useState(false);
+  const [sources, setSources] = useState<BatchEnrichmentOptions | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const bulkCount = useMemo(() => countBulkLines(bulkText), [bulkText]);
+  const bulkCheck = useMemo(() => bulkIssues(bulkText), [bulkText]);
+  const rowProblems = useMemo(() => {
+    const seen = new Map<string, number>();
+    return rows.map((r, idx) => {
+      const value = r.url.trim();
+      if (!value) return null;
+      const problem = describeProblem(value);
+      if (problem) return { blocking: true, text: problem };
+      const check = checkUrlInput(value);
+      const key = check.ok ? dedupeKey(check.url) : value;
+      const first = seen.get(key);
+      if (first !== undefined) return { blocking: false, text: `Duplicate of URL ${first + 1} – will be analyzed only once.` };
+      seen.set(key, idx);
+      return null;
+    });
+  }, [rows]);
+  const rowsValid = rowProblems.every((p) => !p?.blocking);
   const filledRows = rows.filter((r) => r.url.trim());
   const effectiveTitle = title.trim() || (mode === 'account' ? accountName.trim() : '');
   const titleValid = WORD_START.test(effectiveTitle);
@@ -65,8 +121,8 @@ export default function BatchForm({ mode, onCreated }: BatchFormProps) {
     !submitting &&
     titleValid &&
     (mode === 'account'
-      ? filledRows.length > 0 && filledRows.length <= MAX_ACCOUNT_URLS && labelsValid
-      : bulkCount > 0 && bulkCount <= MAX_BULK_URLS);
+      ? filledRows.length > 0 && filledRows.length <= MAX_ACCOUNT_URLS && labelsValid && rowsValid
+      : bulkCount > 0 && bulkCount <= MAX_BULK_URLS && bulkCheck.invalid.length < bulkCount);
 
   const updateRow = (idx: number, key: 'url' | 'label', value: string) =>
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [key]: value } : r)));
@@ -104,9 +160,10 @@ export default function BatchForm({ mode, onCreated }: BatchFormProps) {
               industry: industry.trim() || undefined,
               opportunityId: opportunityId.trim() || undefined,
               aiAnalysis: aiAccount,
+              enrichments: sources ?? undefined,
               items: filledRows.map((r) => ({ url: r.url.trim(), label: r.label.trim() || undefined })),
             }
-          : { kind: 'bulk' as const, title: effectiveTitle, aiAnalysis: aiBulk, input: bulkText };
+          : { kind: 'bulk' as const, title: effectiveTitle, aiAnalysis: aiBulk, enrichments: sources ?? undefined, input: bulkText };
       const res = await apiRequest<CreateResponse>('/api/batches', { method: 'POST', body });
       onCreated(res.batch, res.warnings ?? []);
       setRows([{ url: '', label: '' }]);
@@ -160,8 +217,11 @@ export default function BatchForm({ mode, onCreated }: BatchFormProps) {
             </div>
             <div className="space-y-2">
               {rows.map((row, idx) => (
-                <div key={idx} className="flex gap-2">
+                <div key={idx}>
+                <div className="flex gap-2">
                   <input aria-label={`URL ${idx + 1}`} className={`${inputClass} flex-[2]`} value={row.url}
+                    aria-invalid={rowProblems[idx]?.blocking ? true : undefined}
+                    aria-describedby={rowProblems[idx] ? `batch-url-${idx}-problem` : undefined}
                     onChange={(e) => updateRow(idx, 'url', e.target.value)} placeholder="www.example.com" />
                   <input aria-label={`Label ${idx + 1}`} className={`${inputClass} flex-1`} value={row.label} maxLength={255}
                     onChange={(e) => updateRow(idx, 'label', e.target.value)} placeholder={LABEL_PLACEHOLDER[lens]} />
@@ -170,6 +230,13 @@ export default function BatchForm({ mode, onCreated }: BatchFormProps) {
                     className="px-2 text-ts-text-secondary hover:text-adobe-red disabled:opacity-30">
                     <Trash2 className="w-4 h-4" />
                   </button>
+                </div>
+                {rowProblems[idx] && (
+                  <p id={`batch-url-${idx}-problem`}
+                    className={`mt-1 text-xs ${rowProblems[idx]!.blocking ? 'text-adobe-red' : 'text-ts-warning'}`}>
+                    {rowProblems[idx]!.text}
+                  </p>
+                )}
                 </div>
               ))}
             </div>
@@ -212,6 +279,12 @@ export default function BatchForm({ mode, onCreated }: BatchFormProps) {
                 <Upload className="w-3.5 h-3.5" /> Upload CSV
               </button>
               <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={onFile} />
+              {(bulkCheck.invalid.length > 0 || bulkCheck.duplicates > 0) && (
+                <span className="text-xs text-ts-warning">
+                  {bulkCheck.invalid.length > 0 && `${bulkCheck.invalid.length} invalid line(s) will be skipped. `}
+                  {bulkCheck.duplicates > 0 && `${bulkCheck.duplicates} duplicate(s) will be analyzed only once.`}
+                </span>
+              )}
               {bulkCount > APPROVAL_HINT_THRESHOLD && (
                 <span className="text-xs text-ts-warning">
                   More than {APPROVAL_HINT_THRESHOLD} URLs (default threshold) require admin approval before processing.
@@ -219,6 +292,12 @@ export default function BatchForm({ mode, onCreated }: BatchFormProps) {
               )}
             </div>
           </div>
+          {bulkCheck.invalid.length > 0 && (
+            <div className="p-3 rounded-lg border border-ts-warning/40 bg-ts-warning/10 text-xs text-ts-warning space-y-0.5">
+              {bulkCheck.invalid.slice(0, 5).map((w) => <p key={w}>{w}</p>)}
+              {bulkCheck.invalid.length > 5 && <p>…and {bulkCheck.invalid.length - 5} more</p>}
+            </div>
+          )}
           <label className="flex items-center gap-2 text-sm text-ts-text-primary">
             <input type="checkbox" checked={aiBulk} onChange={(e) => setAiBulk(e.target.checked)} />
             Full AI analysis per URL
@@ -226,6 +305,8 @@ export default function BatchForm({ mode, onCreated }: BatchFormProps) {
           </label>
         </>
       )}
+
+      <BatchSourcesPicker mode={mode} aiAnalysis={mode === 'account' ? aiAccount : aiBulk} value={sources} onChange={setSources} />
 
       {!titleValid && (effectiveTitle.length > 0) && (
         <p className="text-xs text-adobe-red">Title must start with a letter, digit or underscore.</p>

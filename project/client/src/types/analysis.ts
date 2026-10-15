@@ -41,6 +41,14 @@ export interface AnalysisResult {
   sitemapUrls?: string[];
   /** On-Demand-Anreicherungen (EAA-Parität). */
   enrichments?: AnalysisEnrichments;
+  /** Qualitätswarnungen zum Scan (Fehlerseite, Bot-Wall, KI-Ausfall); fehlt bei älteren Analysen. */
+  scanWarnings?: ScanWarning[];
+}
+
+export interface ScanWarning {
+  code: string;
+  severity: 'info' | 'warning' | 'error';
+  message: string;
 }
 
 export interface UseCaseItem {
@@ -60,6 +68,17 @@ export interface UseCaseItem {
   timeToValue?: string;
   /** Geschäftlicher Impact. */
   impact?: 'Low' | 'Medium' | 'High';
+  /** Gemessene Evidenz, auf der der Use Case basiert (z. B. ObservePoint-Findings). */
+  evidence?: UseCaseEvidence;
+}
+
+export interface UseCaseEvidence {
+  source: 'ObservePoint';
+  findingIds: string[];
+  /** Kurztitel der referenzierten Findings (für die Anzeige). */
+  findings: string[];
+  /** true = Use Case regelbasiert aus Findings erzeugt (nicht vom LLM). */
+  ruleBased?: boolean;
 }
 
 export interface UseCaseDiscoveryResult {

@@ -52,8 +52,8 @@ const CATEGORY_TO_BLOCK: Record<string, BuildingBlock> = {
 /** Namensbasierte Overrides, wo die TSA-Kategorie nicht der EAA-Semantik entspricht. */
 const NAME_TO_BLOCK: Array<[RegExp, BuildingBlock]> = [
   [/Experience Cloud Identity Service|\bECID\b/i, 'Profile Resolution'],
-  [/^LiveRamp$|Unified ID 2\.0|^ID5$|Lotame Panorama ID|Tapad|Neustar/i, 'Profile Resolution'],
-  [/Demandbase|Bombora|Eyeota|Oracle Data Cloud|Clearbit|ZoomInfo/i, '3rd Party Data'],
+  [/^LiveRamp$|Unified ID 2\.0|^ID5$|Tapad|Neustar/i, 'Profile Resolution'],
+  [/Demandbase|Bombora|Eyeota|Oracle Data Cloud|Clearbit|ZoomInfo|6sense|G2 Buyer Intent|Madison Logic|Dun & Bradstreet/i, '3rd Party Data'],
   [/Adobe Sign|DocuSign|Acrobat Sign/i, 'Digital Signature'],
 ];
 

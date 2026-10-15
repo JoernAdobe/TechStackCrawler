@@ -85,10 +85,10 @@ export default function TechCaseInsights({ analysis }: TechCaseInsightsProps) {
   ];
 
   return (
-    <section className="px-6 py-8 max-w-7xl mx-auto">
+    <section id="section-tech-case" className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
       <div className="bg-ts-surface-card rounded-2xl border border-ts-border overflow-hidden">
         {/* Header */}
-        <div className="relative bg-gradient-to-br from-adobe-red/10 via-ts-surface-card to-ts-accent/5 p-6 border-b border-ts-border">
+        <div className="relative bg-gradient-to-br from-adobe-red/10 via-ts-surface-card to-ts-accent/5 p-4 sm:p-6 border-b border-ts-border">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-ts-text-primary flex items-center gap-2">
@@ -112,7 +112,7 @@ export default function TechCaseInsights({ analysis }: TechCaseInsightsProps) {
         </div>
 
         {/* Section preview grid */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {!useCasesReady && (
             <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-ts-warning/30 bg-ts-warning/10 px-4 py-3">
               <AlertTriangle className="w-4 h-4 text-ts-warning shrink-0 mt-0.5" strokeWidth={1.5} />

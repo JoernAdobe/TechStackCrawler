@@ -1,0 +1,2066 @@
+{
+ "info": {
+  "blockThirdPartyCookies": false,
+  "browserName": "Chrome",
+  "browserVersion": "154.0.8037.97",
+  "discoverSitemaps": false,
+  "sitemapData": {
+   "sitemapsScannedCount": 0,
+   "sitemapsScanned": [],
+   "sitemapsBrokenCount": 0,
+   "sitemapsBrokenUrls": []
+  },
+  "gpcEnabled": false,
+  "height": 1200,
+  "loginActions": true,
+  "locationId": 1,
+  "onPageActions": false,
+  "privacyConsentActions": true,
+  "runDuration": 209,
+  "scanSpeed": 1,
+  "urlsScanned": 1,
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 ObservePoint",
+  "vpnEnabled": false,
+  "width": 1326,
+  "technologyBlockingEnabled": false,
+  "fileSubstitutionConfigured": false,
+  "customHeadersApplied": false
+ },
+ "pageSummary": {
+  "pagesFiltered": 1,
+  "totalPages": 1,
+  "averagePageLoadTime": 1304,
+  "brokenPages": 0,
+  "pagesWithBrokenInitialStatusCode": 0,
+  "pagesWithBrokenFinalStatusCode": 0,
+  "pageCountByLoadTimes": {
+   "_3to6": 0,
+   "_6to10": 0,
+   "_10andAbove": 0,
+   "below3": 1,
+   "3to6": 0,
+   "6to10": 0,
+   "10andAbove": 0
+  },
+  "pageCountsByInitialStatusCodes": {
+   "good": 1,
+   "redirects": 0,
+   "broken": 0
+  },
+  "pageCountsByFinalStatusCodes": {
+   "good": 1,
+   "redirects": 0,
+   "broken": 0
+  },
+  "pagesWithBrokenLinks": 0,
+  "webVitals": {
+   "medianLargestContentfulPaint": 540,
+   "medianFirstContentfulPaint": 456,
+   "medianTimeToFirstByte": 148,
+   "medianCumulativeLayoutShift": 0.089,
+   "p75LargestContentfulPaint": 540,
+   "p75FirstContentfulPaint": 456,
+   "p75TimeToFirstByte": 148,
+   "p75CumulativeLayoutShift": 0.089
+  }
+ },
+ "pages": {
+  "pages": [
+   {
+    "pageId": "284dff814750af4b9ee9bf2beb17a4f2",
+    "pageUrl": "https://www.lazardassetmanagement.com/us/en_us/home",
+    "finalPageUrl": "https://www.lazardassetmanagement.com/us/en_us/home"
+   }
+  ]
+ },
+ "grid": {
+  "metadata": {
+   "pagination": {
+    "totalCount": 21,
+    "totalPageCount": 1,
+    "pageSize": 500,
+    "currentPageSize": 21,
+    "currentPageNumber": 0
+   },
+   "headers": [
+    {
+     "column": {
+      "groupBy": true,
+      "columnId": "TAG"
+     }
+    },
+    {
+     "column": {
+      "groupBy": true,
+      "columnId": "TAG_VERSION"
+     }
+    },
+    {
+     "column": {
+      "aggregateFunction": "count_distinct",
+      "aggregatedColumn": {
+       "columnId": "PAGE_ID"
+      }
+     }
+    },
+    {
+     "column": {
+      "aggregateFunction": "median",
+      "aggregatedColumn": {
+       "columnId": "TAG_DURATION"
+      }
+     }
+    }
+   ]
+  },
+  "rows": [
+   [
+    [
+     "Adobe Target",
+     24
+    ],
+    "",
+    1,
+    9
+   ],
+   [
+    [
+     "OneTrust CMP Loader",
+     810
+    ],
+    "",
+    1,
+    30
+   ],
+   [
+    [
+     "Marketo Engage Loader",
+     378
+    ],
+    "",
+    1,
+    42
+   ],
+   [
+    [
+     "Floodlight Counter",
+     15
+    ],
+    "",
+    1,
+    52
+   ],
+   [
+    [
+     "Adobe Launch",
+     556
+    ],
+    "",
+    1,
+    183
+   ],
+   [
+    [
+     "OneTrust CMP Language Configuration",
+     1205
+    ],
+    "",
+    1,
+    1
+   ],
+   [
+    [
+     "OneTrust CMP Banner",
+     1206
+    ],
+    "202601.1.0",
+    1,
+    3
+   ],
+   [
+    [
+     "Adobe Launch Loader",
+     837
+    ],
+    "",
+    1,
+    3
+   ],
+   [
+    [
+     "Google Ads Remarketing",
+     184
+    ],
+    "",
+    1,
+    33
+   ],
+   [
+    [
+     "Google Tag",
+     655
+    ],
+    "",
+    1,
+    7
+   ],
+   [
+    [
+     "Adobe Analytics",
+     1
+    ],
+    "JS-2.27.0-LGU4",
+    1,
+    84
+   ],
+   [
+    [
+     "Interaction Studio PR",
+     1113
+    ],
+    "",
+    1,
+    60
+   ],
+   [
+    [
+     "OneTrust Geolocation",
+     1243
+    ],
+    "1",
+    1,
+    36
+   ],
+   [
+    [
+     "Marketo Engage",
+     81
+    ],
+    "165",
+    1,
+    61
+   ],
+   [
+    [
+     "Google Ads Conversion Tracking",
+     16
+    ],
+    "",
+    1,
+    26
+   ],
+   [
+    [
+     "Data Layer",
+     211
+    ],
+    "",
+    1,
+    0
+   ],
+   [
+    [
+     "Adobe Extensions",
+     944
+    ],
+    "",
+    1,
+    45
+   ],
+   [
+    [
+     "Adobe Experience Manager",
+     336
+    ],
+    "",
+    1,
+    157
+   ],
+   [
+    [
+     "OneTrust CMP Assets",
+     1462
+    ],
+    "",
+    1,
+    5
+   ],
+   [
+    [
+     "Interaction Studio Loader",
+     1111
+    ],
+    "",
+    1,
+    179
+   ],
+   [
+    [
+     "OneTrust CMP Metadata",
+     1204
+    ],
+    "",
+    1,
+    56
+   ]
+  ]
+ },
+ "health": {
+  "tags": [
+   {
+    "tagId": 1,
+    "tagName": "Adobe Analytics",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 15,
+    "tagName": "Floodlight Counter",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 3,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 3,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 16,
+    "tagName": "Google Ads Conversion Tracking",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 6,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 6,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 24,
+    "tagName": "Adobe Target",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 81,
+    "tagName": "Marketo Engage",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 184,
+    "tagName": "Google Ads Remarketing",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 2,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 2,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 211,
+    "tagName": "Data Layer",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 5,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 5,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 336,
+    "tagName": "Adobe Experience Manager",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 378,
+    "tagName": "Marketo Engage Loader",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 2,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 2,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 556,
+    "tagName": "Adobe Launch",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 655,
+    "tagName": "Google Tag",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 2,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 2,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 810,
+    "tagName": "OneTrust CMP Loader",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 2,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 2,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 837,
+    "tagName": "Adobe Launch Loader",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 944,
+    "tagName": "Adobe Extensions",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 2,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 0,
+     "redirect": 2,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 1111,
+    "tagName": "Interaction Studio Loader",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 1113,
+    "tagName": "Interaction Studio PR",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 1204,
+    "tagName": "OneTrust CMP Metadata",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 1205,
+    "tagName": "OneTrust CMP Language Configuration",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 1206,
+    "tagName": "OneTrust CMP Banner",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 1243,
+    "tagName": "OneTrust Geolocation",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 1,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 1,
+     "redirect": 0,
+     "broken": 0
+    }
+   },
+   {
+    "tagId": 1462,
+    "tagName": "OneTrust CMP Assets",
+    "tagLoadTimeDistribution": {
+     "_500to1000": 0,
+     "_1000to2000": 0,
+     "below500": 6,
+     "above2000": 0,
+     "500to1000": 0,
+     "1000to2000": 0
+    },
+    "tagStatusCodeDistribution": {
+     "good": 6,
+     "redirect": 0,
+     "broken": 0
+    }
+   }
+  ]
+ },
+ "dupes": {
+  "tags": [
+   {
+    "tagId": 1,
+    "tagName": "Adobe Analytics",
+    "tagCategoryId": 42,
+    "tagCategoryName": "Web Analytics",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 336,
+    "tagName": "Adobe Experience Manager",
+    "tagCategoryId": 50,
+    "tagCategoryName": "Content & Asset Management",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 944,
+    "tagName": "Adobe Extensions",
+    "tagCategoryId": 6,
+    "tagCategoryName": "Tag Management",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 2,
+    "filteredTagMultiplePageCount": 1,
+    "filteredTagInstanceCount": 2
+   },
+   {
+    "tagId": 556,
+    "tagName": "Adobe Launch",
+    "tagCategoryId": 6,
+    "tagCategoryName": "Tag Management",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 837,
+    "tagName": "Adobe Launch Loader",
+    "tagCategoryId": 6,
+    "tagCategoryName": "Tag Management",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 24,
+    "tagName": "Adobe Target",
+    "tagCategoryId": 4,
+    "tagCategoryName": "A/B Testing & Optimization",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 211,
+    "tagName": "Data Layer",
+    "tagCategoryId": 13,
+    "tagCategoryName": "Data Management (DMP)",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 5
+   },
+   {
+    "tagId": 15,
+    "tagName": "Floodlight Counter",
+    "tagCategoryId": 3,
+    "tagCategoryName": "Advertising & Paid Media",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 2,
+    "filteredTagMultiplePageCount": 1,
+    "filteredTagInstanceCount": 3
+   },
+   {
+    "tagId": 16,
+    "tagName": "Google Ads Conversion Tracking",
+    "tagCategoryId": 3,
+    "tagCategoryName": "Advertising & Paid Media",
+    "filteredTagDuplicateCount": 4,
+    "filteredTagDuplicatePageCount": 1,
+    "filteredTagMultipleCount": 2,
+    "filteredTagMultiplePageCount": 1,
+    "filteredTagInstanceCount": 6
+   },
+   {
+    "tagId": 184,
+    "tagName": "Google Ads Remarketing",
+    "tagCategoryId": 52,
+    "tagCategoryName": "Retargeting",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 2,
+    "filteredTagMultiplePageCount": 1,
+    "filteredTagInstanceCount": 2
+   },
+   {
+    "tagId": 655,
+    "tagName": "Google Tag",
+    "tagCategoryId": 6,
+    "tagCategoryName": "Tag Management",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 2
+   },
+   {
+    "tagId": 1111,
+    "tagName": "Interaction Studio Loader",
+    "tagCategoryId": 5,
+    "tagCategoryName": "Personalization",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 1113,
+    "tagName": "Interaction Studio PR",
+    "tagCategoryId": 5,
+    "tagCategoryName": "Personalization",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 81,
+    "tagName": "Marketo Engage",
+    "tagCategoryId": 16,
+    "tagCategoryName": "Marketing Automation & Email",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 378,
+    "tagName": "Marketo Engage Loader",
+    "tagCategoryId": 16,
+    "tagCategoryName": "Marketing Automation & Email",
+    "filteredTagDuplicateCount": 2,
+    "filteredTagDuplicatePageCount": 1,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 2
+   },
+   {
+    "tagId": 1462,
+    "tagName": "OneTrust CMP Assets",
+    "tagCategoryId": 14,
+    "tagCategoryName": "Privacy & Consent",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 6,
+    "filteredTagMultiplePageCount": 1,
+    "filteredTagInstanceCount": 6
+   },
+   {
+    "tagId": 1206,
+    "tagName": "OneTrust CMP Banner",
+    "tagCategoryId": 14,
+    "tagCategoryName": "Privacy & Consent",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 1205,
+    "tagName": "OneTrust CMP Language Configuration",
+    "tagCategoryId": 14,
+    "tagCategoryName": "Privacy & Consent",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 810,
+    "tagName": "OneTrust CMP Loader",
+    "tagCategoryId": 14,
+    "tagCategoryName": "Privacy & Consent",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 2
+   },
+   {
+    "tagId": 1204,
+    "tagName": "OneTrust CMP Metadata",
+    "tagCategoryId": 14,
+    "tagCategoryName": "Privacy & Consent",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   },
+   {
+    "tagId": 1243,
+    "tagName": "OneTrust Geolocation",
+    "tagCategoryId": 14,
+    "tagCategoryName": "Privacy & Consent",
+    "filteredTagDuplicateCount": 0,
+    "filteredTagDuplicatePageCount": 0,
+    "filteredTagMultipleCount": 0,
+    "filteredTagMultiplePageCount": 0,
+    "filteredTagInstanceCount": 1
+   }
+  ]
+ },
+ "logSummary": {
+  "errorLogCount": 0,
+  "warnLogCount": 1,
+  "infoLogCount": 2,
+  "debugLogCount": 1,
+  "otherLogCount": 0,
+  "totalPageCount": 1,
+  "filteredPageCount": 1
+ },
+ "logs": {
+  "messages": [
+   {
+    "level": "debug",
+    "message": "Munchkin.init(\"%s\") options: 394-MLC-997 {\"_ecid\":\"1BA53F5C636ADA560A495FD5@AdobeOrg:9:20605833010284010961861364757041159065\"}",
+    "logCount": 1,
+    "pageCount": 1,
+    "relatedTag": {
+     "tagId": 378,
+     "tagName": "Marketo Engage Loader",
+     "tagCategoryId": 16,
+     "tagCategoryName": "Marketing Automation & Email"
+    }
+   },
+   {
+    "level": "info",
+    "message": "EnvTesting-adobe",
+    "logCount": 1,
+    "pageCount": 1
+   },
+   {
+    "level": "info",
+    "message": "gtag is NOT loaded, creating stub function",
+    "logCount": 1,
+    "pageCount": 1
+   },
+   {
+    "level": "warn",
+    "message": "Adobe Client Data Layer v2.0.2 has already been imported/initialized on this page. You may be erroneously loading it a second time.",
+    "logCount": 1,
+    "pageCount": 1
+   }
+  ]
+ },
+ "cookieSummary": {
+  "totalPageCount": 1,
+  "filteredPageCount": 1,
+  "totalUniqueCookieCount": 20,
+  "filteredUniqueCookieCount": 20,
+  "totalFirstPartyCookieCount": 15,
+  "filteredFirstPartyCookieCount": 15,
+  "totalThirdPartyCookieCount": 5,
+  "filteredThirdPartyCookieCount": 5,
+  "filteredNonSecureCookieCount": 11,
+  "filteredSameSiteEmptyCookieCount": 12,
+  "totalUniqueCookieDomainCount": 6,
+  "filteredUniqueCookieDomainCount": 6
+ },
+ "cookies": {
+  "cookies": [
+   {
+    "name": "_evga_81ac",
+    "domain": "www.lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": 576000,
+    "initiatorTagIds": [
+     1111
+    ]
+   },
+   {
+    "name": "_gcl_au",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": 129600,
+    "initiatorTagIds": [
+     655
+    ]
+   },
+   {
+    "name": "_mkto_trk",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": 576000,
+    "initiatorTagIds": [
+     378
+    ]
+   },
+   {
+    "name": "_sfid_b1cd",
+    "domain": "www.lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": 576000,
+    "initiatorTagIds": [
+     1111
+    ]
+   },
+   {
+    "name": "affinity",
+    "domain": "www.lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": null,
+    "initiatorTagIds": []
+   },
+   {
+    "name": "AMCV_1BA53F5C636ADA560A495FD5%40AdobeOrg",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": 576000,
+    "initiatorTagIds": [
+     556
+    ]
+   },
+   {
+    "name": "AMCVS_1BA53F5C636ADA560A495FD5%40AdobeOrg",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": null,
+    "initiatorTagIds": [
+     556
+    ]
+   },
+   {
+    "name": "at_check",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": null,
+    "initiatorTagIds": [
+     556
+    ]
+   },
+   {
+    "name": "AWSALBTGCORS",
+    "domain": "q55685555561wq73o3n3n3d089564827.us-5.evergage.com",
+    "partyType": "3rd_party",
+    "maxDurationInMinutes": 10080,
+    "initiatorTagIds": [
+     1113
+    ]
+   },
+   {
+    "name": "demdex",
+    "domain": "demdex.net",
+    "partyType": "3rd_party",
+    "maxDurationInMinutes": 259200,
+    "initiatorTagIds": [
+     181,
+     407
+    ]
+   },
+   {
+    "name": "dpm",
+    "domain": "dpm.demdex.net",
+    "partyType": "3rd_party",
+    "maxDurationInMinutes": 259200,
+    "initiatorTagIds": [
+     181
+    ]
+   },
+   {
+    "name": "IDE",
+    "domain": "doubleclick.net",
+    "partyType": "3rd_party",
+    "maxDurationInMinutes": 576000,
+    "initiatorTagIds": [
+     184
+    ]
+   },
+   {
+    "name": "mbox",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": 576000,
+    "initiatorTagIds": [
+     556
+    ]
+   },
+   {
+    "name": "OptanonAlertBoxClosed",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": 525600,
+    "initiatorTagIds": [
+     1206
+    ]
+   },
+   {
+    "name": "OptanonConsent",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": 525600,
+    "initiatorTagIds": [
+     1206
+    ]
+   },
+   {
+    "name": "s_cc",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": null,
+    "initiatorTagIds": [
+     944
+    ]
+   },
+   {
+    "name": "s_plt",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": null,
+    "initiatorTagIds": [
+     556,
+     944
+    ]
+   },
+   {
+    "name": "s_pltp",
+    "domain": "lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": null,
+    "initiatorTagIds": [
+     556,
+     944
+    ]
+   },
+   {
+    "name": "test_cookie",
+    "domain": "doubleclick.net",
+    "partyType": "3rd_party",
+    "maxDurationInMinutes": 15,
+    "initiatorTagIds": [
+     184
+    ]
+   },
+   {
+    "name": "x-aem-variant",
+    "domain": "www.lazardassetmanagement.com",
+    "partyType": "1st_party",
+    "maxDurationInMinutes": null,
+    "initiatorTagIds": []
+   }
+  ]
+ },
+ "requests": {
+  "requests": [
+   {
+    "requestDomain": "www.lazardassetmanagement.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 52
+   },
+   {
+    "requestDomain": "cdn.cookielaw.org",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 11
+   },
+   {
+    "requestDomain": "assets.adobedtm.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 4
+   },
+   {
+    "requestDomain": "geoip-js.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 3
+   },
+   {
+    "requestDomain": "s7d9.scene7.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 3
+   },
+   {
+    "requestDomain": "googleads.g.doubleclick.net",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 2
+   },
+   {
+    "requestDomain": "munchkin.marketo.net",
+    "requestGeo": {
+     "countryCode": "NL",
+     "countryName": "Netherlands"
+    },
+    "requestCount": 2
+   },
+   {
+    "requestDomain": "q55685555561wq73o3n3n3d089564827.us-5.evergage.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 2
+   },
+   {
+    "requestDomain": "www.google.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 2
+   },
+   {
+    "requestDomain": "www.googletagmanager.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 2
+   },
+   {
+    "requestDomain": "394-mlc-997.mktoresp.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 1
+   },
+   {
+    "requestDomain": "ad.doubleclick.net",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 1
+   },
+   {
+    "requestDomain": "cdn.evgnet.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 1
+   },
+   {
+    "requestDomain": "geolocation.onetrust.com",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 1
+   },
+   {
+    "requestDomain": "lazard.tt.omtrdc.net",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 1
+   },
+   {
+    "requestDomain": "lazardassetmanagement.sc.omtrdc.net",
+    "requestGeo": {
+     "countryCode": "US",
+     "countryName": "United States"
+    },
+    "requestCount": 1
+   }
+  ]
+ },
+ "runTags": [
+  {
+   "tagId": 1,
+   "tagName": "Adobe Analytics",
+   "tagCategoryId": 42,
+   "tagCategoryName": "Web Analytics",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 15,
+   "tagName": "Floodlight Counter",
+   "tagCategoryId": 3,
+   "tagCategoryName": "Advertising & Paid Media",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 2
+  },
+  {
+   "tagId": 16,
+   "tagName": "Google Ads Conversion Tracking",
+   "tagCategoryId": 3,
+   "tagCategoryName": "Advertising & Paid Media",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 2
+  },
+  {
+   "tagId": 24,
+   "tagName": "Adobe Target",
+   "tagCategoryId": 4,
+   "tagCategoryName": "A/B Testing & Optimization",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 81,
+   "tagName": "Marketo Engage",
+   "tagCategoryId": 16,
+   "tagCategoryName": "Marketing Automation & Email",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 184,
+   "tagName": "Google Ads Remarketing",
+   "tagCategoryId": 52,
+   "tagCategoryName": "Retargeting",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 211,
+   "tagName": "Data Layer",
+   "tagCategoryId": 13,
+   "tagCategoryName": "Data Management (DMP)",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 5
+  },
+  {
+   "tagId": 336,
+   "tagName": "Adobe Experience Manager",
+   "tagCategoryId": 50,
+   "tagCategoryName": "Content & Asset Management",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 378,
+   "tagName": "Marketo Engage Loader",
+   "tagCategoryId": 16,
+   "tagCategoryName": "Marketing Automation & Email",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 556,
+   "tagName": "Adobe Launch",
+   "tagCategoryId": 6,
+   "tagCategoryName": "Tag Management",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 655,
+   "tagName": "Google Tag",
+   "tagCategoryId": 6,
+   "tagCategoryName": "Tag Management",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 2
+  },
+  {
+   "tagId": 810,
+   "tagName": "OneTrust CMP Loader",
+   "tagCategoryId": 14,
+   "tagCategoryName": "Privacy & Consent",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 2
+  },
+  {
+   "tagId": 837,
+   "tagName": "Adobe Launch Loader",
+   "tagCategoryId": 6,
+   "tagCategoryName": "Tag Management",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 944,
+   "tagName": "Adobe Extensions",
+   "tagCategoryId": 6,
+   "tagCategoryName": "Tag Management",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 1111,
+   "tagName": "Interaction Studio Loader",
+   "tagCategoryId": 5,
+   "tagCategoryName": "Personalization",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 1113,
+   "tagName": "Interaction Studio PR",
+   "tagCategoryId": 5,
+   "tagCategoryName": "Personalization",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 1204,
+   "tagName": "OneTrust CMP Metadata",
+   "tagCategoryId": 14,
+   "tagCategoryName": "Privacy & Consent",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 1205,
+   "tagName": "OneTrust CMP Language Configuration",
+   "tagCategoryId": 14,
+   "tagCategoryName": "Privacy & Consent",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 1206,
+   "tagName": "OneTrust CMP Banner",
+   "tagCategoryId": 14,
+   "tagCategoryName": "Privacy & Consent",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 1243,
+   "tagName": "OneTrust Geolocation",
+   "tagCategoryId": 14,
+   "tagCategoryName": "Privacy & Consent",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  },
+  {
+   "tagId": 1462,
+   "tagName": "OneTrust CMP Assets",
+   "tagCategoryId": 14,
+   "tagCategoryName": "Privacy & Consent",
+   "tagPresentPageCount": 1,
+   "tagAbsentPageCount": 0,
+   "filteredTagAccountCount": 1
+  }
+ ],
+ "pageTags": {
+  "pageTags": [
+   {
+    "name": "Adobe Analytics",
+    "category": "Web Analytics",
+    "tagId": 1,
+    "pageTagInstances": [
+     {
+      "account": "lazard-asset-management-prod",
+      "loadTime": 84,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "c4",
+        "value": "redacted"
+       },
+       {
+        "name": "v20",
+        "value": "redacted"
+       },
+       {
+        "name": "v7",
+        "value": "redacted"
+       },
+       {
+        "name": "v2",
+        "value": "redacted"
+       },
+       {
+        "name": "v6",
+        "value": "redacted"
+       },
+       {
+        "name": "mcorgid",
+        "value": "1BA53F5C636ADA560A495FD5@AdobeOrg"
+       },
+       {
+        "name": "c5",
+        "value": "redacted"
+       },
+       {
+        "name": "c2",
+        "value": "redacted"
+       },
+       {
+        "name": "v8",
+        "value": "redacted"
+       },
+       {
+        "name": "v1",
+        "value": "redacted"
+       },
+       {
+        "name": "c1",
+        "value": "redacted"
+       },
+       {
+        "name": "trackingServer",
+        "value": "lazardassetmanagement.sc.omtrdc.net"
+       },
+       {
+        "name": "v4",
+        "value": "redacted"
+       },
+       {
+        "name": "v0",
+        "value": "redacted"
+       },
+       {
+        "name": "tag version",
+        "value": "JS-2.27.0-LGU4"
+       },
+       {
+        "name": "v9",
+        "value": "redacted"
+       },
+       {
+        "name": "v3",
+        "value": "redacted"
+       },
+       {
+        "name": "v21",
+        "value": "redacted"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "Adobe Launch Loader",
+    "category": "Tag Management",
+    "tagId": 837,
+    "pageTagInstances": [
+     {
+      "account": "None",
+      "loadTime": 3,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "organization_ID",
+        "value": "7b7acbd5edf1"
+       },
+       {
+        "name": "property_ID",
+        "value": "7240d7bbe901/RCdbf7f97a70be433498c49eed3aceb324"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "OneTrust CMP Loader",
+    "category": "Privacy & Consent",
+    "tagId": 810,
+    "pageTagInstances": [
+     {
+      "account": "0199e32f-c52b-7748-9dd7-cacb3102c59b/otSDKStub",
+      "loadTime": 28,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     },
+     {
+      "account": "0199e32f-c52b-7748-9dd7-cacb3102c59b/OtAutoBlock",
+      "loadTime": 33,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "Adobe Launch",
+    "category": "Tag Management",
+    "tagId": 556,
+    "pageTagInstances": [
+     {
+      "account": "afb1b03f83ee",
+      "loadTime": 183,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "Floodlight Counter",
+    "category": "Advertising & Paid Media",
+    "tagId": 15,
+    "pageTagInstances": [
+     {
+      "account": "17592619",
+      "loadTime": 52,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "gcd",
+        "value": "13l3l3l3l1l1"
+       }
+      ]
+     },
+     {
+      "account": "None",
+      "loadTime": 53,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "gcd",
+        "value": "13l3l3l3l1l1"
+       }
+      ]
+     },
+     {
+      "account": "None",
+      "loadTime": 52,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "gcd",
+        "value": "13l3l3l3l1l1"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "Google Tag",
+    "category": "Tag Management",
+    "tagId": 655,
+    "pageTagInstances": [
+     {
+      "account": "DC-17592619",
+      "loadTime": 10,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     },
+     {
+      "account": "AW-17270501652",
+      "loadTime": 4,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "Adobe Experience Manager",
+    "category": "Content & Asset Management",
+    "tagId": 336,
+    "pageTagInstances": [
+     {
+      "account": "lam",
+      "loadTime": 157,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "Adobe Extensions",
+    "category": "Tag Management",
+    "tagId": 944,
+    "pageTagInstances": [
+     {
+      "account": "EP31dbb9c60e404ba1aa6e746d49be6f29",
+      "loadTime": 46,
+      "statusCode": 304,
+      "tagInstanceVariables": [
+       {
+        "name": " type",
+        "value": "AppMeasurement"
+       }
+      ]
+     },
+     {
+      "account": "EP31dbb9c60e404ba1aa6e746d49be6f29",
+      "loadTime": 44,
+      "statusCode": 304,
+      "tagInstanceVariables": [
+       {
+        "name": " type",
+        "value": "AppMeasurement_Module_ActivityMap"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "Google Ads Conversion Tracking",
+    "category": "Advertising & Paid Media",
+    "tagId": 16,
+    "pageTagInstances": [
+     {
+      "account": "AW-17270501652",
+      "loadTime": 25,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "gcs",
+        "value": "G1--"
+       },
+       {
+        "name": "gcd",
+        "value": "13l3l3R3l5l1"
+       }
+      ]
+     },
+     {
+      "account": "AW-17270501652",
+      "loadTime": 33,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "gcs",
+        "value": "G1--"
+       },
+       {
+        "name": "gcd",
+        "value": "13l3l3R3l5l1"
+       }
+      ]
+     },
+     {
+      "account": "17270501652",
+      "loadTime": 28,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "gcd",
+        "value": "13l3l3R3l5l1"
+       }
+      ]
+     },
+     {
+      "account": "17270501652",
+      "loadTime": 24,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "gcd",
+        "value": "13l3l3R3l5l1"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "Marketo Engage",
+    "category": "Marketing Automation & Email",
+    "tagId": 81,
+    "pageTagInstances": [
+     {
+      "account": "394-MLC-997",
+      "loadTime": 61,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "tag version",
+        "value": "165"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "Data Layer",
+    "category": "Data Management (DMP)",
+    "tagId": 211,
+    "pageTagInstances": [
+     {
+      "account": "dataLayer",
+      "loadTime": 0,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     },
+     {
+      "account": "adobeDataLayer",
+      "loadTime": 0,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "version",
+        "value": "2.0.2"
+       }
+      ]
+     },
+     {
+      "account": "_satellite",
+      "loadTime": 0,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "buildInfo.buildDate",
+        "value": "2026-10-09T19:36:54Z"
+       },
+       {
+        "name": "property.name",
+        "value": "Lazard Asset Management Web"
+       },
+       {
+        "name": "company.orgId",
+        "value": "1BA53F5C636ADA560A495FD5@AdobeOrg"
+       },
+       {
+        "name": "buildInfo.turbineVersion",
+        "value": "29.1.0"
+       },
+       {
+        "name": "environment.stage",
+        "value": "production"
+       },
+       {
+        "name": "environment.id",
+        "value": "EN79625c10fe474b1aa979db78a11b29cb"
+       },
+       {
+        "name": "property.id",
+        "value": "PR233af4dea06b417d9ddb36275ae7129a"
+       }
+      ]
+     },
+     {
+      "account": "sessionStorage",
+      "loadTime": 0,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     },
+     {
+      "account": "localStorage",
+      "loadTime": 0,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "OneTrust CMP Metadata",
+    "category": "Privacy & Consent",
+    "tagId": 1204,
+    "pageTagInstances": [
+     {
+      "account": "0199e32f-c52b-7748-9dd7-cacb3102c59b",
+      "loadTime": 56,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "OneTrust CMP Language Configuration",
+    "category": "Privacy & Consent",
+    "tagId": 1205,
+    "pageTagInstances": [
+     {
+      "account": "0199e32f-c52b-7748-9dd7-cacb3102c59b",
+      "loadTime": 1,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "OneTrust CMP Assets",
+    "category": "Privacy & Consent",
+    "tagId": 1462,
+    "pageTagInstances": [
+     {
+      "account": "None",
+      "loadTime": 5,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     },
+     {
+      "account": "None",
+      "loadTime": 5,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     },
+     {
+      "account": "None",
+      "loadTime": 5,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     },
+     {
+      "account": "None",
+      "loadTime": 2,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     },
+     {
+      "account": "None",
+      "loadTime": 5,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     },
+     {
+      "account": "None",
+      "loadTime": 3,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "OneTrust CMP Banner",
+    "category": "Privacy & Consent",
+    "tagId": 1206,
+    "pageTagInstances": [
+     {
+      "account": "None",
+      "loadTime": 3,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "tag version",
+        "value": "202601.1.0"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "Interaction Studio Loader",
+    "category": "Personalization",
+    "tagId": 1111,
+    "pageTagInstances": [
+     {
+      "account": "None",
+      "loadTime": 179,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "Adobe Target",
+    "category": "A/B Testing & Optimization",
+    "tagId": 24,
+    "pageTagInstances": [
+     {
+      "account": "lazard",
+      "loadTime": 9,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "version",
+        "value": "2.11.4"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "Google Ads Remarketing",
+    "category": "Retargeting",
+    "tagId": 184,
+    "pageTagInstances": [
+     {
+      "account": "17270501652",
+      "loadTime": 32,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "gcd",
+        "value": "13l3l3R3l5l1"
+       }
+      ]
+     },
+     {
+      "account": "17270501652",
+      "loadTime": 34,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "gcd",
+        "value": "13l3l3R3l5l1"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "Interaction Studio PR",
+    "category": "Personalization",
+    "tagId": 1113,
+    "pageTagInstances": [
+     {
+      "account": "None",
+      "loadTime": 60,
+      "statusCode": 204,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "Marketo Engage Loader",
+    "category": "Marketing Automation & Email",
+    "tagId": 378,
+    "pageTagInstances": [
+     {
+      "account": "None",
+      "loadTime": 42,
+      "statusCode": 200,
+      "tagInstanceVariables": []
+     }
+    ]
+   },
+   {
+    "name": "OneTrust Geolocation",
+    "category": "Privacy & Consent",
+    "tagId": 1243,
+    "pageTagInstances": [
+     {
+      "account": "None",
+      "loadTime": 36,
+      "statusCode": 200,
+      "tagInstanceVariables": [
+       {
+        "name": "tag version",
+        "value": "1"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "libraryTags": [
+  {
+   "id": 181,
+   "name": "Adobe Audience Manager"
+  },
+  {
+   "id": 407,
+   "name": "Adobe Experience Cloud ID"
+  }
+ ],
+ "run": {
+  "id": 10450181,
+  "completed": "2026-10-13T18:00:55Z",
+  "totalUrl": 1
+ }
+}

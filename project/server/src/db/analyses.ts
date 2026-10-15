@@ -56,6 +56,41 @@ export async function listAnalyses(
   }
 }
 
+const asString = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v : fallback);
+const asArray = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+
+/**
+ * Ältere/teilweise gespeicherte Analysen defensiv auf die aktuelle Form bringen, damit
+ * Client-Komponenten (`categories.map`, `rawDetections.length` …) nicht crashen.
+ */
+export function normalizeAnalysisResult(raw: unknown, row?: Pick<AnalysisRow, 'url' | 'analyzed_at'>): AnalysisResult {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const analyzedAt = row?.analyzed_at instanceof Date ? row.analyzed_at.toISOString() : asString(row?.analyzed_at);
+  return {
+    ...(r as unknown as AnalysisResult),
+    url: asString(r.url, row?.url ?? ''),
+    analyzedAt: asString(r.analyzedAt, analyzedAt),
+    summary: asString(r.summary),
+    categories: asArray<Record<string, unknown>>(r.categories)
+      .filter((c) => c && typeof c === 'object')
+      .map((c) => ({
+        ...c,
+        category: asString(c.category),
+        currentTechnology: asString(c.currentTechnology),
+        challengesAndPainPoints: asString(c.challengesAndPainPoints),
+        adobeOpportunity: asString(c.adobeOpportunity),
+      })),
+    rawDetections: asArray<Record<string, unknown>>(r.rawDetections)
+      .filter((d) => d && typeof d === 'object' && typeof d.name === 'string')
+      .map((d) => ({
+        ...(d as unknown as AnalysisResult['rawDetections'][number]),
+        categories: asArray<string>(d.categories).filter((c) => typeof c === 'string'),
+        confidence: typeof d.confidence === 'number' ? d.confidence : 0,
+      })),
+    ...(r.scanWarnings !== undefined ? { scanWarnings: asArray(r.scanWarnings) } : {}),
+  };
+}
+
 export async function getAnalysisById(
   db: DbHandle,
   id: number,
@@ -68,7 +103,7 @@ export async function getAnalysisById(
   const row = (Array.isArray(rows) ? rows[0] : null) as AnalysisRow | null;
   if (!row) return null;
   try {
-    const result = JSON.parse(row.result_json) as AnalysisResult;
+    const result = normalizeAnalysisResult(JSON.parse(row.result_json), row);
     result.id = row.id;
     return result;
   } catch {

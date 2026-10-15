@@ -95,6 +95,8 @@ spec:
         - name: techstack
           image: __IMAGE__
           ports: [{ containerPort: 3001 }]
+          # Optionale Keys/Schalter (SEMRUSH_API_KEY, PAGESPEED_API_KEY, OBSERVEPOINT_* …) kommen wie alle
+          # App-Env-Werte über das Secret `techstack-env`; hier bewusst nicht unter `env:` setzen, sonst überschrieben.
           envFrom:
             - secretRef: { name: techstack-env }
           env:

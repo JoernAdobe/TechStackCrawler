@@ -1,17 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { RefreshCw, ChevronRight, Clock, Globe } from 'lucide-react';
+import { RefreshCw, ChevronRight, Clock, Globe, Loader2 } from 'lucide-react';
 import type { AnalysisResult } from '../types/analysis';
 import ResultsTable from './ResultsTable';
 import UseCaseDiscovery from './UseCaseDiscovery';
 import DownloadButton from './DownloadButton';
 import ParityExtras from './ParityExtras';
+import TechCaseInsights from './TechCaseInsights';
+import ResultsSectionNav from './ResultsSectionNav';
 import SpotlightCard from './SpotlightCard';
 import { useUseCaseDiscovery } from '../hooks/useUseCaseDiscovery';
 import { apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
 
 gsap.registerPlugin(useGSAP);
+
+const PAGE_SIZE = 10;
+/** List/empty states keep the narrow column; the detail view uses the full results width. */
+const LIST_CONTAINER = 'max-w-4xl mx-auto px-4 sm:px-6';
 
 interface AnalysisSummary {
   id: number;
@@ -86,6 +92,8 @@ export default function PastAnalyses({
   const [selected, setSelected] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [openingId, setOpeningId] = useState<number | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const gridRef = useRef<HTMLDivElement>(null);
   const {
     discover: discoverUseCases,
@@ -138,25 +146,37 @@ export default function PastAnalyses({
   );
 
   const loadAnalysis = (id: number) => {
+    if (openingId !== null) return;
     const controller = abortRef.current;
+    setOpeningId(id);
+    setError('');
     apiRequest<AnalysisResult>(`/api/analyses/${id}`, {
       signal: controller?.signal,
       headers: { 'Cache-Control': 'no-store' },
     })
       .then((data) => {
-        if (!controller?.signal.aborted) setSelected(data);
+        if (!controller?.signal.aborted) {
+          setSelected(data);
+          window.scrollTo({ top: 0 });
+        }
       })
       .catch((e: unknown) => {
-        if (!isAbortError(e) && !controller?.signal.aborted) setError('Failed to load analysis.');
-      });
+        if (!isAbortError(e) && !controller?.signal.aborted) setError('Failed to load analysis. Please try again.');
+      })
+      .finally(() => setOpeningId(null));
   };
 
-  // Limit to last 3 analyses
-  const recentSummaries = summaries.slice(0, 3);
+  const closeDetail = () => {
+    setSelected(null);
+    window.scrollTo({ top: 0 });
+  };
+
+  const recentSummaries = summaries.slice(0, visibleCount);
+  const hiddenCount = summaries.length - recentSummaries.length;
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
+      <div className={`flex justify-center py-16 ${LIST_CONTAINER}`}>
         <div role="status" aria-live="polite" className="flex items-center gap-3 text-ts-text-secondary">
           <div className="w-5 h-5 border-2 border-ts-accent/30 border-t-ts-accent rounded-full animate-spin" />
           Loading analyses...
@@ -167,22 +187,34 @@ export default function PastAnalyses({
 
   if (error && summaries.length === 0) {
     return (
-      <div role="alert" className="text-center py-16 text-ts-text-secondary text-sm">
+      <div role="alert" className={`flex flex-col items-center gap-4 text-center py-16 text-ts-text-secondary text-sm ${LIST_CONTAINER}`}>
         {error}
+        <button
+          type="button"
+          onClick={reloadAnalyses}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-ts-border text-ts-text-primary hover:border-ts-accent/40 transition-colors"
+        >
+          <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+          Try again
+        </button>
       </div>
     );
   }
 
   if (selected) {
     return (
-      <div className="w-screen relative left-1/2 -ml-[50vw]">
-        <div className="max-w-7xl mx-auto px-6 space-y-4">
+      <div>
+        <ResultsSectionNav />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4">
           <button
-            onClick={() => setSelected(null)}
-            className="text-ts-accent hover:text-ts-accent-light text-sm font-medium transition-colors"
+            type="button"
+            onClick={closeDetail}
+            className="text-ts-accent-light hover:text-white text-sm font-medium transition-colors"
           >
             &larr; Back to list
           </button>
+        </div>
+        <div>
           <ResultsTable results={selected} />
           <UseCaseDiscovery
             analysis={selected}
@@ -191,8 +223,11 @@ export default function PastAnalyses({
             result={useCaseResult}
             error={useCaseError}
           />
+          <TechCaseInsights
+            analysis={useCaseResult ? { ...selected, useCaseDiscovery: useCaseResult } : selected}
+          />
           <ParityExtras analysis={selected} />
-          <DownloadButton results={selected} onReset={() => setSelected(null)} />
+          <DownloadButton results={selected} onReset={closeDetail} resetLabel="Back to list" />
           <div className="h-20" />
         </div>
       </div>
@@ -201,7 +236,7 @@ export default function PastAnalyses({
 
   if (summaries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className={`flex flex-col items-center justify-center py-20 text-center ${LIST_CONTAINER}`}>
         <div className="w-16 h-16 rounded-2xl bg-ts-surface-card border border-ts-border flex items-center justify-center mb-6">
           <Clock className="w-7 h-7 text-ts-text-secondary/50" />
         </div>
@@ -220,10 +255,11 @@ export default function PastAnalyses({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className={`space-y-6 ${LIST_CONTAINER}`}>
+      <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-ts-text-secondary">
-          Showing the {recentSummaries.length} most recent {recentSummaries.length === 1 ? 'analysis' : 'analyses'}
+          Showing {recentSummaries.length} of {summaries.length} {summaries.length === 1 ? 'analysis' : 'analyses'}
+          {' '}(most recent first)
         </p>
         <button
           onClick={reloadAnalyses}
@@ -231,10 +267,16 @@ export default function PastAnalyses({
           className="flex items-center gap-1.5 text-sm text-ts-text-secondary hover:text-ts-text-primary font-medium px-3 py-1.5 rounded-lg hover:bg-ts-surface-card border border-transparent hover:border-ts-border transition-all"
           title="Refresh list"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
           Refresh
         </button>
       </div>
+
+      {error && (
+        <p role="alert" className="rounded-xl border border-adobe-red/30 bg-adobe-red/10 px-3 py-2 text-sm text-ts-text-primary">
+          {error}
+        </p>
+      )}
 
       <div ref={gridRef} className="grid grid-cols-1 gap-4">
         {recentSummaries.map((s) => (
@@ -244,8 +286,11 @@ export default function PastAnalyses({
             spotlightColor="rgba(139, 143, 160, 0.06)"
           >
             <button
+              type="button"
               onClick={() => loadAnalysis(s.id)}
-              className="w-full text-left p-6"
+              disabled={openingId !== null}
+              aria-busy={openingId === s.id}
+              className="w-full text-left p-4 sm:p-6 rounded-2xl disabled:cursor-wait"
             >
               <div className="flex items-center gap-4">
                 <div className="shrink-0 w-12 h-12 rounded-xl bg-ts-surface-light border border-ts-border flex items-center justify-center overflow-hidden">
@@ -256,16 +301,35 @@ export default function PastAnalyses({
                     {getDomain(s.url)}
                   </span>
                   <span className="flex items-center gap-1.5 text-ts-text-secondary text-sm mt-1">
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-3.5 h-3.5" aria-hidden="true" />
                     {formatDate(s.analyzedAt)}
                   </span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-ts-text-secondary/30 group-hover:text-ts-accent group-hover:translate-x-1 transition-all duration-200 shrink-0" />
+                {openingId === s.id ? (
+                  <span className="flex items-center gap-2 text-sm text-ts-text-secondary shrink-0">
+                    <Loader2 className="w-5 h-5 animate-spin text-ts-accent-light" aria-hidden="true" />
+                    <span className="hidden sm:inline">Opening…</span>
+                  </span>
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-ts-text-secondary/60 group-hover:text-ts-accent group-hover:translate-x-1 transition-all duration-200 shrink-0" aria-hidden="true" />
+                )}
               </div>
             </button>
           </SpotlightCard>
         ))}
       </div>
+
+      {hiddenCount > 0 && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+            className="px-4 py-2 text-sm font-medium text-ts-text-primary border border-ts-border rounded-lg hover:border-ts-accent/40 hover:bg-ts-surface-card transition-colors"
+          >
+            Show {Math.min(PAGE_SIZE, hiddenCount)} more ({hiddenCount} remaining)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

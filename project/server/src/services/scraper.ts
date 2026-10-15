@@ -5,6 +5,7 @@ import { config } from '../config.js';
 import { localeForUrl } from '../utils/locale.js';
 import { sanitizeUrlWithDns } from '../utils/sanitize.js';
 import type { ConsentSnapshot } from './consentAudit.js';
+import { httpFallbackScrape } from './httpFallbackScrape.js';
 
 export interface ScrapedData {
   url: string;
@@ -25,6 +26,10 @@ export interface ScrapedData {
   edgeSignals: string[];
   /** Consent-Audit-Snapshot unmittelbar vor dem Banner-Klick (nur gefüllt, wenn geklickt wurde). */
   consent?: ConsentSnapshot;
+  /** HTTP-Status der Hauptseite (0/fehlend = unbekannt). */
+  status?: number;
+  /** 'browser' = Scrapling/Chromium, 'http' = Fallback ohne JavaScript. */
+  scrapeMode?: 'browser' | 'http';
 }
 
 const SCRAPED_DATA_SCHEMA = z.object({
@@ -49,6 +54,8 @@ const SCRAPED_DATA_SCHEMA = z.object({
     })
     .strict()
     .optional(),
+  status: z.number().int().min(0).max(999).optional(),
+  scrapeMode: z.enum(['browser', 'http']).optional(),
 }).strict();
 
 const WORKER_PATH = fileURLToPath(new URL('../../python/scrapling_crawler.py', import.meta.url));
@@ -196,6 +203,21 @@ export async function scrapePage(
   if (!safeUrl) throw new Error('Blocked unsafe or unresolved target URL');
 
   onProgress('Starting Scrapling…');
-  const scraped = await withHeartbeat(runWorker(safeUrl), onProgress);
-  return SCRAPED_DATA_SCHEMA.parse(scraped);
+  try {
+    const scraped = await withHeartbeat(runWorker(safeUrl), onProgress);
+    return SCRAPED_DATA_SCHEMA.parse({ ...scraped, scrapeMode: 'browser' });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // SSRF-Blockaden niemals per Fallback umgehen.
+    if (/Blocked/i.test(message)) throw err;
+    console.warn(`[scraper] Scrapling failed for ${safeUrl} (${message}) – falling back to plain HTTP fetch`);
+    onProgress('Browser rendering failed – retrying with a plain HTTP fetch…');
+    try {
+      return SCRAPED_DATA_SCHEMA.parse(await httpFallbackScrape(safeUrl));
+    } catch (fallbackErr) {
+      console.warn(`[scraper] HTTP fallback failed for ${safeUrl}: ${(fallbackErr as Error).message}`);
+      // Ursprünglichen (aussagekräftigeren) Scrapling-Fehler weiterreichen.
+      throw err;
+    }
+  }
 }

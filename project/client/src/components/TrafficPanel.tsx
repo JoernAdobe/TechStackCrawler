@@ -23,9 +23,11 @@ function formatDuration(sec: number): string {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-ts-border bg-ts-surface-light/30 px-3 py-2">
+    <div className="min-w-0 rounded-lg border border-ts-border bg-ts-surface-light/30 px-3 py-2">
       <div className="text-[11px] text-ts-text-secondary">{label}</div>
-      <div className="text-sm font-semibold text-ts-text-primary">{value}</div>
+      <div className="truncate text-sm font-semibold text-ts-text-primary" title={value}>
+        {value}
+      </div>
     </div>
   );
 }

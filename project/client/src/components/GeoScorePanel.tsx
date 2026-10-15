@@ -89,9 +89,9 @@ export default function GeoScorePanel({ analysis, onUpdate }: GeoScorePanelProps
   };
 
   return (
-    <section className="px-6 py-8 max-w-7xl mx-auto">
+    <section id="section-geo">
       <div className="bg-ts-surface-card rounded-2xl border border-ts-border overflow-hidden">
-        <div className="bg-gradient-to-br from-ts-accent/10 via-ts-surface-card to-adobe-red/5 p-6 border-b border-ts-border">
+        <div className="bg-gradient-to-br from-ts-accent/10 via-ts-surface-card to-adobe-red/5 p-4 sm:p-6 border-b border-ts-border">
           <h2 className="text-xl font-semibold text-ts-text-primary flex items-center gap-2">
             <Radar className="w-6 h-6 text-ts-accent" strokeWidth={1.5} />
             GEO Score · AI Visibility
@@ -102,7 +102,7 @@ export default function GeoScorePanel({ analysis, onUpdate }: GeoScorePanelProps
           </p>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           {!analysis.id ? (
             <p className="text-sm text-ts-text-secondary">
               GEO scoring is only available for saved analyses (database required).
@@ -133,8 +133,8 @@ export default function GeoScorePanel({ analysis, onUpdate }: GeoScorePanelProps
                 <span>Country</span>
                 <input className={inputClass} value={country} onChange={(e) => setCountry(e.target.value)} placeholder="auto (DE, US, GLOBAL)" disabled={loading} maxLength={6} />
               </label>
-              <label className="md:col-span-1 text-xs text-ts-text-secondary space-y-1">
-                <span># Queries</span>
+              <label className="md:col-span-1 min-w-0 text-xs text-ts-text-secondary space-y-1">
+                <span className="block truncate"># Queries</span>
                 <input
                   type="number"
                   min={8}
@@ -149,7 +149,7 @@ export default function GeoScorePanel({ analysis, onUpdate }: GeoScorePanelProps
                 <button
                   type="submit"
                   disabled={disabled}
-                  className="w-full px-5 py-2.5 bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-medium rounded-xl hover:opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full px-5 py-2.5 border border-ts-border text-ts-text-primary font-medium rounded-xl hover:border-ts-accent-light hover:bg-ts-surface-light transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                   {loading ? 'Running…' : existing ? 'Re-run GEO Score' : 'Run GEO Score'}

@@ -156,7 +156,7 @@ export default function BatchAssessment({ renderExtraActions, onOpenAnalysis }: 
                       {b.failed > 0 && <span className="text-adobe-red">{b.failed} failed</span>}
                     </div>
                     <div className="h-1.5 rounded-full bg-ts-surface-light overflow-hidden">
-                      <div className="h-full bg-adobe-red" style={{ width: `${pct}%` }} />
+                      <div className={`h-full ${b.status === 'completed' ? 'bg-ts-success' : 'bg-adobe-red'}`} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 </button>

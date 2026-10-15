@@ -1,11 +1,19 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import type { AnalysisResult, ProgressEvent } from '../types/analysis';
-import { apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
+import { ApiError, apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
+
+/** Fehler einer Analyse inkl. Handlungsempfehlung und optionalem Korrekturvorschlag. */
+export interface AnalysisErrorInfo {
+  message: string;
+  code?: string;
+  hint?: string;
+  suggestion?: string;
+}
 
 interface UseAnalysisOptions {
   onProgress: (event: ProgressEvent) => void;
   onComplete: (result: AnalysisResult) => void;
-  onError: (message: string) => void;
+  onError: (error: AnalysisErrorInfo) => void;
 }
 
 interface AnalyzeResponse {
@@ -80,11 +88,20 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
           onProgress({ phase: 'complete', message: 'Done!', timestamp: Date.now() });
           onComplete(data.result);
         } else {
-          onError(data.error || 'No result');
+          onError({ message: data.error || 'The analysis finished without a result.', hint: 'Please try again.' });
         }
       } catch (err) {
         if (!isAbortError(err)) {
-          onError(toErrorMessage(err, 'Analysis failed'));
+          onError(
+            err instanceof ApiError
+              ? {
+                  message: err.code === 'bad_request' ? toErrorMessage(err, 'Analysis failed') : err.message,
+                  code: err.code,
+                  hint: err.hint ?? (err.code === 'rate_limited' ? 'Wait a minute before starting the next analysis.' : undefined),
+                  suggestion: err.suggestion,
+                }
+              : { message: toErrorMessage(err, 'Analysis failed') },
+          );
         }
       } finally {
         clearInterval(intervalId);

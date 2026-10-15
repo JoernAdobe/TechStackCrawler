@@ -1,0 +1,963 @@
+[
+  {
+    "rule": "Angular",
+    "severity": "high",
+    "problem": "HTML-Pattern /ng-app/ ohne Wortgrenze trifft \"rating-app\", \"dating-apps\", \"landing-app\" usw.; im Korpus 3/3 Angular-Treffer (allianz, bild, techcrunch) falsch. Zusätzlich scriptSrc /angular/ trifft \"rectangular-slider.js\" und Theme-CSS.",
+    "proposedFix": {
+      "field": "html",
+      "replace": "/ng-app/",
+      "with": "/\\sng-app(=|\\s|>)/",
+      "alsoReplace": {
+        "field": "scriptSrc",
+        "replace": "/angular/",
+        "with": "/(^|[\\/@])angular(js)?([\\/.@-]|$)|angular(\\.min)?\\.js|@angular\\/core/"
+      }
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "\\sng-app(=|\\s|>)",
+      "shouldMatch": [
+        "<html ng-app=\"shop\">",
+        "<div ng-app>"
+      ],
+      "shouldNotMatch": [
+        "class=\"ekomi-rating-app\"",
+        "href=\"/dating-apps\"",
+        "landing-app"
+      ]
+    },
+    "evidence": "Korpus: allianz «ekomi-rating-app», bild «dating-apps», techcrunch «tag-dating-apps»"
+  },
+  {
+    "rule": "Contentful",
+    "severity": "high",
+    "problem": "HTML /contentful/i trifft Web-Vitals-Konstanten \"LARGEST_CONTENTFUL_PAINT\", CSS-Klassen \"contentFullWidth\" und Footer-Links auf contentful.com; 4/4 Korpus-Treffer (otto, spiegel, salesforce, stripe) falsch.",
+    "proposedFix": {
+      "field": "html",
+      "remove": "/contentful/i",
+      "keep": [
+        "/ctfassets\\.net/"
+      ],
+      "add": [
+        "/images\\.ctfassets\\.net|videos\\.ctfassets\\.net|cdn\\.contentful\\.com/"
+      ]
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "(images|videos|assets|downloads)\\.ctfassets\\.net|cdn\\.contentful\\.com",
+      "shouldMatch": [
+        "src=\"https://images.ctfassets.net/abc/def/hero.jpg\""
+      ],
+      "shouldNotMatch": [
+        "LARGEST_CONTENTFUL_PAINT_READY",
+        "class=\"contentFullWidth\"",
+        "href=\"https://www.contentful.com/\""
+      ]
+    },
+    "evidence": "Korpus: spiegel «POLYGON_DOM_LARGEST_CONTENTFUL_PAINT_READY», otto «contentFullWidth»"
+  },
+  {
+    "rule": "Bootstrap",
+    "severity": "high",
+    "problem": "Strukturelle HTML-Heuristik (class container … row, col-xx-N) feuert auf 11/22 Korpus-Seiten (52 %), davon ~9 falsch (z. B. Nike \"ncss-container\"/\"ncss-col-lg-12\", Otto \"nav_desktop-global-navigation-container\"). Zusätzlich .* über das ganze Dokument (Backtracking, 32 ms auf allianz) und scriptSrc /bootstrap\\.min\\.js/ trifft Trustpilot \"tp.widget.bootstrap.min.js\".",
+    "proposedFix": {
+      "field": "html",
+      "replace": "beide Klassen-Heuristiken",
+      "with": [
+        "/bootstrap(\\.bundle)?(\\.min)?\\.(css|js)\\b/",
+        "/data-bs-(toggle|target|dismiss)=/"
+      ],
+      "scriptSrc": "/(^|\\/)bootstrap(\\.bundle)?(\\.min)?\\.js(\\?|$)/"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|\\/)bootstrap(\\.bundle)?(\\.min)?\\.js(\\?|$)",
+      "shouldMatch": [
+        "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js",
+        "/js/bootstrap.min.js"
+      ],
+      "shouldNotMatch": [
+        "https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js",
+        "/js/app-bootstrap-loader.js"
+      ]
+    },
+    "evidence": "Korpus-Quote 52 % (alle weak), DB 3/5 Seiten"
+  },
+  {
+    "rule": "Segment",
+    "severity": "high",
+    "problem": "Cookies _scid/_sctr gehören zum Snapchat Pixel, nicht zu Segment → jede Seite mit Snap Pixel meldet Segment (Cookie-Signal = 84 %, nicht weak). Außerdem scriptSrc /segment\\.com/ ohne Anker.",
+    "proposedFix": {
+      "field": "cookies",
+      "remove": [
+        "_scid",
+        "_sctr"
+      ],
+      "add": [
+        "ajs_anonymous_id",
+        "ajs_user_id"
+      ],
+      "scriptSrc": "/(^|\\/\\/)cdn\\.segment\\.(com|io)\\//"
+    },
+    "testCase": {
+      "field": "cookies",
+      "cookies": {
+        "_scid": "x",
+        "_sctr": "y"
+      },
+      "expectNot": "Segment",
+      "expect": "Snapchat Pixel"
+    }
+  },
+  {
+    "rule": "Signal (BrightTag)",
+    "severity": "high",
+    "problem": "scriptSrc /signal\\.co/ trifft \"cdn.onesignal.com\" (OneSignal-Push wird als BrightTag-TMS gemeldet) und jede Domain \"*signal.com\". Produkt ist seit Jahren abgekündigt.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/signal\\.co/",
+      "with": "/(^|[\\/.])s\\.btstatic\\.com\\/|(^|[\\/.])signal\\.co\\//",
+      "note": "oder Regel als deprecated markieren"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|[\\/.])s\\.btstatic\\.com\\/|(^|[\\/.])signal\\.co\\/",
+      "shouldMatch": [
+        "https://s.btstatic.com/tag.js",
+        "https://www.signal.co/x.js"
+      ],
+      "shouldNotMatch": [
+        "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js",
+        "https://www.signal.com/js/app.js"
+      ]
+    }
+  },
+  {
+    "rule": "Media.net",
+    "severity": "high",
+    "problem": "scriptSrc /media\\.net/ trifft LivePerson-CDN \"lpcdn.lpsnmedia.net\" und jede \"*media.net\"-Domain → jede LivePerson-Seite meldet Media.net (Advertising).",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/media\\.net/",
+      "with": "/(^|[\\/.])(contextual|static)\\.media\\.net\\//"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|[\\/.])(contextual|static)\\.media\\.net\\/",
+      "shouldMatch": [
+        "https://contextual.media.net/dmedianet.js?cid=8CU"
+      ],
+      "shouldNotMatch": [
+        "https://lpcdn.lpsnmedia.net/le_unified_window/10.0/client.js",
+        "https://cdn.socialmedia.net/js/share.js"
+      ]
+    }
+  },
+  {
+    "rule": "Azure CDN",
+    "severity": "high",
+    "problem": "Header server=/Microsoft/ trifft jeden \"Microsoft-IIS/10.0\"- und \"Microsoft-HTTPAPI\"-Server → On-Prem-IIS wird als Azure CDN gemeldet (Header-Signal = 88 %).",
+    "proposedFix": {
+      "field": "headers",
+      "remove": "server=/Microsoft/",
+      "keep": [
+        "x-azure-ref"
+      ],
+      "add": [
+        "x-msedge-ref=/./",
+        "x-azure-fdid=/./",
+        "x-cache=/TCP_.*(HIT|MISS)/"
+      ]
+    },
+    "testCase": {
+      "field": "headers",
+      "headers": {
+        "server": "Microsoft-IIS/10.0"
+      },
+      "expectNot": "Azure CDN"
+    }
+  },
+  {
+    "rule": "Ember.js",
+    "severity": "high",
+    "problem": "scriptSrc /ember/ trifft \"member\", \"remember\", \"november\", \"december\"; in den OP-Kundenhosts 4 Treffer (\"members.*\", \"member.*\").",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/ember/",
+      "with": "/(^|[\\/@])ember(\\.debug|\\.prod)?(\\.min)?\\.js|(^|\\/)ember-source\\/|\\/assets\\/vendor-[a-f0-9]+\\.js.*ember/"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|[\\/@])ember(\\.debug|\\.prod)?(\\.min)?\\.js|(^|\\/)ember-source\\/",
+      "shouldMatch": [
+        "https://cdnjs.cloudflare.com/ajax/libs/ember.js/3.28.0/ember.min.js",
+        "https://cdn.jsdelivr.net/npm/ember-source/dist/ember.prod.js"
+      ],
+      "shouldNotMatch": [
+        "https://www.example.com/assets/js/member-area.bundle.js",
+        "/js/remember-me.js",
+        "/static/js/november-campaign.js"
+      ]
+    }
+  },
+  {
+    "rule": "Econda",
+    "severity": "high",
+    "problem": "scriptSrc /econda/ trifft \"secondary\" (z. B. \"secondary-navigation.js\") → jede Seite mit so einem Dateinamen meldet Econda.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/econda/",
+      "with": "/(^|[\\/.])econda(-monitor)?\\.(de|net|com)\\/|(^|\\/)emos[23](\\.min)?\\.js/"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|[\\/.])econda(-monitor)?\\.(de|net|com)\\/|(^|\\/)emos[23](\\.min)?\\.js",
+      "shouldMatch": [
+        "https://l.ecn-ldr.de/loader/loader.js?x=1&src=https://www.econda-monitor.de/els/x.js",
+        "/js/emos2.js"
+      ],
+      "shouldNotMatch": [
+        "https://www.example.com/etc/designs/acme/js/secondary-navigation.js"
+      ]
+    }
+  },
+  {
+    "rule": "Cal.com",
+    "severity": "high",
+    "problem": "scriptSrc /cal\\.com/ trifft \"local.com\", \"medical.com\", \"economical.com\" (3 OP-Kundenhosts aus dem Medizin-/Finanzsektor).",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/cal\\.com/",
+      "with": "/(^|\\/\\/|\\.)(app\\.)?cal\\.com\\/(embed|[\\w-]+\\/)/"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|\\/\\/|\\.)(app\\.)?cal\\.com\\/(embed|[\\w-]+\\/)",
+      "shouldMatch": [
+        "https://app.cal.com/embed/embed.js",
+        "https://cal.com/embed/embed.js"
+      ],
+      "shouldNotMatch": [
+        "https://www.local.com/widget.js",
+        "https://www.medical.com/js/app.js"
+      ]
+    }
+  },
+  {
+    "rule": "Microsoft Dynamics 365",
+    "severity": "high",
+    "problem": "HTML /dynamics\\.com/ trifft \"bostondynamics.com\" und jeden Link auf \"dynamics.com\" (Footer, Partnerlogos). Regel ist html-only → immer weak, aber in Building Block CRM.",
+    "proposedFix": {
+      "field": "html",
+      "replace": "/dynamics\\.com/",
+      "with": "/[\\w-]+\\.crm\\d*\\.dynamics\\.com|mktdplp102cdn\\.azureedge\\.net|cxppusa1formui01cdnsa01-endpoint\\.azureedge\\.net|d365mktformloader/"
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "[\\w-]+\\.crm\\d*\\.dynamics\\.com|d365mktformloader",
+      "shouldMatch": [
+        "src=\"https://acme.crm4.dynamics.com/WebResources/x.js\"",
+        "data-form-loader=\"d365mktformloader\""
+      ],
+      "shouldNotMatch": [
+        "href=\"https://www.bostondynamics.com/\"",
+        "href=\"https://dynamics.microsoft.com\""
+      ]
+    }
+  },
+  {
+    "rule": "Salesforce",
+    "severity": "medium",
+    "problem": "scriptSrc/html /force\\.com/ trifft \"workforce.com\", \"salesforce.com\"-Marketingseiten und Footer-Links; Live-Agent-Skripte (service.force.com/embeddedservice) landen bei \"Salesforce\" statt bei \"Salesforce Live Agent / Messaging\".",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/force\\.com/",
+      "with": "/(^|[\\/.])[\\w-]+\\.(my\\.)?(site|salesforce-sites|lightning)\\.force\\.com\\/|(^|[\\/.])[\\w-]+\\.my\\.salesforce\\.com\\/|(^|[\\/.])[\\w-]+\\.my\\.site\\.com\\//",
+      "html": "Links auf salesforce.com/force.com entfernen"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|[\\/.])[\\w-]+\\.(my\\.)?(site|salesforce-sites|lightning)\\.force\\.com\\/|(^|[\\/.])[\\w-]+\\.my\\.salesforce\\.com\\/|(^|[\\/.])[\\w-]+\\.my\\.site\\.com\\/",
+      "shouldMatch": [
+        "https://acme.my.site.com/x",
+        "https://acme.lightning.force.com/lightning/lightning.out.js",
+        "https://acme.my.salesforce.com/x.js"
+      ],
+      "shouldNotMatch": [
+        "https://cdn.myworkforce.com/js/app.js",
+        "https://service.force.com/embeddedservice/5.0/esw.min.js"
+      ]
+    }
+  },
+  {
+    "rule": "Google Ads",
+    "severity": "medium",
+    "problem": "scriptSrc /pagead2\\.googlesyndication/ ist AdSense (Publisher-Monetarisierung), nicht Google Ads (Advertiser). Cookie _gcl_au setzt auch der GA4-Conversion-Linker ohne Ads-Konto.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "remove": "/pagead2\\.googlesyndication/",
+      "moveTo": "neue Regel \"Google AdSense\" (Advertising) mit /pagead2\\.googlesyndication\\.com\\/pagead\\/js\\/adsbygoogle\\.js/ und html /data-ad-client=\"ca-pub-/",
+      "cookies": "_gcl_au nur in Kombination (nicht als Einzelsignal) werten"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "url": "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1",
+      "expect": "Google AdSense",
+      "expectNot": "Google Ads"
+    }
+  },
+  {
+    "rule": "Tealium AudienceStream",
+    "severity": "medium",
+    "problem": "Patterns /tags\\.tiqcdn\\.com/ und /tealium/ sind Tealium-iQ-Belege → jede iQ-Seite meldet zusätzlich die CDP AudienceStream (Building Block CDP!).",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": [
+        "/tags\\.tiqcdn\\.com/",
+        "/tealium/"
+      ],
+      "with": {
+        "requests": [
+          "/collect\\.tealiumiq\\.com\\/(event|[\\w-]+\\/[\\w-]+\\/[\\w-]+\\/i\\.gif)/",
+          "/visitor-service[\\w.-]*\\.tealiumiq\\.com\\//"
+        ]
+      }
+    },
+    "testCase": {
+      "field": "requests",
+      "pattern": "visitor-service[\\w.-]*\\.tealiumiq\\.com\\/",
+      "shouldMatch": [
+        "https://visitor-service-eu-central-1.tealiumiq.com/acme/main/123"
+      ],
+      "shouldNotMatch": [
+        "https://tags.tiqcdn.com/utag/acme/main/prod/utag.js"
+      ]
+    }
+  },
+  {
+    "rule": "Stimulus (Hotwire)",
+    "severity": "medium",
+    "problem": "HTML /data-action/ und /data-controller/ sind generische Data-Attribute (Analytics-Tracking, eigene Komponenten); Korpus 3/3 falsch (allianz \"data-action-special\", nike \"data-action-hashkeys\", ergo \"data-action=\\\"search\\\"\"). scriptSrc /stimulus/ und /hotwire/ ohne Anker.",
+    "proposedFix": {
+      "field": "html",
+      "replace": [
+        "/data-controller/",
+        "/data-action/"
+      ],
+      "with": "/data-action=\"[\\w-]+->[\\w-]+#[\\w-]+\"/",
+      "scriptSrc": "/@hotwired\\/stimulus|(^|\\/)stimulus(\\.umd)?(\\.min)?\\.js/"
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "data-action=\"[\\w-]+->[\\w-]+#[\\w-]+\"",
+      "shouldMatch": [
+        "<button data-action=\"click->hello#greet\">"
+      ],
+      "shouldNotMatch": [
+        "data-action=\"search\"",
+        "data-action-special=\"{}\"",
+        "data-action-hashkeys=\"a4e7\""
+      ]
+    }
+  },
+  {
+    "rule": "Tailwind CSS",
+    "severity": "medium",
+    "problem": "HTML-Heuristik flex…items-center trifft Bootstrap-Utilities \"d-flex align-items-center\" (techcrunch) und beliebige BEM-Klassen; bg-\\w+-\\d{3} ist ebenfalls generisch.",
+    "proposedFix": {
+      "field": "html",
+      "replace": "/class=\"[^\"]*\\bflex\\b[^\"]*\\bitems-center\\b/",
+      "with": "/class=\"[^\"]*(?<![\\w-])(sm|md|lg|xl):[\\w-]+[^\"]*(?<![\\w-])(px|py|mx|my)-\\d/",
+      "note": "nur zusammen mit 2. Signal (z. B. /--tw-/ in inline CSS) als nicht-weak werten"
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "--tw-[\\w-]+:",
+      "shouldMatch": [
+        "<style>*,:before{--tw-border-spacing-x:0}</style>"
+      ],
+      "shouldNotMatch": [
+        "<div class=\"d-flex-inline align-items-center gap-16\">"
+      ]
+    }
+  },
+  {
+    "rule": "Bulma",
+    "severity": "medium",
+    "problem": "HTML /class=\"[^\"]*\\bhero\\b[^\"]*\\bis-/ trifft WordPress-Klassen wie \"hero-ad-container … is-layout-flow\" (techcrunch); columns…column mit .* backtrackt.",
+    "proposedFix": {
+      "field": "html",
+      "replace": "beide Heuristiken",
+      "with": [
+        "/bulma(\\.min)?\\.css/",
+        "/class=\"[^\"]*\\bcolumns\\b[^\"]*\\bis-(multiline|mobile|desktop|gapless|centered)\\b/"
+      ]
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "bulma(\\.min)?\\.css|class=\"[^\"]*\\bcolumns\\b[^\"]*\\bis-(multiline|mobile|desktop|gapless|centered)\\b",
+      "shouldMatch": [
+        "<link href=\"/css/bulma.min.css\">",
+        "<div class=\"columns is-multiline\">"
+      ],
+      "shouldNotMatch": [
+        "<div class=\"wp-block-group hero-ad-container has-gray-100-background-color has-background is-layout-flow\">"
+      ]
+    }
+  },
+  {
+    "rule": "Alpine.js",
+    "severity": "medium",
+    "problem": "HTML /@click/ ist auch Vue-Kurzsyntax (allbirds = Vue); /x-data/ trifft \"box-data\"/\"x-data-layer\"; scriptSrc /alpine/ trifft \"alpine-skiing.js\" und Hostnamen \"alpine.*\".",
+    "proposedFix": {
+      "field": "html",
+      "replace": [
+        "/x-data/",
+        "/@click/"
+      ],
+      "with": "/\\sx-data(=|\\s|>)/",
+      "scriptSrc": "/(^|[\\/@])alpinejs(@[\\d.]+)?\\/|(^|\\/)alpine(js)?(\\.min)?\\.js/"
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "\\sx-data(=|\\s|>)",
+      "shouldMatch": [
+        "<div x-data=\"{ open: false }\">"
+      ],
+      "shouldNotMatch": [
+        "<div data-box-data=\"1\">",
+        "<button @click='handleSkip'>",
+        "<div class=\"x-data-layer\">"
+      ]
+    }
+  },
+  {
+    "rule": "Turbo (Hotwire)",
+    "severity": "medium",
+    "problem": "scriptSrc /turbo/ trifft \"turbopack\" (Vercel/Next.js), \"turbotax\", \"turbo-charger\"; Vercel wird als Hotwire erkannt.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/turbo/",
+      "with": "/@hotwired\\/turbo|(^|\\/)turbo(\\.es2017-(esm|umd))?(\\.min)?\\.js(\\?|$)/"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "@hotwired\\/turbo|(^|\\/)turbo(\\.es2017-(esm|umd))?(\\.min)?\\.js(\\?|$)",
+      "shouldMatch": [
+        "https://cdn.jsdelivr.net/npm/@hotwired/turbo@8/dist/turbo.es2017-umd.js"
+      ],
+      "shouldNotMatch": [
+        "https://vercel.com/_next/static/chunks/turbopack-0mml176l.js",
+        "https://turbotax.intuit.com/app.js",
+        "/js/turbo-charger-configurator.js"
+      ]
+    },
+    "evidence": "Korpus vercel: Next.js + Turbo (Hotwire) auf turbopack-Chunk"
+  },
+  {
+    "rule": "Snowplow",
+    "severity": "medium",
+    "problem": "scriptSrc /(^|\\/)sp(\\.min)?\\.js/ trifft SharePoint \"/_layouts/15/sp.js\"; Cookie-Präfix _sp_ teilt sich Snowplow mit Sourcepoint (_sp_v1_*, _sp_su).",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/(^|\\/)sp(\\.min)?\\.js(\\?|$)/",
+      "with": "/(^|\\/)sp(\\.min)?\\.js(\\?|$)(?<!_layouts\\/\\d+\\/sp\\.js)/",
+      "cookies": "_sp_ → _sp_id. und _sp_ses. (Präfix mit Punkt, s. Engine-Fix)"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "url": "https://www.example.com/_layouts/15/sp.js",
+      "expectNot": "Snowplow"
+    }
+  },
+  {
+    "rule": "Treasure Data",
+    "severity": "medium",
+    "problem": "scriptSrc /(^|\\/)td(\\.min)?\\.js/ und Cookie _td sind generisch (td = \"table data\", \"today\", Tradedoubler).",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/(^|\\/)td(\\.min)?\\.js(\\?|$)/",
+      "with": "/cdn\\.treasuredata\\.com\\/sdk\\/[\\d.]+\\/td(\\.min)?\\.js/",
+      "cookies": "_td → _td_global (eigener Cookie)"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "cdn\\.treasuredata\\.com\\/sdk\\/[\\d.]+\\/td(\\.min)?\\.js",
+      "shouldMatch": [
+        "https://cdn.treasuredata.com/sdk/4.0/td.min.js"
+      ],
+      "shouldNotMatch": [
+        "https://www.example.com/js/td.js"
+      ]
+    }
+  },
+  {
+    "rule": "Adobe Experience Manager Assets",
+    "severity": "medium",
+    "problem": "HTML /\\/content\\/dam\\// ist identisch mit dem AEM-Sites-Pattern → jede AEM-Sites-Seite meldet zusätzlich AEM Assets (Korpus 3/3, DB 4/5, immer weak). /content/dam ist das JCR-Repository von AEM Sites, kein Assets-Lizenzbeleg.",
+    "proposedFix": {
+      "field": "html",
+      "remove": "/\\/content\\/dam\\//",
+      "add": [
+        "/\\/is\\/image\\/|\\/is\\/content\\//",
+        "/scene7\\.com\\/is\\//",
+        "/\\/adobe\\/dynamicmedia\\/deliver\\//"
+      ],
+      "note": "Dynamic Media / Assets-Delivery-API als stärkeres Signal"
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "\\/adobe\\/dynamicmedia\\/deliver\\/|scene7\\.com\\/is\\/",
+      "shouldMatch": [
+        "src=\"https://delivery-p123-e456.adobeaemcloud.com/adobe/dynamicmedia/deliver/urn:aaid:aem:x/a.webp\""
+      ],
+      "shouldNotMatch": [
+        "content=\"https://www.allianz.de/content/dam/onemarketing/x.png\""
+      ]
+    }
+  },
+  {
+    "rule": "Cookie-Engine (Präfix-Cookies)",
+    "severity": "medium",
+    "problem": "customDetect behandelt nur Cookies mit abschließendem \"_\" als Präfix. \"PrestaShop-\", \"intercom-\" (Intercom) und \"scarab.\" (Emarsys) werden exakt verglichen und feuern nie.",
+    "proposedFix": {
+      "field": "engine",
+      "change": "Präfix-Erkennung auf /[_.-]$/ erweitern oder explizite Syntax { prefix: \"intercom-\" } einführen"
+    },
+    "testCase": {
+      "field": "cookies",
+      "cookies": {
+        "intercom-id-abc123": "x"
+      },
+      "expect": "Intercom"
+    }
+  },
+  {
+    "rule": "Google Marketing Platform",
+    "severity": "medium",
+    "problem": "gtag-Loader mit DC-ID (googletagmanager.com/gtag/js?id=DC-…) wird nicht erkannt (nur HTML-ID und Floodlight-Requests). Analog zum GA4/AW-Fix.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "add": "/googletagmanager\\.com\\/gtag\\/js\\?id=DC-/"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "googletagmanager\\.com\\/gtag\\/js\\?id=DC-",
+      "shouldMatch": [
+        "https://www.googletagmanager.com/gtag/js?id=DC-1234567"
+      ],
+      "shouldNotMatch": [
+        "https://www.googletagmanager.com/gtag/js?id=G-ABC"
+      ]
+    }
+  },
+  {
+    "rule": "Klarna",
+    "severity": "medium",
+    "problem": "HTML /klarna/i trifft Payment-Logos/Labels im Footer (ikea aria-label=\"Klarna\", stripe Übersetzungsstring). Das ist eher Zahlungsart-Angebot als Integration; Klarna-CDN klarnacdn.net fehlt.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "add": "/(^|[\\/.])(x\\.|js\\.)?klarnacdn\\.net\\/|(^|[\\/.])klarnaservices\\.com\\//",
+      "html": "/klarna/i → /klarna-(payments|placement|osm)|<klarna-placement/"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|[\\/.])(x\\.|js\\.)?klarnacdn\\.net\\/|(^|[\\/.])klarnaservices\\.com\\/",
+      "shouldMatch": [
+        "https://x.klarnacdn.net/kp/lib/v1/api.js",
+        "https://eu-library.klarnaservices.com/lib.js"
+      ],
+      "shouldNotMatch": [
+        "aria-label=\"Klarna\""
+      ]
+    }
+  },
+  {
+    "rule": "Facebook / Meta Pixel",
+    "severity": "medium",
+    "problem": "scriptSrc /connect\\.facebook\\.net/ trifft auch das Social-SDK (sdk.js, Like-Button/Login) → Meta Pixel ohne fbevents.js.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/connect\\.facebook\\.net/",
+      "with": "/connect\\.facebook\\.net\\/[\\w_]+\\/fbevents\\.js|connect\\.facebook\\.net\\/signals\\//",
+      "moveTo": "sdk.js → Regel \"Facebook SDK\" (Social)"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "connect\\.facebook\\.net\\/[\\w_]+\\/fbevents\\.js|connect\\.facebook\\.net\\/signals\\/",
+      "shouldMatch": [
+        "https://connect.facebook.net/en_US/fbevents.js"
+      ],
+      "shouldNotMatch": [
+        "https://connect.facebook.net/de_DE/sdk.js"
+      ]
+    }
+  },
+  {
+    "rule": "HubSpot CMS / CRM / Marketing",
+    "severity": "medium",
+    "problem": "Alle drei Regeln feuern auf js.hubspot.com bzw. js.hs-scripts.com (Tracking-Code) → ein Tracking-Skript erzeugt drei Produkte; HubSpot CRM zusätzlich mit HTML /hubspot/i (techcrunch \"hubspotPortalId\").",
+    "proposedFix": {
+      "field": "rules",
+      "change": "Tracking-Code (js.hs-scripts.com, js.hs-analytics.net, track.hubspot.com) nur → \"HubSpot Marketing\"; CMS nur über Header x-hs-hub-id / x-powered-by=HubSpot bzw. hs-sites/hubfs; CRM-Regel nur über Chat/Meetings (js.usemessages.com, meetings.hubspot.com). HTML /hubspot/i streichen."
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "url": "https://js.hs-scripts.com/123456.js",
+      "expect": "HubSpot Marketing",
+      "expectNot": [
+        "HubSpot CRM",
+        "HubSpot CMS"
+      ]
+    }
+  },
+  {
+    "rule": "Doppelte Regeln (Qubit, Coveo, Emarsys, Insider, Mixpanel, Lotame)",
+    "severity": "medium",
+    "problem": "Paare mit identischem Signal: Qubit/Qubit (now Coveo), Coveo/Coveo Search, Emarsys/Emarsys Personalization, Insider/Insider CDP, Mixpanel/Mixpanel CDP, Lotame/Lotame Panorama ID. Ein Signal → zwei Produkte, Zählung und Building Blocks doppelt.",
+    "proposedFix": {
+      "field": "rules",
+      "change": "je Paar eine Regel behalten, Zweitname als alias in canonicalNames; Mehrfach-Kategorien über categories[] statt Zweitregel"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "url": "https://cdn.useinsider.com/acme/ins.js",
+      "expectExactlyOneOf": [
+        "Insider",
+        "Insider CDP"
+      ]
+    }
+  },
+  {
+    "rule": "Oracle Data Cloud",
+    "severity": "medium",
+    "problem": "scriptSrc /addthis\\.com/ (AddThis wurde 2023 eingestellt) dupliziert die AddThis-Regel; ODC/BlueKai selbst ist ebenfalls abgekündigt.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "remove": "/addthis\\.com/",
+      "metadata": "deprecated: true, sunset: 2023"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "url": "https://s7.addthis.com/js/300/addthis_widget.js",
+      "expectNot": "Oracle Data Cloud"
+    }
+  },
+  {
+    "rule": "Cookie-Kollisionen (_lr_, mp_, ins_)",
+    "severity": "medium",
+    "problem": "Gleiches Cookie-Präfix in mehreren Regeln: _lr_ (LiveRamp vs. LogRocket), mp_ (Mixpanel/Mixpanel CDP), ins_ (Insider/Insider CDP). Cookie-Signal ist 84 % stark → Fehlzuordnung mit hoher Konfidenz.",
+    "proposedFix": {
+      "field": "cookies",
+      "change": "LiveRamp: _lr_env, _lr_retry_request, _lr_geo_location; LogRocket: _lr_hb_, _lr_tabs_, _lr_uf_ (spezifische Präfixe), Mixpanel: mp_<32hex>_mixpanel per Regex"
+    },
+    "testCase": {
+      "field": "cookies",
+      "cookies": {
+        "_lr_env": "x"
+      },
+      "expect": "LiveRamp",
+      "expectNot": "LogRocket"
+    }
+  },
+  {
+    "rule": "Generische HTML-Wörter (CMS/Commerce/MarTech)",
+    "severity": "medium",
+    "problem": "49 Regeln matchen ein nacktes Produktwort mit /i im gesamten HTML (sitecore, strapi, tridion, hybris, oxid, magnolia, marketo, eloqua, pardot, algolia, adyen, mollie …). Jede Erwähnung in Text, Links, Jobanzeigen oder Kundenreferenzen erzeugt einen Treffer (Korpus: sap «hybris.com», techcrunch «isWooCommerceBlocksEnabled», guardian «omnitureAmpAccount»). \"oxid\" trifft \"oxide/dioxide\", \"magnolia\" ist ein Blumenname.",
+    "proposedFix": {
+      "field": "html",
+      "change": "Wort-Patterns durch technische Artefakte ersetzen: Pfade (/-/media/ für Sitecore, /sitefiles/, /_next/…), Generator-Meta, Cookie-/Header-Belege, Script-Hosts mit Anker. Mindestens in href/src-Kontext einschränken: /(src|href)=\"[^\"]*sitecore/i"
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "<meta[^>]+name=\"generator\"[^>]+content=\"[^\"]*OXID",
+      "shouldMatch": [
+        "<meta name=\"generator\" content=\"OXID eShop 7.0\">"
+      ],
+      "shouldNotMatch": [
+        "Titandioxid in Lebensmitteln",
+        "<p>carbon dioxide</p>"
+      ]
+    }
+  },
+  {
+    "rule": "Adobe-Erwähnungs-Regeln (AJO, CJA, Adobe Sign, Workfront, GenStudio)",
+    "severity": "medium",
+    "problem": "HTML-Patterns /journey-optimizer/, /cja\\.adobe\\.com/, /adobe\\.com\\/sign/, /workfront\\.com/, /genstudio/ sind Links bzw. Erwähnungen, keine Implementierungsbelege. Besonders kritisch, weil Adobe-Produkte im Report hervorgehoben werden.",
+    "proposedFix": {
+      "field": "html",
+      "change": "nur technische Belege: AJO → requests auf *.adobe.io/…/ajo bzw. Web-SDK-Propositions mit \"scopeDetails.decisionProvider\":\"AJO\"; Adobe Sign → iframe-src *.adobesign.com|echosign.com; Rest als \"Hinweis\" statt Detection"
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "<iframe[^>]+src=\"https:\\/\\/[\\w.-]*(adobesign|echosign)\\.com\\/",
+      "shouldMatch": [
+        "<iframe src=\"https://secure.eu1.adobesign.com/public/esignWidget?wid=1\">"
+      ],
+      "shouldNotMatch": [
+        "<a href=\"https://www.adobe.com/sign.html\">Adobe Sign</a>"
+      ]
+    }
+  },
+  {
+    "rule": "Fehlende Vendor-Hosts (Gap-Probes)",
+    "severity": "medium",
+    "problem": "24 von 190 kuratierten Vendor-URLs werden nicht erkannt: LogRocket (cdn.lr-ingest.io), Sentry (js.sentry-cdn.com), Datadog RUM (datadoghq-browser-agent.com), Kameleoon (*.kameleoon.eu), Convert (convertexperiments.com), Emarsys (scarabresearch.com), Sourcepoint (privacy-mgmt.com), Pinterest (s.pinimg.com/ct/core.js), Reddit (redditstatic.com/ads/pixel.js), Awin (dwin1.com), Eloqua (en25.com), SFMC (exacttargetapis.com), Cordial, Genesys (mypurecloud.*), Klarna (klarnacdn.net), PerimeterX (px-cloud.net), Brightcove (players.brightcove.net), YouTube iframe_api, Contentful/Sanity/DatoCMS/Imgix nur als scriptSrc-/Asset-URL.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "add": [
+        "/(^|[\\/.])lr-ingest\\.(io|com)\\//",
+        "/(^|[\\/.])js\\.sentry-cdn\\.com\\//",
+        "/datadoghq-browser-agent\\.com\\//",
+        "/(^|[\\/.])[\\w-]+\\.kameleoon\\.(eu|io)\\//",
+        "/convertexperiments\\.com\\//",
+        "/scarabresearch\\.com\\//",
+        "/(^|[\\/.])privacy-mgmt\\.com\\//",
+        "/s\\.pinimg\\.com\\/ct\\/core\\.js/",
+        "/redditstatic\\.com\\/ads\\/pixel\\.js/",
+        "/(^|[\\/.])dwin1\\.com\\//",
+        "/(^|[\\/.])en25\\.com\\//",
+        "/exacttargetapis\\.com\\//",
+        "/mypurecloud\\.(com|de|ie|jp|com\\.au)\\//",
+        "/(^|[\\/.])px-cloud\\.net\\//",
+        "/players\\.brightcove\\.net\\//",
+        "/youtube\\.com\\/iframe_api/"
+      ]
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "urls": [
+        "https://cdn.lr-ingest.io/LogRocket.min.js",
+        "https://s.pinimg.com/ct/core.js",
+        "https://client.px-cloud.net/PX123/main.min.js"
+      ],
+      "expect": [
+        "LogRocket",
+        "Pinterest Tag",
+        "PerimeterX / HUMAN"
+      ]
+    }
+  },
+  {
+    "rule": "Generische Cookie-Präfixe",
+    "severity": "low",
+    "problem": "2-Buchstaben-Präfixe et_, tc_, uc_, dm_, ld_, ph_, mf_, wt_, km_, uv_, TD_ treffen beliebige First-Party-Cookies (z. B. \"uc_settings\", \"tc_layout\", \"ld_session\").",
+    "proposedFix": {
+      "field": "cookies",
+      "change": "auf konkrete Cookie-Namen umstellen (etracker: et_coid, et_allow_cookies; Usercentrics: uc_user_interaction, uc_settings; PostHog: ph_<key>_posthog per Regex; Mouseflow: mf_<uuid>)"
+    },
+    "testCase": {
+      "field": "cookies",
+      "cookies": {
+        "uc_layout": "x"
+      },
+      "expectNot": "Usercentrics"
+    }
+  },
+  {
+    "rule": "Fastly",
+    "severity": "low",
+    "problem": "Header via=/varnish/ trifft jedes selbst gehostete Varnish (viele Verlags-/Shop-Setups).",
+    "proposedFix": {
+      "field": "headers",
+      "remove": "via=/varnish/",
+      "keep": [
+        "x-served-by=/cache-/",
+        "x-fastly-request-id"
+      ]
+    },
+    "testCase": {
+      "field": "headers",
+      "headers": {
+        "via": "1.1 varnish (Varnish/7.4)"
+      },
+      "expectNot": "Fastly"
+    }
+  },
+  {
+    "rule": "Google Cloud CDN",
+    "severity": "low",
+    "problem": "Header via=/google/ ist der Google Front End / Cloud Load Balancer (auch ohne CDN, z. B. Cloud Run, App Engine); server=/gws/ ist Googles eigener Webserver. Korpus: spiegel \"via: 1.1 google\".",
+    "proposedFix": {
+      "field": "headers",
+      "change": "Name auf \"Google Cloud (Load Balancer)\" ändern oder als CDN nur bei Header \"x-goog-*\"/\"age\" + \"cache-control: public\" werten"
+    },
+    "testCase": {
+      "field": "headers",
+      "headers": {
+        "via": "1.1 google"
+      },
+      "expect": "Google Cloud (Load Balancer)"
+    }
+  },
+  {
+    "rule": "Payment-Logo-Regeln (Apple Pay, Google Pay, PayPal, Stripe)",
+    "severity": "low",
+    "problem": "HTML /apple-pay/, /google-pay/, Links auf paypal.com/stripe.com treffen Footer-Zahlungslogos (\"apple-pay.svg\") und Preconnect-Hints; Stripe matcht auf eigener Domain-Prefetch.",
+    "proposedFix": {
+      "field": "html",
+      "change": "Logo-Dateinamen ausschließen; Apple Pay nur über /ApplePaySession/ bzw. <apple-pay-button>, Google Pay über pay.google.com/gp/p/js/pay.js, Stripe über js.stripe.com/v3"
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "ApplePaySession|<apple-pay-button",
+      "shouldMatch": [
+        "if (window.ApplePaySession) {"
+      ],
+      "shouldNotMatch": [
+        "<img src=\"/payment-providers/apple-pay.svg\" alt=\"Apple Pay\">"
+      ]
+    }
+  },
+  {
+    "rule": "Prebid.js",
+    "severity": "low",
+    "problem": "scriptSrc /prebid/ trifft \"prebidding-calculator.js\" und beliebige Pfade.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "replace": "/prebid/",
+      "with": "/(^|[\\/.-])prebid([\\d.]+)?(\\.min)?\\.js|\\/prebid\\/|cdn\\.jsdelivr\\.net\\/npm\\/prebid\\.js/"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|[\\/.-])prebid([\\d.]+)?(\\.min)?\\.js|\\/prebid\\/",
+      "shouldMatch": [
+        "https://cdn.example.com/prebid/prebid8.40.0.js",
+        "/js/prebid.min.js"
+      ],
+      "shouldNotMatch": [
+        "/js/prebidding-calculator.js"
+      ]
+    }
+  },
+  {
+    "rule": "Generische scriptSrc-Wörter (Gatsby, Svelte, Preact, Countly, Klaro, Borlabs, Typesense, Metrika, mPulse)",
+    "severity": "low",
+    "problem": "scriptSrc-Patterns ohne Pfad-/Dateigrenze (/gatsby/, /svelte/, /countly/, /klaro/, /borlabs/, /typesense/, /metrika/, /mpulse/) treffen Dateinamen wie \"gatsby-the-great-promo.js\", \"mpulse-heart-rate.js\".",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "change": "Muster als Datei-/Paketgrenze formulieren: /(^|[\\/@])NAME([\\/@.-]|$)/ und nach Möglichkeit Host verankern (mc.yandex.ru/metrika/, s.go-mpulse.net/boomerang/)"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|\\/\\/|\\.)s\\.go-mpulse\\.net\\/boomerang\\/",
+      "shouldMatch": [
+        "https://s.go-mpulse.net/boomerang/ABCDE-12345"
+      ],
+      "shouldNotMatch": [
+        "/js/mpulse-heart-rate.js"
+      ]
+    }
+  },
+  {
+    "rule": "Unverankerte Domain-Patterns (impact.com, convert.com, shape.com, oath.com, checkout.com, shop.app)",
+    "severity": "low",
+    "problem": "Domain-Regexe ohne linken Anker treffen längere Hostnamen: \"socialimpact.com\"→Impact, \"unitconvert.com\"→Convert, \"onshape.com\"→Shape Security, \"shop.app.example.com\"→Shop Pay, \"checkout.com-bridge.js\"→Checkout.com.",
+    "proposedFix": {
+      "field": "scriptSrc",
+      "change": "Einheitlich /(^|\\/\\/|\\.)DOMAIN\\.TLD(\\/|:|$)/ verwenden (Helper host(\"impact.com\") in den Regeln)"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "(^|\\/\\/|\\.)shape\\.com(\\/|:|$)",
+      "shouldMatch": [
+        "https://cdn.shape.com/x.js"
+      ],
+      "shouldNotMatch": [
+        "https://www.onshape.com/js/app.js"
+      ]
+    }
+  },
+  {
+    "rule": "Evergage / Salesforce Interaction Studio",
+    "severity": "low",
+    "problem": "signalLayers hängt /\\.evergage\\.com\\// und /\\.evgnet\\.com\\// erneut an, obwohl die Regel sie schon enthält → doppelte Patterns (doppelte Evidenz-Einträge, doppelte Laufzeit).",
+    "proposedFix": {
+      "field": "signalLayers",
+      "change": "Merge dedupliziert per String(re); Patterns aus signalLayers entfernen"
+    },
+    "testCase": {
+      "field": "requests",
+      "url": "https://acme.us-5.evgnet.com/api2/event/x",
+      "expectEvidenceCount": 1
+    }
+  },
+  {
+    "rule": "Nuxt.js",
+    "severity": "low",
+    "problem": "HTML /nuxt/ trifft Text/Links wie \"frameworks/full-stack/nuxt\" (vercel).",
+    "proposedFix": {
+      "field": "html",
+      "remove": "/nuxt/",
+      "keep": [
+        "/__NUXT__/",
+        "/_nuxt\\//"
+      ],
+      "add": [
+        "/<div id=\"__nuxt\"/"
+      ]
+    },
+    "testCase": {
+      "field": "html",
+      "pattern": "__NUXT__|\\/_nuxt\\/|<div id=\"__nuxt\"",
+      "shouldMatch": [
+        "<div id=\"__nuxt\">",
+        "src=\"/_nuxt/entry.js\""
+      ],
+      "shouldNotMatch": [
+        "href=\"/frameworks/full-stack/nuxt\""
+      ]
+    }
+  },
+  {
+    "rule": "React",
+    "severity": "low",
+    "problem": "HTML /__NEXT_DATA__/ ist bereits Next.js-Signal (cross-rule-Duplikat) und /react-app/ ist generisch (CRA-Klassenname, beliebige IDs).",
+    "proposedFix": {
+      "field": "html",
+      "remove": [
+        "/__NEXT_DATA__/",
+        "/react-app/"
+      ],
+      "note": "React-Ableitung aus Next.js über impliziertes \"implies: [React]\" statt Pattern-Duplikat"
+    },
+    "testCase": {
+      "field": "html",
+      "html": "<div id=\"react-app-root\">",
+      "expectNot": "React"
+    }
+  },
+  {
+    "rule": "Version-Extraktion",
+    "severity": "low",
+    "problem": "Nur 13 Regeln liefern Versionen (versionExtractor \"Nginx\" ist toter Code ohne Regel). Leicht extrahierbar: Bootstrap/jQuery/Svelte/Prebid aus Dateinamen, Drupal/Joomla/TYPO3/Shopware aus meta generator, Launch-turbineVersion, OneTrust otSDKStub-Version.",
+    "proposedFix": {
+      "field": "detector",
+      "change": "Rule-Feld version: { scriptSrc: /bootstrap@([\\d.]+)/, meta: { generator: /Drupal (\\d+)/ } } einführen; Extractor pro Regel statt globaler Tabelle"
+    },
+    "testCase": {
+      "field": "scriptSrc",
+      "pattern": "svelte\\/(\\d+\\.\\d+\\.\\d+)\\/",
+      "shouldMatch": [
+        "https://static.otto.de/assets-static/global-resources/modules/svelte/5.57.1/runtime/disclose-version.js"
+      ],
+      "shouldNotMatch": [
+        "/svelte-like-carousel.js"
+      ]
+    }
+  },
+  {
+    "rule": "Gespeicherte Analysen mit Alt-Namen",
+    "severity": "low",
+    "problem": "DB enthält Erkennungen mit Namen, die keine aktuelle Regel mehr haben (\"Google Analytics\", \"Adobe Experience Platform Launch\", \"Tealium\") → Vergleiche (stackHistory, Diff) zeigen Phantom-Wechsel.",
+    "proposedFix": {
+      "field": "canonicalNames",
+      "change": "Alt-Namen als Aliase eintragen und beim Laden normalisieren"
+    },
+    "testCase": {
+      "field": "canonical",
+      "input": "Adobe Experience Platform Launch",
+      "expect": "Adobe Experience Platform Tags (Launch)"
+    }
+  }
+]

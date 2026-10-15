@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { apiRequest, ApiError, isAbortError, toErrorMessage } from '../lib/apiClient';
+import { apiErrorFromResponse, apiRequest, isAbortError, toErrorMessage, toNetworkError } from '../lib/apiClient';
 import type { FeedbackEntry } from '../types/parity';
 
 type Status = NonNullable<FeedbackEntry['status']>;
@@ -18,15 +18,17 @@ function ratingIcon(r?: -1 | 0 | 1): string {
 
 /** PATCH ist im zentralen apiRequest nicht vorgesehen – daher hier ein schlanker fetch mit gleichem Fehlerformat. */
 async function patchStatus(id: number, status: Status, token: string): Promise<void> {
-  const res = await fetch(`/api/feedback/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ status }),
-  });
-  if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string; details?: unknown };
-    throw new ApiError(res.status, data.error || `Request failed (HTTP ${res.status})`, data.code, data.details);
+  let res: Response;
+  try {
+    res = await fetch(`/api/feedback/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status }),
+    });
+  } catch (err) {
+    throw toNetworkError(err);
   }
+  if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
 export default function FeedbackList({ token }: FeedbackListProps) {

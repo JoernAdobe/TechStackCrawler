@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { ArrowLeft, Ban, Check, FileDown, FileSpreadsheet, X } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { ArrowLeft, Ban, Check, FileDown, FileSpreadsheet, FileText, X } from 'lucide-react';
 import type { BatchJob, BatchStatus } from '../types/parity';
 import { apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
+import { downloadBatchXlsx } from '../lib/batchExcel';
 import SolutionMatrix from './SolutionMatrix';
+import AccountDashboard from './AccountDashboard';
 
 const POLL_MS = 3000;
 
@@ -28,53 +29,39 @@ export function StatusPill({ status }: { status: string }) {
   );
 }
 
-function downloadXlsx(batch: BatchJob) {
-  const wb = XLSX.utils.book_new();
-  const matrix = batch.matrix;
-  if (matrix) {
-    const mapping = matrix.columns.map((col, i) => {
-      const row: Record<string, string> = { URL: col.url, Label: col.label ?? '' };
-      for (const r of matrix.rows) {
-        row[r.buildingBlock] = r.cells[i].solutions
-          .map((s) => (s.weak ? `${s.name} (unverified)` : s.name))
-          .join(' | ');
-      }
-      return row;
-    });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapping), 'Solution Mapping');
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.json_to_sheet(
-        matrix.keyFindings.map((k) => ({
-          'Building Block': k.buildingBlock,
-          Code: k.code,
-          Solutions: k.solutions.join(' | '),
-          Findings: k.findings.join(' '),
-        })),
-      ),
-      'Key Findings',
-    );
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.json_to_sheet(matrix.otherTechnologies.map((t) => ({ Technology: t }))),
-      'Other Technologies',
-    );
-  }
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.json_to_sheet(
-      (batch.items ?? []).map((it) => ({
-        URL: it.url,
-        Label: it.label ?? '',
-        Status: it.status,
-        'Analysis ID': it.analysisId ?? '',
-        Error: it.error ?? '',
-      })),
-    ),
-    'URLs',
-  );
-  const base = (batch.accountName || batch.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  XLSX.writeFile(wb, `assessment-${base || batch.id}-${batch.id}.xlsx`);
+const SOURCE_NAMES: Record<string, string> = {
+  traffic: 'Tranco',
+  semrush: 'Semrush',
+  observepoint: 'ObservePoint',
+  mobileApps: 'Apps',
+  lighthouse: 'Lighthouse',
+  geo: 'GEO',
+  useCases: 'Use cases',
+  multiPage: 'Subpages',
+};
+
+function enrichmentSummary(batch: BatchJob): string {
+  const o = batch.enrichmentOptions;
+  if (!o) return '';
+  const on = Object.entries(SOURCE_NAMES)
+    .filter(([k]) => o[k as keyof typeof o] === true)
+    .map(([, v]) => v);
+  return on.length ? ` · Sources: ${on.join(', ')}` : '';
+}
+
+/** Kurzer Status der Enrichments eines Items (Tooltip mit Fehlern/Skips). */
+function itemSources(it: NonNullable<BatchJob['items']>[number]): { text: string; title: string } {
+  const e = it.enrichments;
+  if (!e) return { text: '', title: '' };
+  const parts: string[] = [];
+  if (e.traffic?.trancoRank) parts.push(`#${e.traffic.trancoRank.toLocaleString('en-US')}`);
+  if (e.lighthouse?.mobilePerformance !== undefined && e.lighthouse.mobilePerformance !== null) parts.push(`LH ${e.lighthouse.mobilePerformance}`);
+  if (e.geo) parts.push(`GEO ${e.geo.geoScore}`);
+  if (e.observepoint?.status === 'done' && e.observepoint.agreementRate !== null) parts.push(`OP ${Math.round(e.observepoint.agreementRate)}%`);
+  if (e.mobileApps?.count) parts.push(`${e.mobileApps.count} apps`);
+  const issues = [...Object.values(e.errors ?? {}), ...Object.entries(e.skipped ?? {}).map(([k, v]) => `${k}: ${v}`)];
+  if (issues.length) parts.push(`⚠ ${issues.length}`);
+  return { text: parts.join(' · '), title: issues.join('\n') };
 }
 
 export interface BatchDetailProps {
@@ -157,6 +144,7 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
               {batch.opportunityId && ` · Opp ${batch.opportunityId}`}
               {batch.lens && ` · Lens: ${batch.lens}`}
               {` · ${batch.aiAnalysis ? 'Full AI analysis' : 'Detection only'}`}
+              {enrichmentSummary(batch)}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -178,9 +166,12 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
             <a className={btn} href={`/api/batches/${batch.id}/export.csv`} download>
               <FileDown className="w-3.5 h-3.5" /> CSV
             </a>
-            <button className={btn} onClick={() => downloadXlsx(batch)} disabled={!batch.items?.length}>
+            <button className={btn} onClick={() => downloadBatchXlsx(batch)} disabled={!batch.items?.length}>
               <FileSpreadsheet className="w-3.5 h-3.5" /> XLSX
             </button>
+            <a className={btn} href={`/api/batches/${batch.id}/export.md`} download>
+              <FileText className="w-3.5 h-3.5" /> Markdown
+            </a>
             {renderExtraActions?.(batch)}
           </div>
         </div>
@@ -205,6 +196,8 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
         </div>
       </div>
 
+      {batch.accountView && <AccountDashboard view={batch.accountView} onOpenAnalysis={onOpenAnalysis} />}
+
       {batch.matrix && <SolutionMatrix matrix={batch.matrix} />}
 
       <section>
@@ -219,6 +212,7 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
                 <th className="text-left px-3 py-2">Status</th>
                 <th className="text-left px-3 py-2">Analysis</th>
                 <th className="text-left px-3 py-2">Technologies</th>
+                <th className="text-left px-3 py-2">Sources</th>
                 <th className="text-left px-3 py-2">Error</th>
               </tr>
             </thead>
@@ -243,6 +237,7 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
                     )}
                   </td>
                   <td className="px-3 py-2 text-ts-text-secondary">{it.detections ? it.detections.filter((d) => !d.weak).length : ''}</td>
+                  <td className="px-3 py-2 text-ts-text-secondary whitespace-nowrap" title={itemSources(it).title}>{itemSources(it).text}</td>
                   <td className="px-3 py-2 text-adobe-red">{it.error ?? ''}</td>
                 </tr>
               ))}

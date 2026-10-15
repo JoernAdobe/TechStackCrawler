@@ -1,0 +1,313 @@
+[
+  {
+    "name": "Adobe Marketo Engage",
+    "action": "improve",
+    "category": "ESP/Marketing Automation",
+    "signals": {
+      "cookies": ["_mkto_trk"]
+    },
+    "note": "Bestehende Regel (scriptSrc munchkin.marketo.net, mktoForms) erfasst Nutzung ohne Formular-Submit nicht robust genug; _mkto_trk ist das primäre 2-Jahres-Tracking-Cookie und erhöht Konfidenz deutlich.",
+    "sources": [
+      "https://experienceleague.adobe.com/en/docs/marketo/using/product-docs/admin/other-lead-tracking/munchkin-javascript-tracking",
+      "https://experienceleague.adobe.com/en/docs/marketo-developer/marketo/javascriptapi/leadtracking/api-reference"
+    ]
+  },
+  {
+    "name": "Adobe Dynamic Media",
+    "action": "improve",
+    "category": "DAM",
+    "signals": {
+      "requests": ["/cdn\\.adobe\\.com\\/dynamicmedia\\/assets\\//"],
+      "html": ["/cdn\\.adobe\\.com\\/dynamicmedia\\/assets\\//"]
+    },
+    "note": "Neue Dynamic-Media-OpenAPI-Delivery-Pfadstruktur ist von der bestehenden Scene7/klassischen Regel (.scene7.com, /adobe/dynamicmedia/deliver/) nicht abgedeckt.",
+    "sources": [
+      "https://experienceleague.adobe.com/en/docs/dynamic-media-developer-resources/dynamic-media-open-apis/dm-openapis/dynamic-media-open-apis-overview"
+    ]
+  },
+  {
+    "name": "AEM Edge Delivery Services",
+    "action": "add",
+    "category": "CMS",
+    "signals": {
+      "scriptSrc": ["/rum\\.hlx\\.(page|live)\\/\\.rum\\//", "/\\/scripts\\/aem\\.js$/"],
+      "requests": ["/\\.aem\\.(live|page)\\//", "/\\.hlx\\.(live|page)\\//"],
+      "html": ["/\\.aem\\.(live|page)\\//", "/\\.hlx\\.(live|page)\\//"]
+    },
+    "note": "Komplett neue Adobe-Produktkategorie (Edge Delivery Services / 'Helix'), aktuell in keiner Regel erfasst. Starkes Adobe-Displacement-Signal gegen Headless/JAMstack-Wettbewerber.",
+    "sources": [
+      "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/edge-delivery/overview",
+      "https://github.com/adobe/helix-rum-js"
+    ]
+  },
+  {
+    "name": "Sitecore XM Cloud",
+    "action": "improve",
+    "category": "CMS",
+    "signals": {
+      "requests": ["/edge\\.sitecorecloud\\.io\\/api\\/graphql\\//"],
+      "cookies": ["boxever", "boxever_id"],
+      "headers": { "sc_apikey": "/.*/"}
+    },
+    "note": "Bestehende Sitecore-Regel (hybris/_ui-artige Legacy-Marker gehören fälschlich zu SAP) deckt XM Cloud/Experience Edge und Sitecore Personalize (ehem. Boxever) nicht ab.",
+    "sources": [
+      "https://doc.sitecore.com/xmc/en/developers/xm-cloud/experience-edge-for-xm.html",
+      "https://developers.sitecore.com/learn/accelerate/personalize/developers/web-sdk"
+    ]
+  },
+  {
+    "name": "Salesforce Commerce Cloud",
+    "action": "improve",
+    "category": "eCommerce",
+    "signals": {
+      "cookies": ["dwsid", "dwanonymous_"]
+    },
+    "note": "Bestehende Regel prüft nur demandware.net/.store Domainmuster. SFCC-Session-/Besucher-Cookies dwsid und dwanonymous_* fehlen und greifen auch bei individuellen Storefront-Domains ohne demandware-Hostname.",
+    "sources": [
+      "https://help.salesforce.com/s/articleView?id=001183795&type=1"
+    ]
+  },
+  {
+    "name": "SAP Commerce Cloud (Spartacus / Composable Storefront)",
+    "action": "improve",
+    "category": "eCommerce",
+    "signals": {
+      "html": ["/class=\"[^\"]*\\bcx-storefront\\b/", "/\\/occ\\/v2\\//"],
+      "requests": ["/\\/occ\\/v2\\//"]
+    },
+    "note": "Bestehende SAP-Commerce-Regel erkennt nur klassisches Hybris-Backoffice-Template (hybris, _ui/responsive, acceleratorservices) und übersieht moderne Spartacus-Storefronts vollständig.",
+    "sources": [
+      "https://help.sap.com/docs/SAP_COMMERCE_CLOUD_PUBLIC_CLOUD/1cd0e716d6b575002de4b3e4b19b1d31/8bb3d8f36edb4dbfadd4ba00ef0f0a1d.html",
+      "https://sap.github.io/spartacus-docs/"
+    ]
+  },
+  {
+    "name": "commercetools",
+    "action": "improve",
+    "category": "eCommerce",
+    "signals": {
+      "requests": ["/api\\.[a-z0-9-]+\\.commercetools\\.com\\/[^/]+\\/graphql/"]
+    },
+    "note": "Ergänzt bestehendes Signal um den dokumentierten GraphQL-API-Host/Pfad, der auch bei Composable-Storefront-Frontends (eigene Domain) als Request erkennbar bleibt.",
+    "sources": [
+      "https://docs.commercetools.com/api/graphql"
+    ]
+  },
+  {
+    "name": "Salesforce Data Cloud",
+    "action": "add",
+    "category": "CDP/DMP",
+    "signals": {
+      "scriptSrc": ["/\\/assets\\/(sfdc|datacloud)\\/.*\\.js/"],
+      "js": { "SalesforceInteractions": "/./" }
+    },
+    "note": "Separates Produkt von Interaction Studio/Evergage, fehlt komplett im Ruleset. Konfidenz niedrig/mittel markieren, da öffentliche Cookie-Dokumentation zu Data Cloud Web SDK noch unvollständig ist (Transparenzhinweis im Report).",
+    "sources": [
+      "https://developer.salesforce.com/docs/marketing/marketing-cloud-personalization/guide/salesforce-interactions-sdk.html"
+    ]
+  },
+  {
+    "name": "Salesforce Interaction Studio / Marketing Cloud Personalization (Evergage)",
+    "action": "improve",
+    "category": "Personalisierung & Optimierung",
+    "signals": {
+      "scriptSrc": ["/cdn\\.evgnet\\.com\\/beacon\\/[^/]+\\/[^/]+\\/scripts\\/evergage(\\.min)?\\.js/"],
+      "js": { "SalesforceInteractions": "/./" }
+    },
+    "note": "Ergänzt modernes SDK-Namespace SalesforceInteractions (Nachfolger von Evergage), falls bestehende Regel nur auf den String 'evergage' prüft.",
+    "sources": [
+      "https://developer.salesforce.com/docs/marketing/marketing-cloud-personalization/guide/salesforce-interactions-sdk.html"
+    ]
+  },
+  {
+    "name": "HubSpot",
+    "action": "improve",
+    "category": "ESP/Marketing Automation",
+    "signals": {
+      "cookies": ["__hstc", "__hssc", "hubspotutk"],
+      "scriptSrc": ["/js\\.hs-analytics\\.net\\//", "/js\\.hs-scripts\\.com\\//"]
+    },
+    "note": "Cookie-basierte Signale (__hstc/__hssc/hubspotutk) erhöhen Konfidenz und erfassen Fälle, in denen der Script-Host durch CDN-Varianten abweicht.",
+    "sources": [
+      "https://knowledge.hubspot.com/privacy-and-consent/what-cookies-does-hubspot-set-in-a-visitor-s-browser"
+    ]
+  },
+  {
+    "name": "Salesforce Account Engagement (Pardot)",
+    "action": "improve",
+    "category": "ESP/Marketing Automation",
+    "signals": {
+      "cookies": ["/^visitor_id[0-9]+$/", "pi_opt_in"]
+    },
+    "note": "Seit Februar 2023 ist First-Party-Tracking-Domain (z. B. go.kunde.de) für neue Business Units verpflichtend; reines pi.pardot.com-Hostsignal erfasst diese Deployments nicht mehr. Cookie-Pattern visitor_id<accountId> ist domainunabhängig.",
+    "sources": [
+      "https://help.salesforce.com/s/articleView?id=sf.pardot_admin_tracking_code.htm&type=5"
+    ]
+  },
+  {
+    "name": "mParticle",
+    "action": "improve",
+    "category": "CDP/DMP",
+    "signals": {
+      "cookies": ["/^mp_/"],
+      "note_storage": "Default-Storage ist localStorage (useCookieStorage:true erforderlich für Cookies) – Cookie-Regel erfasst nur Teilmenge der Deployments, sollte als ergänzendes, nicht alleiniges Signal behandelt werden."
+    },
+    "note": "Bestehende Regel ist reines scriptSrc-Signal (schwach). Cookie-Präfix mp_ als Zusatzsignal ergänzen, mit Hinweis auf localStorage-Default-Limitation.",
+    "sources": [
+      "https://docs.mparticle.com/developers/quickstart/web/overview/"
+    ]
+  },
+  {
+    "name": "RudderStack",
+    "action": "improve",
+    "category": "CDP/DMP",
+    "signals": {
+      "cookies": ["rl_anonymous_id", "rl_user_id"]
+    },
+    "note": "Bestehende Regel ist reines scriptSrc-Signal. Cookie-Namen sind stabil, auch wenn Ingestion über kundenspezifischen dataPlaneUrl (CNAME-artig) läuft.",
+    "sources": [
+      "https://www.rudderstack.com/docs/sources/event-streams/sdks/rudderstack-javascript-sdk/"
+    ]
+  },
+  {
+    "name": "Segment",
+    "action": "improve",
+    "category": "CDP/DMP",
+    "signals": {
+      "cookies": ["ajs_anonymous_id", "ajs_user_id", "ajs_group_id"],
+      "requests": ["/api\\.segment\\.io\\/v1\\//"]
+    },
+    "note": "Ergänzt Ingestion-Endpunkt und Standard-Cookienamen als robustere Alternative zu reinem cdn.segment.com-scriptSrc-Match.",
+    "sources": [
+      "https://www.twilio.com/docs/segment/connections/sources/catalog/libraries/website/javascript"
+    ]
+  },
+  {
+    "name": "Optimizely Web Experimentation",
+    "action": "improve",
+    "category": "Personalisierung & Optimierung",
+    "signals": {
+      "cookies": ["/^optimizelyEndUserId$/"]
+    },
+    "note": "Cookie-Format oeu<timestamp>r<random> ist dokumentiert und stabil über ~6 Monate; ergänzt bestehendes reines scriptSrc-Signal.",
+    "sources": [
+      "https://docs.optimizely.com/web-experimentation/docs/customer-profiles"
+    ]
+  },
+  {
+    "name": "Contentsquare",
+    "action": "improve",
+    "category": "Personalisierung & Optimierung",
+    "signals": {
+      "cookies": ["_cs_c"],
+      "note_storage": "Unterstützt Cookieless-Modus (localStorage/sessionStorage) – Cookie-Regel erfasst nicht alle Deployments."
+    },
+    "note": "Ergänzt bestehendes scriptSrc-Signal (t.contentsquare.net) um dokumentiertes Consent-Cookie _cs_c.",
+    "sources": [
+      "https://docs.contentsquare.com/en/web/cookies/"
+    ]
+  },
+  {
+    "name": "Tealium iQ / Collect Tag",
+    "action": "improve",
+    "category": "Tag Management",
+    "signals": {
+      "cookies": ["/^utag_main(_v_id)?$/"]
+    },
+    "note": "Cookie-Namen bleiben stabil, auch wenn Collect-Tag über First-Party-CNAME-Collection-Domain läuft (Tealium-dokumentiertes Feature) – wichtige Ergänzung zur reinen Host-Erkennung.",
+    "sources": [
+      "https://docs.tealium.com/platforms/javascript/cookies/",
+      "https://docs.tealium.com/platforms/javascript/collect/"
+    ]
+  },
+  {
+    "name": "Server-Side GTM / CNAME-Tagging (generisch, pfadbasiert)",
+    "action": "add",
+    "category": "Tag Management / Server-side Tracking",
+    "signals": {
+      "requests": ["/\\/g\\/collect(\\?|$)/", "/\\/mp\\/collect(\\?|$)/"],
+      "note_methodology": "Hostunabhängiges Pfadmuster als Fallback, da sGTM offiziell auf Kunden-eigener Subdomain laufen kann (App Engine/Cloud Run/Stape)."
+    },
+    "note": "Neues Detektionskonzept: statt Hostname (www.google-analytics.com) wird der GA4-Measurement-Protocol-Pfad geprüft, der auch hinter First-Party-Proxys erhalten bleibt. Reduziert False-Negatives bei Server-Side-Tagging-Setups erheblich.",
+    "sources": [
+      "https://developers.google.com/tag-platform/tag-manager/server-side/intro"
+    ]
+  },
+  {
+    "name": "IAB TCF v2.2 (generischer CMP-Fallback)",
+    "action": "add",
+    "category": "Consent Management",
+    "signals": {
+      "cookies": ["euconsent-v2"],
+      "js": { "__tcfapi": "/./" }
+    },
+    "note": "Herstellerunabhängiges Fallback-Signal: Jeder TCF-v2.2-zertifizierte CMP (Didomi, Sourcepoint, Usercentrics, Cookiebot, Quantcast Choice, TrustArc u.a.) setzt __tcfapi + euconsent-v2. Erlaubt generische Erkennung 'TCF-CMP vorhanden', auch wenn konkreter Anbieter unbekannt ist.",
+    "sources": [
+      "https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework"
+    ]
+  },
+  {
+    "name": "Didomi",
+    "action": "improve",
+    "category": "Consent Management",
+    "signals": {
+      "cookies": ["didomi_token"]
+    },
+    "note": "Ergänzt anbieterspezifisches Cookie zusätzlich zum generischen TCF-Signal, um Didomi explizit (statt nur 'ein TCF-CMP') zu identifizieren.",
+    "sources": [
+      "https://developers.didomi.io/cmp/didomi-consent-string"
+    ]
+  },
+  {
+    "name": "Sourcepoint",
+    "action": "add",
+    "category": "Consent Management",
+    "signals": {
+      "scriptSrc": ["/cdn\\.privacy-mgmt\\.com\\/wrapper(\\.min)?\\.js/"],
+      "cookies": ["/^_sp_user_consent_/", "_sp_local_state"]
+    },
+    "note": "Bisher keine eigene Regel identifiziert (Stichprobenprüfung) – Sourcepoint ist ein verbreiteter Publisher-CMP, insbesondere im Media-/News-Segment.",
+    "sources": [
+      "https://docs.sourcepoint.com/hc/en-us/articles/4405387989011-Cookies-and-local-storage-Web"
+    ]
+  },
+  {
+    "name": "Adobe Journey Optimizer (Web SDK Proposition-Event)",
+    "action": "improve",
+    "category": "ESP/Marketing Automation",
+    "signals": {
+      "requests": ["/decisioning\\.proposition(Display|Interact)/"],
+      "note_methodology": "Setzt voraus, dass der Crawler Request-Body-Inhalte (nicht nur URLs) der /ee/v2/interact-Calls auswertet, analog zum bestehenden edge-Pattern-Konzept."
+    },
+    "note": "Bestehende Regel basiert ausschließlich auf dem serverseitigen edge-Response-Pattern decisionProvider:AJO. Ein Request-Body-Signal würde die Erkennung bereits auf Request-Ebene (vor Response) ermöglichen und AJO von generischem Web-SDK-Traffic unterscheidbar machen.",
+    "sources": [
+      "https://experienceleague.adobe.com/en/docs/journey-optimizer/using/journey-optimizer-overview/journey-optimizer-channels/in-app/implement-in-app-messaging"
+    ]
+  },
+  {
+    "name": "Adobe Experience Platform Web SDK (CNAME/edgeDomain-Fallback)",
+    "action": "improve",
+    "category": "Tag Management / Analytics",
+    "signals": {
+      "requests": ["/\\/ee\\/v2\\/(interact|collect)(\\?|$)/"],
+      "note_methodology": "Pfadbasiertes Fallback-Signal unabhängig vom Host, da edgeDomain-Konfiguration First-Party-CNAME-Hosts erlaubt (z.B. data.kunde.de statt edge.adobedc.net)."
+    },
+    "note": "Ergänzt die bestehende Host-Regex (edge.adobedc.net/server.adobedc.net) um einen host-unabhängigen Pfad-Fallback, damit CNAME'te Web-SDK-Deployments nicht systematisch übersehen werden.",
+    "sources": [
+      "https://developer.adobe.com/data-collection-apis/docs/endpoints/interact/",
+      "https://experienceleague.adobe.com/en/docs/experience-platform/web-sdk/commands/configure/edgedomain"
+    ]
+  },
+  {
+    "name": "Shopify Plus (X-Shopify-Stage Header)",
+    "action": "improve",
+    "category": "eCommerce",
+    "signals": {
+      "note_do_not_add": "X-Shopify-Stage-Header ist in keiner offiziellen Quelle als zuverlässig zugänglich dokumentiert."
+    },
+    "note": "Explizite Negativ-Empfehlung: Dieses in der Praxis kursierende Signal NICHT in die Regel aufnehmen, da keine offizielle Shopify-Dokumentation seine Verfügbarkeit/Stabilität bestätigt. Stattdessen Checkout-Extensibility-Migration (Ablösung von checkout.liquid) als künftigen Beobachtungspunkt vermerken.",
+    "sources": [
+      "https://shopify.dev/docs/apps/checkout/deprecated-customizations"
+    ]
+  }
+]

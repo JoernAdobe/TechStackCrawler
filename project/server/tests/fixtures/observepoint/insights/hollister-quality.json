@@ -1,0 +1,398 @@
+{
+ "tagHealthTags": [
+  {
+   "tagId": 16,
+   "tagName": "Google Ads Conversion Tracking",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 295,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 295,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 18,
+   "tagName": "Google Tag Manager",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 2,
+    "_1000to2000": 0,
+    "below500": 99,
+    "above2000": 0,
+    "500to1000": 2,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 101,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 81,
+   "tagName": "Marketo Engage",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 25,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 25,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 119,
+   "tagName": "Google Universal Analytics",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 97,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 97,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 144,
+   "tagName": "Crazy Egg",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 204,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 8,
+    "redirect": 196,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 184,
+   "tagName": "Google Ads Remarketing",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 196,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 196,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 211,
+   "tagName": "Data Layer",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 300,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 300,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 232,
+   "tagName": "Facebook Conversion",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 98,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 98,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 342,
+   "tagName": "Bing Event Tracking",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 294,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 294,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 378,
+   "tagName": "Marketo Engage Loader",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 50,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 50,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 391,
+   "tagName": "Hotjar Loader",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 98,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 76,
+    "redirect": 22,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 462,
+   "tagName": "Brightcove Tracker",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 0,
+    "_1000to2000": 0,
+    "below500": 110,
+    "above2000": 0,
+    "500to1000": 0,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 110,
+    "redirect": 0,
+    "broken": 0
+   }
+  },
+  {
+   "tagId": 1277,
+   "tagName": "Google reCAPTCHA Loader (DEPRECATED)",
+   "tagLoadTimeDistribution": {
+    "_500to1000": 4,
+    "_1000to2000": 0,
+    "below500": 36,
+    "above2000": 0,
+    "500to1000": 4,
+    "1000to2000": 0
+   },
+   "tagStatusCodeDistribution": {
+    "good": 37,
+    "redirect": 0,
+    "broken": 3
+   }
+  }
+ ],
+ "logSummary": {
+  "errorLogCount": 64,
+  "warnLogCount": 174,
+  "infoLogCount": 149,
+  "debugLogCount": 1,
+  "otherLogCount": 0,
+  "totalPageCount": 100,
+  "filteredPageCount": 100
+ },
+ "logMessages": [
+  {
+   "level": "debug",
+   "message": "[DOM] Input elements should have autocomplete attributes (suggested: \"current-password\"): (More info: https://goo.gl/9p2vKq) %o",
+   "logCount": 1,
+   "pageCount": 1
+  },
+  {
+   "level": "warn",
+   "message": "[Meta Pixel] - An invalid email address was specified for 'em'. This data will not be sent with any events for this Pixel.",
+   "logCount": 106,
+   "pageCount": 98,
+   "relatedTag": {
+    "tagId": 677,
+    "tagName": "Facebook Events JS Bootstrap",
+    "tagCategoryId": 11,
+    "tagCategoryName": "Social Media"
+   }
+  },
+  {
+   "level": "warn",
+   "message": "VIDEOJS: WARN: Calling addRemoteTextTrack without explicitly setting the \"manualCleanup\" parameter to `true` is deprecated and default to `false` in future version of video.js",
+   "logCount": 44,
+   "pageCount": 22
+  },
+  {
+   "level": "warn",
+   "message": "VIDEOJS: WARN: this.options() has been deprecated and will be moved to the constructor in 6.0",
+   "logCount": 22,
+   "pageCount": 22
+  },
+  {
+   "level": "error",
+   "message": "VIDEOJS: ERROR: [Error: Internal XMLHttpRequest Error] {\"headers\":{},\"statusCode\":0}",
+   "logCount": 22,
+   "pageCount": 22
+  },
+  {
+   "level": "error",
+   "message": "VIDEOJS: ERROR: [Error: Failed to execute 'addSourceBuffer' on 'MediaSource': This MediaSource has reached the limit of SourceBuffer objects it can handle. No additional SourceBuffer objects may be added.]",
+   "logCount": 15,
+   "pageCount": 15
+  },
+  {
+   "level": "error",
+   "message": "Access to fetch at 'https://www.facebook.com/login/?next=https%3A%2F%2Fwww.facebook.com%2Fprivacy_sandbox%2Ftopics%2Fregistration%2F%3Fid%3D1864104873861104' (redirected from 'https://www.facebook.com/privacy_sandbox/topics/registration/?id=1864104873861104') from origin 'https://www.hollister.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+   "logCount": 10,
+   "pageCount": 10
+  },
+  {
+   "level": "error",
+   "message": "Failed to load resource: net::ERR_FAILED",
+   "logCount": 10,
+   "pageCount": 10
+  },
+  {
+   "level": "error",
+   "message": "Error: Uncaught TypeError: Cannot read properties of null (reading 'updating')\n    at Q (https://players.brightcove.net/1496514756001/default_default/index.min.js:12:2274)\n    at P (https://players.brightcove.net/1496514756001/default_default/index.min.js:12:2029)",
+   "logCount": 2,
+   "pageCount": 2
+  },
+  {
+   "level": "error",
+   "message": "Mixed Content: The page at 'https://www.hollister.com/en/spinalinjuryawareness' was loaded over HTTPS, but requested an insecure XMLHttpRequest endpoint 'http://manifest.prod.boltdns.net/thumbnail/v1/1496514756001/b155629e-172f-49b1-b8f8-7834aadccc5a/af7c4686-09f3-4117-943f-1bee42526d73/thumbnail.webvtt?fastly_token=NjkwZWI3MDlfMGU2NmVhMjczZWU3NzU1OGI2ZGE5ZDIxYjkxNWRiZjU5MmUzZWI0MTk0Y2QwNjJkZTk4Mjk2ZjY0N2ExMGYwNQ%3D%3D'. This request has been blocked; the content must be served over HTTPS.",
+   "logCount": 1,
+   "pageCount": 1
+  },
+  {
+   "level": "error",
+   "message": "Mixed Content: The page at 'https://www.hollister.com/en/ostomycare/ostomylearningcenter/understandinganostomy/aboutyourcolostomy' was loaded over HTTPS, but requested an insecure XMLHttpRequest endpoint 'http://manifest.prod.boltdns.net/thumbnail/v1/1496514756001/1d4b4536-1d5c-4dfc-9f0b-133394a87b29/a702e44f-93f3-4e9c-8bd9-048f25e3ed90/thumbnail.webvtt?fastly_token=NjkwZWI3MmFfMGY4MWE4NjVmNzMwY2M4YTRmYTQ0M2QzOWMwMDlkZmRkZjE0MGI3NjgwYWM4ZWE1OTE1OTkxN2MzMDZhMTk3MQ%3D%3D'. This request has been blocked; the content must be served over HTTPS.",
+   "logCount": 1,
+   "pageCount": 1
+  }
+ ],
+ "duplicateTags": [
+  {
+   "tagId": 539,
+   "tagName": "Bing Ad Loader",
+   "tagCategoryId": 3,
+   "tagCategoryName": "Advertising & Paid Media",
+   "filteredTagDuplicateCount": 0,
+   "filteredTagDuplicatePageCount": 0,
+   "filteredTagMultipleCount": 0,
+   "filteredTagMultiplePageCount": 0,
+   "filteredTagInstanceCount": 98
+  },
+  {
+   "tagId": 342,
+   "tagName": "Bing Event Tracking",
+   "tagCategoryId": 3,
+   "tagCategoryName": "Advertising & Paid Media",
+   "filteredTagDuplicateCount": 0,
+   "filteredTagDuplicatePageCount": 0,
+   "filteredTagMultipleCount": 196,
+   "filteredTagMultiplePageCount": 98,
+   "filteredTagInstanceCount": 294
+  },
+  {
+   "tagId": 462,
+   "tagName": "Brightcove Tracker",
+   "tagCategoryId": 47,
+   "tagCategoryName": "Video",
+   "filteredTagDuplicateCount": 0,
+   "filteredTagDuplicatePageCount": 0,
+   "filteredTagMultipleCount": 110,
+   "filteredTagMultiplePageCount": 22,
+   "filteredTagInstanceCount": 110
+  },
+  {
+   "tagId": 1050,
+   "tagName": "Cookiebot CMP",
+   "tagCategoryId": 14,
+   "tagCategoryName": "Privacy & Consent",
+   "filteredTagDuplicateCount": 0,
+   "filteredTagDuplicatePageCount": 0,
+   "filteredTagMultipleCount": 4,
+   "filteredTagMultiplePageCount": 2,
+   "filteredTagInstanceCount": 102
+  },
+  {
+   "tagId": 144,
+   "tagName": "Crazy Egg",
+   "tagCategoryId": 45,
+   "tagCategoryName": "Heatmap & Recording",
+   "filteredTagDuplicateCount": 8,
+   "filteredTagDuplicatePageCount": 2,
+   "filteredTagMultipleCount": 196,
+   "filteredTagMultiplePageCount": 98,
+   "filteredTagInstanceCount": 204
+  },
+  {
+   "tagId": 211,
+   "tagName": "Data Layer",
+   "tagCategoryId": 13,
+   "tagCategoryName": "Data Management (DMP)",
+   "filteredTagDuplicateCount": 0,
+   "filteredTagDuplicatePageCount": 0,
+   "filteredTagMultipleCount": 0,
+   "filteredTagMultiplePageCount": 0,
+   "filteredTagInstanceCount": 300
+  },
+  {
+   "tagId": 232,
+   "tagName": "Facebook Conversion",
+   "tagCategoryId": 11,
+   "tagCategoryName": "Social Media",
+   "filteredTagDuplicateCount": 0,
+   "filteredTagDuplicatePageCount": 0,
+   "filteredTagMultipleCount": 0,
+   "filteredTagMultiplePageCount": 0,
+   "filteredTagInstanceCount": 98
+  },
+  {
+   "tagId": 1144,
+   "tagName": "Facebook Event",
+   "tagCategoryId": 11,
+   "tagCategoryName": "Social Media",
+   "filteredTagDuplicateCount": 0,
+   "filteredTagDuplicatePageCount": 0,
+   "filteredTagMultipleCount": 0,
+   "filteredTagMultiplePageCount": 0,
+   "filteredTagInstanceCount": 98
+  }
+ ]
+}

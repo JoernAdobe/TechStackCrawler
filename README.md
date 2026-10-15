@@ -18,6 +18,7 @@ Enter any URL, and the tool renders the site with Scrapling, detects its tech st
 - **API token management** — Create, list, and revoke MCP bearer tokens from the authenticated dashboard.
 - **Account & bulk assessments** — Analyze up to 30 URLs per account (with AI) or bulk lists (detection only, admin approval above `BATCH_APPROVAL_THRESHOLD`), with a solution matrix mapped to 44 Adobe building blocks, key findings, CSV/XLSX export, and stack history per domain.
 - **Enrichments** — Lighthouse scores (PageSpeed Insights), traffic insights (Semrush), and mobile app discovery (website links + App Store lookup) per analysis.
+- **ObservePoint & Evidence Matrix** — Optional second detection source: reuses existing ObservePoint audits (or a scratch audit for opt-in fresh scans) and builds a TechStack × ObservePoint Evidence Matrix with consensus status and agreement rate. Details: [`docs/observepoint-integration-plan.md`](docs/observepoint-integration-plan.md).
 - **GEO score** — Generative Engine Optimization score (AI visibility, sentiment, competitor gap) via Claude on Bedrock.
 - **PPTX decks** — Adobe-branded slide decks for single analyses and account assessments.
 - **Feedback** — In-app feedback (rating, bug, missing solution) with an admin review list in the dashboard.
@@ -141,6 +142,25 @@ cd project && npm test
 
 This runs the Node boundary tests and Scrapling worker unit tests; `npm run test:connections` additionally renders `https://example.com` and checks configured external services.
 
+## Account / Bulk – data sources & account view
+
+Batch items can optionally run the same enrichments as a single analysis. Sources are chosen per batch in the form (`enrichments` object in `POST /api/batches`); results are stored compactly per item (`batch_items.enrichments_json`) and aggregated into `accountView` on read.
+
+| Source | Default (account / bulk) | Cost / quota | Notes |
+| --- | --- | --- | --- |
+| Traffic rank (Tranco) | on / on | free, ~1 req/s | Used for traffic weighting of domains/opportunities. |
+| Traffic visits (Semrush) | off / off | Semrush API units | Only when `SEMRUSH_API_KEY` is set; disabled for the rest of the batch on unit/quota errors. |
+| ObservePoint (reuse) | on / on | read-only | Reuses existing audits + evidence matrix; never starts scans. Disabled on 401/403. |
+| Mobile apps | on / off | free, ~20 req/min | App Store lookup. |
+| PageSpeed / Lighthouse | off / off | Google quota, 20–60 s/URL | Quota errors (`friendlyPsiError`) open a circuit breaker for the rest of the batch. |
+| GEO score | off / off | LLM, many calls | Costly. |
+| Use case discovery | off / off | LLM | Requires full AI analysis per URL. |
+| Detection, DNS signals, consent/pre-consent, scan warnings | always | – | Part of the detection pass. |
+
+Costly sources (PageSpeed, Semrush, GEO, use cases) are capped by `maxCostlyItems` (default 10 account / 5 bulk, max 50). Each source runs throttled and with a timeout; failures are recorded per item (`errors` / `skipped`) and never fail the item. Bulk batches with GEO or use cases require admin approval like AI analysis.
+
+The **account view** (dashboard in the batch result, CSV/XLSX/Markdown exports) contains: domains weighted by traffic, top opportunities (traffic × gap: competitor, fragmentation, or nothing detected), Adobe footprint vs. competition per building block, fragmentation, a domain × technology matrix, performance and GEO rankings, ObservePoint agreement per domain, aggregated privacy/technical findings, and use cases. Sections without data are hidden.
+
 ## Deployment
 
 The main application uses `make deploy`, Docker Compose, and Caddy. The `hub/` landing page is separate and uses `make deploy-hub`.
@@ -247,6 +267,12 @@ The server loads the first available `.env` file from the compiled server-relati
 | `SIZE` | Makefile tmp-resize | Remote tmpfs size for the diagnostic resize target | `2G` |
 | `PAGESPEED_API_KEY` | server/Docker | Google PageSpeed Insights key for Lighthouse enrichment | Empty; Google usually answers 429 without a key |
 | `SEMRUSH_API_KEY` | server/Docker | Semrush API key for traffic insights | Empty; traffic panel reports "not configured" |
+| `OBSERVEPOINT_API_KEY` | server/Docker | ObservePoint API key (header `Authorization: api_key …`) | Empty; ObservePoint source disabled |
+| `OBSERVEPOINT_BASE_URL` | server/Docker | ObservePoint API base URL | `https://api.observepoint.com` |
+| `OBSERVEPOINT_MAX_RUN_AGE_DAYS` | server/Docker | Only reuse audit runs younger than N days | `365` |
+| `OBSERVEPOINT_ALLOW_CREATE` | server/Docker | Allow fresh scans (consumes page-scan quota) when set to `1` | Disabled |
+| `OBSERVEPOINT_SCRATCH_AUDIT_ID` | server/Docker | Own audit (created in the OP UI) reconfigured via `PUT /v2/web-audits/{id}` for fresh scans | Empty; fresh scans unavailable |
+| `OBSERVEPOINT_MAX_PAGES` | server/Docker | Page limit per fresh scan | `5` |
 | `BATCH_APPROVAL_THRESHOLD` | server/Docker | Bulk batches above this URL count need admin approval | `50` |
 | `BATCH_ITEM_DELAY_MS` | server/Docker | Pause between batch items in milliseconds | `750` |
 | `BATCH_MULTI_PAGE` | server/Docker | Enable multi-page crawl for detection-only bulk items when set to `1` | Disabled |
@@ -306,12 +332,16 @@ The server loads the first available `.env` file from the compiled server-relati
 | `POST` | `/api/analyses/:id/enrich/traffic` | Public | 10/minute | Fetch Semrush traffic insights and store them. |
 | `POST` | `/api/analyses/:id/enrich/mobile-apps` | Public | 10/minute | Discover iOS/Android apps and store them. |
 | `POST` | `/api/analyses/:id/enrich/geo` | Public | 10/minute | Compute the GEO score (synchronous, 1–3 minutes). |
+| `POST` | `/api/analyses/:id/enrich/observepoint` | Public | 10/minute | Body `{ mode: "reuse" \| "fresh" }`; fetch ObservePoint tags and store `observepoint` + `evidenceMatrix`. |
+| `GET` | `/api/observepoint/status` | Public | None | Whether ObservePoint and fresh scans are configured. |
 | `POST` | `/api/batches` | Public | 10/minute | Create an account (≤ 30 URLs, AI) or bulk (detection only) batch. |
 | `GET` | `/api/batches` | Public | None | List batches. |
-| `GET` | `/api/batches/:id` | Public | None | Batch details incl. items, solution matrix, and key findings. |
+| `GET` | `/api/batches/sources` | Public | None | Configured batch enrichment sources (ObservePoint/Semrush/PageSpeed key) and per-mode defaults. |
+| `GET` | `/api/batches/:id` | Public | None | Batch details incl. items, solution matrix, key findings, and aggregated `accountView`. |
 | `POST` | `/api/batches/:id/cancel` | Public | None | Cancel a queued/running batch. |
 | `POST` | `/api/batches/:id/approve` / `reject` | Dashboard admin | None | Approve or reject a bulk batch above the threshold. |
-| `GET` | `/api/batches/:id/export.csv` | Public | None | CSV export (formula-injection safe). |
+| `GET` | `/api/batches/:id/export.csv` | Public | None | CSV export (formula-injection safe), incl. account-view sections. |
+| `GET` | `/api/batches/:id/export.md` | Public | None | Markdown account report (domains, opportunities, footprint, fragmentation, rankings, findings). |
 | `GET` | `/api/stack-history?url=` | Public | None | Technology history across stored analyses of a domain. |
 | `GET` | `/api/analyses/:id/deck.pptx` | Public | 30/minute | Adobe-branded PPTX deck for one analysis. |
 | `GET` | `/api/batches/:id/deck.pptx` | Public | 30/minute | Adobe-branded PPTX deck for an account assessment. |
@@ -341,6 +371,7 @@ The TechStack Analyzer exposes a [Model Context Protocol](https://modelcontextpr
 | `solution-mapping` | Map analyses to the Adobe building blocks incl. key findings | `{ analysisIds: number[] }` |
 | `lighthouse` / `traffic-insights` / `mobile-apps` | Run an enrichment for an analysis | `{ analysisId: number }` |
 | `geo-score` | Compute the GEO score for an analysis | `{ analysisId: number }` |
+| `get_evidence_matrix` | Read the stored Evidence Matrix + ObservePoint summary (read-only) | `{ analysisId: number }` |
 | `stack-history` | Technology history of a domain | `{ url: string }` |
 | `generate-deck` | Return a PPTX deck as embedded resource | `{ analysisId?, assessmentId? }` |
 | `submit-feedback` | Submit feedback | `{ type, description, ... }` |

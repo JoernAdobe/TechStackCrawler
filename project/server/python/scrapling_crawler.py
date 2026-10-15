@@ -225,6 +225,8 @@ def extract_data(
     body = page.css("body").first
     body_text = body.get_all_text() if body is not None else ""
     html = _as_text(page.html_content)[:MAX_HTML_CHARS]
+    raw_status = getattr(page, "status", None)
+    status = raw_status if isinstance(raw_status, int) and 0 <= raw_status <= 999 else 0
 
     return {
         "url": requested_url,
@@ -240,6 +242,7 @@ def extract_data(
         "requests": list(requests or [])[:MAX_REQUESTS],
         "jsGlobals": {str(k): str(v) for k, v in (js_globals or {}).items()},
         "edgeSignals": sorted(edge_signals or ()),
+        "status": status,
         "consent": {
             "bannerAccepted": bool((consent or {}).get("bannerAccepted")),
             "preConsentRequests": [str(u) for u in (consent or {}).get("preConsentRequests", [])][:MAX_REQUESTS],

@@ -123,9 +123,23 @@ async function runStrategy(url: string, strategy: Strategy): Promise<LighthouseS
   return parsePsiResponse(json);
 }
 
+/** Rohe Google-Fehler (inkl. Projektnummern) in kurze, verständliche Texte übersetzen. */
+export function friendlyPsiError(msg: string): string {
+  if (/quota|rate limit|429/i.test(msg)) {
+    return process.env.PAGESPEED_API_KEY
+      ? 'Daily PageSpeed Insights quota exhausted – try again tomorrow.'
+      : 'PageSpeed Insights quota exhausted (no API key configured). Set PAGESPEED_API_KEY on the server or try again later.';
+  }
+  if (/timeout|aborted/i.test(msg)) return 'PageSpeed Insights did not respond in time – please re-run.';
+  if (/FAILED_DOCUMENT_REQUEST|ERRORED_DOCUMENT_REQUEST|unable to (?:process|load)/i.test(msg)) {
+    return 'PageSpeed Insights could not load the page (blocked or unreachable for Google).';
+  }
+  return msg.replace(/'?project_number:\d+'?/g, '').slice(0, 200);
+}
+
 function errMsg(strategy: Strategy, reason: unknown): string {
   const msg = reason instanceof Error ? reason.message : String(reason);
-  return `${strategy}: ${msg}`;
+  return `${strategy}: ${friendlyPsiError(msg)}`;
 }
 
 /** Führt PSI für Mobile und Desktop parallel aus. Wirft nicht – Fehler landen in `error`. */
@@ -145,6 +159,8 @@ export async function runLighthouse(url: string): Promise<LighthouseResult> {
   else errors.push(errMsg('mobile', mobile.reason));
   if (desktop.status === 'fulfilled') result.desktop = desktop.value;
   else errors.push(errMsg('desktop', desktop.reason));
-  if (errors.length) result.error = errors.join(' | ');
+  // Gleiche Ursache für beide Strategien nur einmal anzeigen.
+  const unique = [...new Set(errors.map((e) => e.replace(/^(mobile|desktop): /, '')))];
+  if (errors.length) result.error = unique.length === 1 && errors.length === 2 ? unique[0] : errors.join(' | ');
   return result;
 }

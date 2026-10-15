@@ -5,6 +5,7 @@
  */
 import { config } from '../config.js';
 import { getBedrockClient } from './bedrockClient.js';
+import { callLlm } from './llmCall.js';
 import { parseAIJson } from '../utils/aiJson.js';
 import type { AnalysisResult } from '../types/analysis.js';
 import type { FunnelStage, GeoQueryResult, GeoScoreResult } from '../types/parity.js';
@@ -70,17 +71,26 @@ export function languageForCountry(country: string): string {
 }
 
 async function llm(system: string, user: string, maxTokens: number): Promise<string> {
-  const client = getBedrockClient();
-  const response = await client.messages.create({
-    model: config.bedrock.model,
-    max_tokens: maxTokens,
-    system,
-    messages: [{ role: 'user', content: user }],
-  });
-  return response.content
-    .map((b) => (b.type === 'text' ? b.text : ''))
-    .join('')
-    .trim();
+  return callLlm(
+    'geo-score',
+    async (signal) => {
+      const response = await getBedrockClient().messages.create(
+        {
+          model: config.bedrock.model,
+          max_tokens: maxTokens,
+          system,
+          messages: [{ role: 'user', content: user }],
+        },
+        { signal, maxRetries: 0 },
+      );
+      return response.content
+        .map((b) => (b.type === 'text' ? b.text : ''))
+        .join('')
+        .trim();
+    },
+    // Viele kleine Calls parallel – kürzerer Timeout, weniger Versuche.
+    { attempts: 2, timeoutMs: 90_000 },
+  );
 }
 
 /** Einfacher Promise-Pool mit fester Parallelität, Reihenfolge der Ergebnisse bleibt erhalten. */

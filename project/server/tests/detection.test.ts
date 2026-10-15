@@ -133,3 +133,24 @@ test('selectRepresentativePages prioritises journey pages, one per type, same ho
     'https://www.shop.de/blog/x',
   ]);
 });
+
+// Regressionen aus dem ObservePoint-Abgleich (Lazard, Okt. 2026).
+test('gtag with only AW-/DC- IDs is Google Ads + Floodlight, not GA4 or Google Ad Manager', () => {
+  const html = `<script src="https://www.googletagmanager.com/gtag/js?id=AW-17270501652"></script>
+    <script>gtag('config', 'AW-17270501652'); gtag('config', 'DC-17592619');</script>`;
+  const found = names(page({ html, scriptSrc: ['https://www.googletagmanager.com/gtag/js?id=AW-17270501652'] }));
+  assert.ok(found.includes('Google Ads'), 'Google Ads');
+  assert.ok(found.includes('Google Marketing Platform'), 'Floodlight');
+  assert.ok(!found.includes('Google Analytics 4'), 'GA4 false positive');
+  assert.ok(!found.includes('Google Ad Manager (DFP / DoubleClick)'), 'GAM false positive');
+});
+
+test('GA4 still detected via gtag config with G- ID; GAM via GPT API', () => {
+  assert.ok(names(page({ html: `<script>gtag('config', 'G-ABC123XYZ');</script>` })).includes('Google Analytics 4'));
+  assert.ok(names(page({ html: '<script>googletag.cmd.push(function(){})</script>' })).includes('Google Ad Manager (DFP / DoubleClick)'));
+});
+
+test('Interaction Studio served from cdn.evgnet.com is detected', () => {
+  const src = 'https://cdn.evgnet.com/beacon/lazard/engage/scripts/evergage.min.js';
+  assert.ok(names(page({ scriptSrc: [src] })).includes('Evergage / Salesforce Interaction Studio'));
+});

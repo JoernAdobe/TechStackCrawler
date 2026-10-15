@@ -200,6 +200,29 @@ export function registerParityTools(server: McpServer): void {
   );
 
   server.tool(
+    'get_evidence_matrix',
+    'Read the stored multi-source Evidence Matrix (TechStack × ObservePoint consensus, agreement rate) and the ObservePoint summary (incl. insights: versions, Adobe footprint, quality, privacy, findings) of a saved analysis. Read-only: never triggers ObservePoint calls.',
+    { analysisId },
+    async ({ analysisId: id }) =>
+      withAnalysis(id, async (_db, a) => {
+        const { evidenceMatrix, observepoint } = a.enrichments ?? {};
+        if (!evidenceMatrix) {
+          return json({
+            analysisId: id,
+            evidenceMatrix: null,
+            hint: `No Evidence Matrix stored yet. Run the ObservePoint enrichment first: POST /api/analyses/${id}/enrich/observepoint with body {"mode":"reuse"} (or "fresh" if fresh scans are enabled).`,
+          });
+        }
+        const { tags, ...summary } = observepoint ?? { tags: [] };
+        return json({
+          analysisId: id,
+          observepoint: observepoint ? { ...summary, tagCount: tags.length } : null,
+          evidenceMatrix,
+        });
+      }),
+  );
+
+  server.tool(
     'stack-history',
     'Show how the tech stack of a domain changed across saved analyses (added/removed technologies).',
     { url: z.string().min(1).max(2048) },

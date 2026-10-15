@@ -29,6 +29,18 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        // Backend weg (z. B. tsx-watch-Neustart): JSON statt leerer 500, damit der Client
+        // eine verständliche Meldung zeigen kann.
+        configure: (proxy) => {
+          proxy.on('error', (_err, _req, res) => {
+            if (!('writeHead' in res) || res.headersSent) return
+            res.writeHead(502, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({
+              error: 'Server was restarted or is unreachable – please try again.',
+              code: 'server_unreachable',
+            }))
+          })
+        },
       },
     },
   },

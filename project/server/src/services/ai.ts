@@ -1,12 +1,12 @@
 import { config } from '../config.js';
 import { getBedrockClient } from './bedrockClient.js';
+import { callLlm } from './llmCall.js';
 import { parseAIJson } from '../utils/aiJson.js';
+import { RetryableResponseError } from '../utils/retry.js';
 import { buildSystemPrompt, buildAnalysisPrompt } from '../prompts/analysisPrompt.js';
 import type { ScrapedData } from './scraper.js';
 import type { DetectedTech } from './customDetectors.js';
 import type { CategoryResult } from '../types/analysis.js';
-
-const client = getBedrockClient();
 
 export interface AIAnalysisResult {
   summary: string;
@@ -59,13 +59,18 @@ export async function analyzeWithAI(
   /** Ein Streaming-Durchlauf; liefert Text und stop_reason (für Truncation-Erkennung). */
   const runOnce = async (
     maxTokens: number,
+    signal: AbortSignal,
   ): Promise<{ text: string; stopReason: string | null }> => {
-    const stream = client.messages.stream({
-      model: config.bedrock.model,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
+    const stream = getBedrockClient().messages.stream(
+      {
+        model: config.bedrock.model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      },
+      // Eigenes Retry in callLlm – SDK-interne Retries aus, damit sich Wartezeiten nicht multiplizieren.
+      { signal, maxRetries: 0 },
+    );
 
     let fullResponse = '';
     for await (const event of stream) {
@@ -82,36 +87,41 @@ export async function analyzeWithAI(
     return { text: fullResponse, stopReason: finalMessage.stop_reason };
   };
 
-  try {
-    let { text, stopReason } = await runOnce(config.bedrock.maxTokens);
+  // Ein Versuch = Streaming (+ einmaliger Truncation-Retry) + Parsen + Strukturprüfung.
+  // Abbruch ("terminated"), Throttling, 5xx und unbrauchbares JSON lösen in callLlm einen
+  // Retry mit Backoff aus; endgültige Fehler kommen als LlmError mit Klassifizierung.
+  return callLlm('analysis', async (signal) => {
+    let { text, stopReason } = await runOnce(config.bedrock.maxTokens, signal);
 
-    // Bei Truncation einmalig mit doppeltem Budget wiederholen.
     if (stopReason === 'max_tokens') {
       console.warn(
         `Analyse-Antwort bei ${config.bedrock.maxTokens} Tokens abgeschnitten – Retry mit ${config.bedrock.maxTokens * 2}.`,
       );
-      ({ text, stopReason } = await runOnce(config.bedrock.maxTokens * 2));
+      ({ text, stopReason } = await runOnce(config.bedrock.maxTokens * 2, signal));
     }
 
-    const parsed = parseAIJson<AIAnalysisResult>(text);
+    return validateAnalysisJson(text);
+  });
+}
 
-    // Validate basic structure
-    if (!parsed.summary || !Array.isArray(parsed.categories)) {
-      throw new Error('Invalid response structure');
-    }
-
-    return parsed;
-  } catch (e) {
-    const msg = (e as Error).message;
-    if (msg.includes('403') || msg.includes('expired')) {
-      console.error('Bedrock error:', msg);
-      throw new Error(
-        'Bedrock API-Key abgelaufen. Neuen Key erstellen: AWS Console → Bedrock → API keys → Generate. Oder IAM nutzen (AWS_ACCESS_KEY_ID in .env).',
-      );
-    }
-    if (msg.includes('unauthorized') || msg.includes('credentials')) {
-      throw new Error('Bedrock-Zugriff fehlgeschlagen. Prüfe BEDROCK_API_KEY oder IAM-Credentials in .env.');
-    }
-    throw e;
+/** Parst und prüft die Modellantwort; unbrauchbare Antworten sind wiederholbar. */
+export function validateAnalysisJson(text: string): AIAnalysisResult {
+  let parsed: Partial<AIAnalysisResult> | null;
+  try {
+    parsed = parseAIJson<Partial<AIAnalysisResult>>(text);
+  } catch (err) {
+    throw new RetryableResponseError('AI response is not valid JSON', { cause: err });
   }
+  if (!parsed || typeof parsed.summary !== 'string' || !Array.isArray(parsed.categories)) {
+    throw new RetryableResponseError('AI response has an invalid structure');
+  }
+  const categories = parsed.categories
+    .filter((c): c is CategoryResult => !!c && typeof c === 'object')
+    .map((c) => ({
+      category: String(c.category ?? ''),
+      currentTechnology: String(c.currentTechnology ?? ''),
+      challengesAndPainPoints: String(c.challengesAndPainPoints ?? ''),
+      adobeOpportunity: String(c.adobeOpportunity ?? ''),
+    }));
+  return { summary: parsed.summary, categories };
 }

@@ -1,5 +1,8 @@
 import type { ScrapedData } from './scraper.js';
 import { SIGNAL_LAYERS } from './signalLayers.js';
+import { asset, host } from './rules/ruleHelpers.js';
+import { ADTECH_B2B_RULES } from './rules/adtechB2bRules.js';
+import { MARTECH_RULES } from './rules/martechRules.js';
 
 export interface DetectedTech {
   name: string;
@@ -18,7 +21,11 @@ export interface DetectionRule {
   patterns: {
     html?: RegExp[];
     scriptSrc?: RegExp[];
-    cookies?: string[];
+    /**
+     * Cookie-Namen. String = exakter Name; endet er auf `_`, `-` oder `.`, gilt er als Präfix
+     * (z. B. `intercom-id-`, `_sp_id.`). RegExp = freies Muster gegen den Cookie-Namen.
+     */
+    cookies?: (string | RegExp)[];
     headers?: Record<string, RegExp>;
     meta?: Record<string, RegExp>;
     /** Gegen alle Netzwerk-Requests (Beacons/XHR/Pixel) – stärkster Beleg: der Tag hat tatsächlich gefeuert. */
@@ -28,6 +35,18 @@ export interface DetectionRule {
     /** Gegen edgeSignals aus AEP-Edge-Antworten. */
     edge?: RegExp[];
   };
+  /**
+   * Obergrenze für die Konfidenz – für Regeln, deren Signale nur Indizien sind
+   * (z. B. Produktwort im HTML, ID-Sync-Pixel ohne eigenen Tag).
+   */
+  maxConfidence?: number;
+}
+
+/** Cookie-Treffer: exakt, Präfix (Endung `_`/`-`/`.`) oder RegExp. */
+export function cookieMatches(pattern: string | RegExp, cookieName: string): boolean {
+  if (pattern instanceof RegExp) return pattern.test(cookieName);
+  if (/[_.-]$/.test(pattern)) return cookieName.startsWith(pattern);
+  return cookieName === pattern;
 }
 
 const rules: DetectionRule[] = [
@@ -48,8 +67,8 @@ const rules: DetectionRule[] = [
     name: 'Adobe Experience Manager (Edge Delivery Services)',
     categories: ['CMS'],
     patterns: {
-      scriptSrc: [/\/scripts\/aem\.js(\?|$)/, /\/scripts\/lib-franklin\.js(\?|$)/],
-      requests: [/rum\.hlx\.page\//, /\/\.rum\/@adobe\/helix-rum-js/, /rum\.aem\.(page|live)\//],
+      scriptSrc: [/\/scripts\/aem\.js(\?|$)/, /\/scripts\/lib-franklin\.js(\?|$)/, /rum\.hlx\.(page|live)\/\.rum\//],
+      requests: [/rum\.hlx\.page\//, /\/\.rum\/@adobe\/helix-rum-js/, /rum\.aem\.(page|live)\//, /\/\/[\w-]+--[\w-]+--[\w-]+\.(aem|hlx)\.(live|page)\//],
       html: [/\.aem\.(page|live)\b/, /\.hlx\.(page|live)\b/],
       js: { 'adobe.eds': /./ },
     },
@@ -86,16 +105,20 @@ const rules: DetectionRule[] = [
     name: 'Sitecore',
     categories: ['CMS'],
     patterns: {
-      html: [/sitecore/i, /__sc_/, /sc_site/],
-      cookies: ['SC_ANALYTICS_GLOBAL_COOKIE', 'sitecore'],
+      html: [/(src|href)=["'][^"']*\/-\/(media|jssmedia)\//, asset('sitecore')],
+      // XM Cloud / Experience Edge und Sitecore Personalize (ehem. Boxever) – 03-martech-signals.
+      requests: [/edge\.sitecorecloud\.io\/api\/graphql\//],
+      scriptSrc: [/(^|\/)boxever-[\d.]+(\.min)?\.js/],
+      cookies: ['SC_ANALYTICS_GLOBAL_COOKIE', 'sitecore', 'boxever', 'boxever_id'],
     },
   },
   {
     name: 'Contentful',
     categories: ['CMS'],
     patterns: {
-      html: [/contentful/i, /ctfassets\.net/],
-      scriptSrc: [/contentful/],
+      html: [/(images|videos|assets|downloads)\.ctfassets\.net|cdn\.contentful\.com/],
+      scriptSrc: [/(^|[\/.])(cdn|preview|graphql)\.contentful\.com\//, /\.ctfassets\.net\//],
+      requests: [/(^|[\/.])(cdn|preview|graphql)\.contentful\.com\/(spaces|content)\//],
     },
   },
   {
@@ -109,7 +132,7 @@ const rules: DetectionRule[] = [
     name: 'Strapi',
     categories: ['CMS'],
     patterns: {
-      html: [/strapi/i, /uploads\/.*_strapi/],
+      html: [asset('strapi'), /\/uploads\/[^"'\s]*_strapi/],
     },
   },
   {
@@ -166,7 +189,7 @@ const rules: DetectionRule[] = [
     name: 'Kentico',
     categories: ['CMS'],
     patterns: {
-      html: [/kentico/i, /CMSPages\//],
+      html: [asset('kentico'), /CMSPages\//],
       meta: { generator: /Kentico/i },
     },
   },
@@ -174,7 +197,7 @@ const rules: DetectionRule[] = [
     name: 'Umbraco',
     categories: ['CMS'],
     patterns: {
-      html: [/umbraco/i],
+      html: [asset('umbraco')],
       meta: { generator: /Umbraco/i },
     },
   },
@@ -213,7 +236,7 @@ const rules: DetectionRule[] = [
     name: 'Magnolia',
     categories: ['CMS'],
     patterns: {
-      html: [/magnolia/, /\.magnolia\//, /magnoliaPublic/],
+      html: [/\.magnolia\//, /magnoliaPublic/, asset('magnolia')],
     },
   },
   {
@@ -229,15 +252,16 @@ const rules: DetectionRule[] = [
     name: 'HubSpot CMS',
     categories: ['CMS'],
     patterns: {
-      html: [/hs-sites\.com/, /hubspot\.net\/hub\//],
-      scriptSrc: [/js\.hubspot\.com/],
+      // Tracking-Code (hs-scripts) gehört zu HubSpot Marketing – CMS nur über Hosting-Belege.
+      headers: { 'x-hs-hub-id': /./, 'x-powered-by': /HubSpot/i },
+      html: [/\.hs-sites(-eu1)?\.com/, /\/hubfs\//, /hubspot\.net\/hub\//],
     },
   },
   {
     name: 'Sitefinity',
     categories: ['CMS'],
     patterns: {
-      html: [/sitefinity/i, /Telerik\.Web/],
+      html: [asset('sitefinity'), /Telerik\.Web/],
       meta: { generator: /Sitefinity/i },
     },
   },
@@ -245,7 +269,7 @@ const rules: DetectionRule[] = [
     name: 'Episerver / Optimizely CMS',
     categories: ['CMS'],
     patterns: {
-      html: [/EPiServer/i, /episerver/i],
+      html: [asset('episerver')],
       meta: { generator: /EPiServer/i },
     },
   },
@@ -253,7 +277,7 @@ const rules: DetectionRule[] = [
     name: 'Contao',
     categories: ['CMS'],
     patterns: {
-      html: [/contao/i, /system\/modules\//],
+      html: [asset('contao'), /system\/modules\//],
       meta: { generator: /Contao/i },
     },
   },
@@ -305,28 +329,28 @@ const rules: DetectionRule[] = [
     name: 'Tridion',
     categories: ['CMS'],
     patterns: {
-      html: [/tridion/i, /sdl\.com/],
+      html: [asset('tridion')],
     },
   },
   {
     name: 'CoreMedia',
     categories: ['CMS'],
     patterns: {
-      html: [/coremedia/i, /\/blueprint\/servlet\//],
+      html: [asset('coremedia'), /\/blueprint\/servlet\//],
     },
   },
   {
     name: 'FirstSpirit',
     categories: ['CMS'],
     patterns: {
-      html: [/firstspirit/i, /e-spirit\.com/],
+      html: [asset('firstspirit')],
     },
   },
   {
     name: 'Pimcore',
     categories: ['CMS'],
     patterns: {
-      html: [/pimcore/i],
+      html: [asset('pimcore')],
       headers: { 'x-powered-by': /pimcore/i },
     },
   },
@@ -362,7 +386,7 @@ const rules: DetectionRule[] = [
     name: 'Plone',
     categories: ['CMS'],
     patterns: {
-      html: [/plone/i, /portal_css/],
+      html: [asset('plone'), /portal_css/],
       meta: { generator: /Plone/i },
     },
   },
@@ -378,7 +402,7 @@ const rules: DetectionRule[] = [
     name: 'ProcessWire',
     categories: ['CMS'],
     patterns: {
-      html: [/processwire/i],
+      html: [asset('processwire')],
       meta: { generator: /ProcessWire/i },
     },
   },
@@ -386,15 +410,15 @@ const rules: DetectionRule[] = [
     name: 'Concrete CMS',
     categories: ['CMS'],
     patterns: {
-      html: [/concrete5/, /concretecms/i],
-      meta: { generator: /concrete/i },
+      html: [asset('concrete5'), asset('concretecms')],
+      meta: { generator: /concrete(5|\s*CMS)/i },
     },
   },
   {
     name: 'Silverstripe',
     categories: ['CMS'],
     patterns: {
-      html: [/silverstripe/i],
+      html: [asset('silverstripe')],
       meta: { generator: /SilverStripe/i },
     },
   },
@@ -402,14 +426,14 @@ const rules: DetectionRule[] = [
     name: 'October CMS',
     categories: ['CMS'],
     patterns: {
-      html: [/octobercms/i],
+      html: [asset('octobercms')],
     },
   },
   {
     name: 'Statamic',
     categories: ['CMS'],
     patterns: {
-      html: [/statamic/i],
+      html: [asset('statamic')],
       meta: { generator: /Statamic/i },
     },
   },
@@ -433,8 +457,8 @@ const rules: DetectionRule[] = [
     name: 'Framer',
     categories: ['CMS'],
     patterns: {
-      html: [/framer\.com/, /framerusercontent\.com/],
-      scriptSrc: [/framer\.com/],
+      html: [/framerusercontent\.com/, /(^|[\/.])framer\.com\//],
+      scriptSrc: [/(^|[\/.])framer\.com\//, /framerusercontent\.com/],
     },
   },
 
@@ -471,30 +495,37 @@ const rules: DetectionRule[] = [
     name: 'Salesforce Commerce Cloud',
     categories: ['eCommerce'],
     patterns: {
+      cookies: ['dwsid', 'dwanonymous_', '__cq_uuid', '__cq_seg'],
       html: [/demandware\.net/, /demandware\.store/],
-      scriptSrc: [/demandware/],
+      scriptSrc: [/demandware/, /cdn\.cquotient\.com\/js\/v2\/gretel(\.min)?\.js/],
     },
   },
   {
     name: 'SAP Commerce Cloud (Hybris)',
     categories: ['eCommerce'],
     patterns: {
-      html: [/hybris/i, /_ui\/responsive/, /acceleratorservices/],
+      html: [
+        /\/_ui\/(responsive|desktop|addons)\//,
+        /acceleratorservices/,
+        asset('hybris'),
+        // Composable Storefront (Spartacus) – 03-martech-signals.
+        /<cx-storefront\b|class="[^"]*\bcx-storefront\b/,
+      ],
+      requests: [/\/occ\/v2\/[\w-]+\//],
     },
   },
   {
     name: 'Oracle Commerce Cloud',
     categories: ['eCommerce'],
     patterns: {
-      html: [/oracle\.com.*commerce/i, /ccstore/],
+      html: [/\/ccstorex?\//],
     },
   },
   {
     name: 'WooCommerce',
     categories: ['eCommerce'],
     patterns: {
-      html: [/woocommerce/i, /wc-block/, /wc-cart/],
-      scriptSrc: [/woocommerce/],
+      html: [/\/wp-content\/plugins\/woocommerce\//, /class="[^"]*\bwoocommerce(-[\w-]+)?\b/, /\bwc-block-[\w-]+/],
       cookies: ['woocommerce_cart_hash', 'woocommerce_items_in_cart'],
     },
   },
@@ -511,7 +542,7 @@ const rules: DetectionRule[] = [
     name: 'PrestaShop',
     categories: ['eCommerce'],
     patterns: {
-      html: [/prestashop/i, /modules\/ps_/],
+      html: [asset('prestashop'), /\/modules\/ps_\w+\//],
       meta: { generator: /PrestaShop/i },
       cookies: ['PrestaShop-'],
     },
@@ -520,8 +551,7 @@ const rules: DetectionRule[] = [
     name: 'Shopware',
     categories: ['eCommerce'],
     patterns: {
-      html: [/shopware/i, /shopware\.com/],
-      scriptSrc: [/shopware/],
+      html: [asset('shopware')],
       cookies: ['shopware_'],
     },
   },
@@ -529,6 +559,7 @@ const rules: DetectionRule[] = [
     name: 'Commercetools',
     categories: ['eCommerce'],
     patterns: {
+      requests: [/(^|\/\/)api\.[a-z0-9.-]+\.commercetools\.com\/[^/]+\/graphql/],
       html: [/commercetools\.com/],
       scriptSrc: [/commercetools/],
     },
@@ -537,7 +568,7 @@ const rules: DetectionRule[] = [
     name: 'Spryker',
     categories: ['eCommerce'],
     patterns: {
-      html: [/spryker/i],
+      html: [asset('spryker')],
     },
   },
   {
@@ -560,14 +591,15 @@ const rules: DetectionRule[] = [
     name: 'Oxid eShop',
     categories: ['eCommerce'],
     patterns: {
-      html: [/oxid/i, /oxid-esales/],
+      meta: { generator: /OXID/i },
+      html: [/<meta[^>]+name="generator"[^>]+content="[^"]*OXID/i, asset('oxid-esales')],
     },
   },
   {
     name: 'Gambio',
     categories: ['eCommerce'],
     patterns: {
-      html: [/gambio/i],
+      html: [asset('gambio')],
       meta: { generator: /Gambio/i },
     },
   },
@@ -575,14 +607,14 @@ const rules: DetectionRule[] = [
     name: 'JTL-Shop',
     categories: ['eCommerce'],
     patterns: {
-      html: [/jtl-shop/i, /jtl-software/i],
+      html: [asset('jtl-shop'), asset('jtl-software')],
     },
   },
   {
     name: 'Plentymarkets',
     categories: ['eCommerce'],
     patterns: {
-      html: [/plentymarkets/i],
+      html: [asset('plentymarkets')],
     },
   },
   {
@@ -626,14 +658,14 @@ const rules: DetectionRule[] = [
     name: 'OpenCart',
     categories: ['eCommerce'],
     patterns: {
-      html: [/opencart/i, /catalog\/view/],
+      html: [asset('opencart'), /catalog\/view\/(theme|javascript)\//],
     },
   },
   {
     name: 'nopCommerce',
     categories: ['eCommerce'],
     patterns: {
-      html: [/nopcommerce/i],
+      html: [asset('nopcommerce')],
       meta: { generator: /nopCommerce/i },
     },
   },
@@ -662,7 +694,7 @@ const rules: DetectionRule[] = [
     name: 'Salesforce B2B Commerce',
     categories: ['eCommerce'],
     patterns: {
-      html: [/cloudcraze/i, /b2b-commerce/],
+      html: [asset('cloudcraze')],
     },
   },
   {
@@ -700,7 +732,7 @@ const rules: DetectionRule[] = [
     name: 'Lotame',
     categories: ['DMP'],
     patterns: {
-      scriptSrc: [/lotame\.com/, /crwdcntrl\.net/],
+      scriptSrc: [host('lotame.com'), host('crwdcntrl.net')],
     },
   },
   {
@@ -716,7 +748,7 @@ const rules: DetectionRule[] = [
     categories: ['DMP', 'Advertising'],
     patterns: {
       scriptSrc: [/rlcdn\.com/, /liveramp\.com/],
-      cookies: ['_lr_', 'lr_env'],
+      cookies: ['_lr_env', '_lr_retry_request', '_lr_geo_location', 'lr_env'],
     },
   },
   {
@@ -730,16 +762,18 @@ const rules: DetectionRule[] = [
     name: 'Oracle Data Cloud',
     categories: ['DMP'],
     patterns: {
-      scriptSrc: [/addthis\.com/, /oracleinfinity\.io/],
-      cookies: ['oracleinfinity'],
+      // addthis.com (Share-Widget) und oracleinfinity.io (eigene Regel „Oracle Infinity“) entfernt.
+      scriptSrc: [host('moatads.com')],
+      requests: [/(^|[\/.])(px|z|mb)\.moatads\.com\//],
     },
   },
   {
     name: 'Nielsen DMP',
     categories: ['DMP'],
     patterns: {
-      scriptSrc: [/imrworldwide\.com/, /nielsen\.com/],
-      cookies: ['IMRID'],
+      // imrworldwide/IMRID = Nielsen Digital Measurement (eigene Analytics-Regel).
+      scriptSrc: [host('exelator.com'), /(^|[\/.])nielsen\.com\//],
+      requests: [/(^|[\/.])loadm\.exelator\.com\//],
     },
   },
   {
@@ -769,7 +803,7 @@ const rules: DetectionRule[] = [
     categories: ['DMP'],
     patterns: {
       scriptSrc: [/id5-sync\.com/],
-      cookies: ['id5_'],
+      cookies: [/^id5id/],
     },
   },
 
@@ -789,22 +823,26 @@ const rules: DetectionRule[] = [
     name: 'Segment',
     categories: ['CDP', 'Analytics', 'Tag Management'],
     patterns: {
-      scriptSrc: [/cdn\.segment\.com/, /cdn\.segment\.io/, /segment\.com/],
+      scriptSrc: [/(^|\/\/)cdn\.segment\.(com|io)\//],
+      requests: [/api\.segment\.io\/v1\//],
       html: [/analytics\.identify/, /analytics\.track/],
-      cookies: ['_sctr', '_scid'],
+      // _scid/_sctr sind Snapchat-Cookies (Snap Pixel), nicht Segment.
+      cookies: ['ajs_anonymous_id', 'ajs_user_id', 'ajs_group_id'],
     },
   },
   {
     name: 'Tealium AudienceStream',
     categories: ['CDP'],
     patterns: {
-      scriptSrc: [/tags\.tiqcdn\.com/, /tealium/],
+      // utag.js allein ist Tealium iQ – AudienceStream erst bei Collect/Visitor-Service-Calls.
+      requests: [/collect\.tealiumiq\.com\/(event|[\w-]+\/[\w-]+\/[\w-]+\/i\.gif)/, /visitor-service[\w.-]*\.tealiumiq\.com\//],
     },
   },
   {
     name: 'mParticle',
     categories: ['CDP'],
     patterns: {
+      cookies: [/^mprtcl-v\d/],
       scriptSrc: [/mparticle\.com/],
     },
   },
@@ -812,14 +850,16 @@ const rules: DetectionRule[] = [
     name: 'Treasure Data',
     categories: ['CDP'],
     patterns: {
-      scriptSrc: [/treasuredata\.com/, /(^|\/)td(\.min)?\.js(\?|$)/],
-      cookies: ['_td'],
+      scriptSrc: [/cdn\.treasuredata\.com\/sdk\/[\d.]+\/td(\.min)?\.js/],
+      requests: [/(^|[\/.])[\w-]*\.?treasuredata\.(com|co\.jp)\/(js\/v3\/event|event)\//],
+      cookies: ['_td_global'],
     },
   },
   {
     name: 'Rudderstack',
     categories: ['CDP'],
     patterns: {
+      cookies: ['rl_anonymous_id', 'rl_user_id'],
       scriptSrc: [/rudderstack\.com/, /cdn\.rudderlabs\.com/],
     },
   },
@@ -827,7 +867,7 @@ const rules: DetectionRule[] = [
     name: 'Lytics',
     categories: ['CDP'],
     patterns: {
-      scriptSrc: [/lytics\.io/],
+      scriptSrc: [/(^|[\/.])lytics\.io\//],
       cookies: ['seerid'],
     },
   },
@@ -904,22 +944,6 @@ const rules: DetectionRule[] = [
       scriptSrc: [/twilio\.com.*segment/],
     },
   },
-  {
-    name: 'Insider CDP',
-    categories: ['CDP'],
-    patterns: {
-      scriptSrc: [/useinsider\.com/],
-      cookies: ['ins_'],
-    },
-  },
-  {
-    name: 'Mixpanel CDP',
-    categories: ['CDP'],
-    patterns: {
-      scriptSrc: [/mixpanel\.com/],
-      cookies: ['mp_'],
-    },
-  },
 
   // ═══════════════════════════════════════════════════════
   // ██  Analytics  ██
@@ -930,7 +954,7 @@ const rules: DetectionRule[] = [
     patterns: {
       scriptSrc: [/AppMeasurement/i, /(^|\/)s_code(\.min)?\.js/],
       requests: [/\/b\/ss\/[^/]+\/\d+\//, /\.sc\.omtrdc\.net\//, /\.2o7\.net\//],
-      html: [/s_account/, /omniture/i, /sc\.omtrdc\.net/],
+      html: [/\bs_account\s*=/, /sc\.omtrdc\.net/],
       cookies: ['s_vi', 's_sq', 's_cc', 's_fid', 's_ecid'],
       js: { 'adobe.appmeasurement': /./ },
     },
@@ -959,9 +983,11 @@ const rules: DetectionRule[] = [
   {
     name: 'Adobe Customer Journey Analytics',
     categories: ['Analytics'],
+    maxConfidence: 60,
     patterns: {
-      // Server-seitig – vom Client aus nicht belegbar; nur expliziter Verweis als schwacher Hinweis.
-      html: [/cja\.adobe\.com/],
+      // Server-seitig – vom Client aus nicht belegbar. Links auf cja.adobe.com sind KEIN Beleg;
+      // nur eingebettete CJA-Inhalte (iframe/script) zählen, mit gedeckelter Konfidenz.
+      html: [/<(iframe|script)[^>]+src="https:\/\/[\w.-]*cja\.adobe\.com\//],
     },
   },
   {
@@ -981,7 +1007,7 @@ const rules: DetectionRule[] = [
     patterns: {
       scriptSrc: [/googletagmanager\.com\/gtag\/js\?id=G-/],
       requests: [/\/g\/collect\?v=2&/],
-      html: [/['"]G-[A-Z0-9]{6,12}['"]/, /gtag\(.*config/],
+      html: [/['"]G-[A-Z0-9]{6,12}['"]/, /gtag\(\s*['"]config['"]\s*,\s*['"]G-/],
       cookies: ['_ga_'],
       js: { 'google.tags': /(^|,)G-/ },
     },
@@ -991,7 +1017,7 @@ const rules: DetectionRule[] = [
     categories: ['Analytics'],
     patterns: {
       scriptSrc: [/mixpanel\.com/, /cdn\.mxpnl\.com/],
-      cookies: ['mp_'],
+      cookies: [/^mp_[0-9a-f]{32}_mixpanel$/],
     },
   },
   {
@@ -1015,7 +1041,7 @@ const rules: DetectionRule[] = [
     categories: ['Analytics'],
     patterns: {
       scriptSrc: [/fullstory\.com/, /fullstory\.com\/s\/fs\.js/],
-      cookies: ['_fs_'],
+      cookies: ['fs_uid', 'fs_lua'],
     },
   },
   {
@@ -1023,7 +1049,7 @@ const rules: DetectionRule[] = [
     categories: ['Analytics'],
     patterns: {
       scriptSrc: [/amplitude\.com/, /cdn\.amplitude\.com/],
-      cookies: ['amp_'],
+      cookies: ['amp_', 'AMP_'],
     },
   },
   {
@@ -1074,7 +1100,7 @@ const rules: DetectionRule[] = [
     name: 'Countly',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/countly/],
+      scriptSrc: [/(^|[\/@])countly([\/@.]|$)/],
       cookies: ['cly_'],
     },
   },
@@ -1098,8 +1124,8 @@ const rules: DetectionRule[] = [
     name: 'Snowplow',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/snowplow/, /(^|\/)sp(\.min)?\.js(\?|$)/],
-      cookies: ['_sp_'],
+      scriptSrc: [/(^|[\/.@-])snowplow/, /^(?!.*\/_layouts\/)(.*\/)?sp(\.min)?\.js(\?|$)/],
+      cookies: ['_sp_id.', '_sp_ses.'],
     },
   },
   {
@@ -1107,7 +1133,7 @@ const rules: DetectionRule[] = [
     categories: ['Analytics'],
     patterns: {
       scriptSrc: [/posthog\.com/, /app\.posthog\.com/],
-      cookies: ['ph_'],
+      cookies: [/^ph_[\w-]+_posthog$/],
     },
   },
   {
@@ -1115,7 +1141,7 @@ const rules: DetectionRule[] = [
     categories: ['Analytics'],
     patterns: {
       scriptSrc: [/kissmetrics\.com/, /i\.kissmetrics\.com/],
-      cookies: ['km_'],
+      cookies: ['km_ai', 'km_lv', 'km_vs'],
     },
   },
   {
@@ -1138,7 +1164,7 @@ const rules: DetectionRule[] = [
     name: 'Yandex Metrica',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/mc\.yandex\.ru/, /metrika/],
+      scriptSrc: [/(^|[\/.])mc\.yandex\.(ru|com|by|kz)\//],
       cookies: ['_ym_'],
     },
   },
@@ -1170,8 +1196,8 @@ const rules: DetectionRule[] = [
     name: 'LogRocket',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/logrocket\.com/, /cdn\.logrocket\.io/],
-      cookies: ['_lr_'],
+      scriptSrc: [/logrocket\.com/, /cdn\.logrocket\.io/, /(^|[\/.])lr-ingest\.(io|com)\//],
+      cookies: ['_lr_hb_', '_lr_tabs_', '_lr_uf_'],
     },
   },
   {
@@ -1179,7 +1205,7 @@ const rules: DetectionRule[] = [
     categories: ['Analytics'],
     patterns: {
       scriptSrc: [/mouseflow\.com/],
-      cookies: ['mf_'],
+      cookies: [/^mf_[0-9a-f]{8}-?[0-9a-f]{4}/i],
     },
   },
   {
@@ -1219,7 +1245,7 @@ const rules: DetectionRule[] = [
     categories: ['Analytics'],
     patterns: {
       scriptSrc: [/contentsquare\.net/, /contentsquare\.com/],
-      cookies: ['_cs_'],
+      cookies: ['_cs_c', '_cs_id', '_cs_s'],
     },
   },
   {
@@ -1275,7 +1301,7 @@ const rules: DetectionRule[] = [
     categories: ['Analytics'],
     patterns: {
       scriptSrc: [/etracker\.com/, /etracker\.de/],
-      cookies: ['et_'],
+      cookies: ['et_coid', 'et_allow_cookies'],
     },
   },
   {
@@ -1283,14 +1309,14 @@ const rules: DetectionRule[] = [
     categories: ['Analytics'],
     patterns: {
       scriptSrc: [/webtrekk\.net/, /mapp\.com/, /wt-eu02\.net/],
-      cookies: ['wt_'],
+      cookies: [/^wt3_(eid|sid)/, /^wt(eid|sid)_\d+/, 'wt_rla'],
     },
   },
   {
     name: 'Econda',
     categories: ['Analytics'],
     patterns: {
-      scriptSrc: [/econda/],
+      scriptSrc: [/(^|[\/.])econda(-monitor)?\.(de|net|com)\/|(^|\/)emos[23](\.min)?\.js/],
       cookies: ['emos_'],
     },
   },
@@ -1396,7 +1422,7 @@ const rules: DetectionRule[] = [
     categories: ['Personalization & Optimization'],
     patterns: {
       scriptSrc: [/dev\.visualwebsiteoptimizer\.com/, /vwo_code/, /vwo\.com/],
-      cookies: ['_vwo'],
+      cookies: ['_vwo_', '_vwo_uuid_v2'],
     },
   },
   {
@@ -1404,7 +1430,7 @@ const rules: DetectionRule[] = [
     categories: ['Personalization & Optimization'],
     patterns: {
       scriptSrc: [/dynamicyield\.com/, /dy-api/],
-      cookies: ['_dy_'],
+      cookies: ['_dy_', '_dyid', '_dyjsession'],
     },
   },
   {
@@ -1419,8 +1445,8 @@ const rules: DetectionRule[] = [
     name: 'Kameleoon',
     categories: ['Personalization & Optimization'],
     patterns: {
-      scriptSrc: [/kameleoon\.com/],
-      cookies: ['_kameleoon'],
+      scriptSrc: [/kameleoon\.com/, /(^|[\/.])[\w-]+\.kameleoon\.(eu|io)\//],
+      cookies: ['_kameleoon', 'kameleoonVisitorCode'],
     },
   },
   {
@@ -1449,7 +1475,7 @@ const rules: DetectionRule[] = [
   },
   {
     name: 'Coveo',
-    categories: ['Personalization & Optimization'],
+    categories: ['Personalization & Optimization', 'Search'],
     patterns: {
       scriptSrc: [/coveo\.com/, /platform\.cloud\.coveo\.com/],
       cookies: ['coveo_'],
@@ -1459,7 +1485,7 @@ const rules: DetectionRule[] = [
     name: 'Qubit',
     categories: ['Personalization & Optimization'],
     patterns: {
-      scriptSrc: [/qubit\.com/],
+      scriptSrc: [/qubit\.com/, /d3c3cq33003psk\.cloudfront\.net/],
       cookies: ['_qubitTracker'],
     },
   },
@@ -1467,7 +1493,8 @@ const rules: DetectionRule[] = [
     name: 'Evergage / Salesforce Interaction Studio',
     categories: ['Personalization & Optimization'],
     patterns: {
-      scriptSrc: [/evergage\.com/],
+      scriptSrc: [/evergage\.com/, /evgnet\.com/, /cdn\.evgnet\.com\/beacon\/[^/]+\/[^/]+\/scripts\/evergage(\.min)?\.js/],
+      requests: [/\.evergage\.com\//, /\.evgnet\.com\//],
       cookies: ['_evga_'],
     },
   },
@@ -1490,7 +1517,7 @@ const rules: DetectionRule[] = [
     name: 'Convert',
     categories: ['Personalization & Optimization'],
     patterns: {
-      scriptSrc: [/convert\.com/],
+      scriptSrc: [host('convert.com'), /convertexperiments\.com\//],
       cookies: ['_conv_'],
     },
   },
@@ -1507,7 +1534,6 @@ const rules: DetectionRule[] = [
     categories: ['Personalization & Optimization'],
     patterns: {
       scriptSrc: [/launchdarkly\.com/],
-      cookies: ['ld_'],
     },
   },
   {
@@ -1566,14 +1592,6 @@ const rules: DetectionRule[] = [
       scriptSrc: [/sitespect\.com/],
     },
   },
-  {
-    name: 'Emarsys Personalization',
-    categories: ['Personalization & Optimization'],
-    patterns: {
-      scriptSrc: [/emarsys\.com/, /scarab\.js/],
-      cookies: ['scarab.'],
-    },
-  },
 
   // ═══════════════════════════════════════════════════════
   // ██  DAM  ██
@@ -1582,7 +1600,8 @@ const rules: DetectionRule[] = [
     name: 'Adobe Experience Manager Assets',
     categories: ['DAM'],
     patterns: {
-      html: [/\/content\/dam\//, /assets\.adobe\.com/],
+      // /content/dam/ ist AEM-Sites-Standard (eigene AEM-Regel) und kein Beleg für eine Assets-Lizenz.
+      html: [/\/is\/(image|content)\//, /scene7\.com\/is\//, /\/adobe\/dynamicmedia\/deliver\//],
       scriptSrc: [/assets\.adobe\.com/],
     },
   },
@@ -1590,8 +1609,19 @@ const rules: DetectionRule[] = [
     name: 'Adobe Dynamic Media',
     categories: ['DAM'],
     patterns: {
-      html: [/\.scene7\.com\/is\/(image|content)\//, /\/adobe\/dynamicmedia\/deliver\//],
-      requests: [/\.scene7\.com\/is\/(image|content|agm)\//, /\/adobe\/dynamicmedia\/deliver\//],
+      html: [
+        /\.scene7\.com\/is\/(image|content)\//,
+        /\/adobe\/dynamicmedia\/deliver\//,
+        /cdn\.adobe\.com\/dynamicmedia\/assets\//,
+        /\/is\/image\/[A-Za-z0-9_-]+\//,
+      ],
+      requests: [
+        /\.scene7\.com\/is\/(image|content|agm)\//,
+        /\/adobe\/dynamicmedia\/deliver\//,
+        /cdn\.adobe\.com\/dynamicmedia\/assets\//,
+        /\/is\/image\/[A-Za-z0-9_-]+\//,
+        /assetsadobe\d?\.com\/is\/(image|content)\//,
+      ],
       scriptSrc: [/\.scene7\.com\/s7viewers\//, /s7sdk/i],
     },
   },
@@ -1690,23 +1720,29 @@ const rules: DetectionRule[] = [
     name: 'Salesforce',
     categories: ['CRM'],
     patterns: {
-      html: [/force\.com/, /salesforce\.com/, /lightning\.force\.com/],
-      scriptSrc: [/force\.com/],
+      // Nur Org-/Site-Hosts; Links auf salesforce.com sowie service.force.com/embeddedservice (Chat) zählen nicht.
+      scriptSrc: [
+        /(^|[\/.])[\w-]+\.(my\.)?(site|salesforce-sites|lightning)\.force\.com\/|(^|[\/.])[\w-]+\.my\.salesforce\.com\/|(^|[\/.])[\w-]+\.my\.site\.com\//,
+      ],
     },
   },
   {
     name: 'Microsoft Dynamics 365',
     categories: ['CRM'],
     patterns: {
-      html: [/dynamics\.com/, /msdyncrm/],
+      html: [
+        /[\w-]+\.crm\d*\.dynamics\.com|mktdplp102cdn\.azureedge\.net|cxppusa1formui01cdnsa01-endpoint\.azureedge\.net|d365mktformloader/,
+        /\bmsdyncrm_/,
+      ],
     },
   },
   {
     name: 'HubSpot CRM',
     categories: ['CRM'],
     patterns: {
-      scriptSrc: [/js\.hs-scripts\.com/, /js\.hubspot\.com/],
-      html: [/hubspot/i],
+      // Chat-/Meetings-Widgets; der Tracking-Code (hs-scripts) gehört zu HubSpot Marketing.
+      scriptSrc: [/(^|[\/.])js\.usemessages\.com\//],
+      html: [/(src|href|data-src)="https:\/\/meetings(-[a-z]{2}\d)?\.hubspot\.com\//],
     },
   },
   {
@@ -1736,7 +1772,7 @@ const rules: DetectionRule[] = [
     name: 'SugarCRM',
     categories: ['CRM'],
     patterns: {
-      html: [/sugarcrm/i],
+      html: [asset('sugarcrm')],
     },
   },
   {
@@ -1750,7 +1786,7 @@ const rules: DetectionRule[] = [
     name: 'Oracle CX Sales (Siebel)',
     categories: ['CRM'],
     patterns: {
-      html: [/siebel/i],
+      html: [asset('siebel')],
     },
   },
 
@@ -1763,8 +1799,8 @@ const rules: DetectionRule[] = [
     patterns: {
       scriptSrc: [/munchkin\.marketo\.net/, /mktoForms/, /\/js\/forms2\/js\/forms2(\.min)?\.js/],
       requests: [/\.mktoresp\.com\//, /\/webevents\/visitWebPage\?/],
-      html: [/mktoForm/, /marketo/i, /munchkin/i],
-      cookies: ['_mkto_'],
+      html: [/mktoForm/, /Munchkin\.init\(/, asset('marketo')],
+      cookies: ['_mkto_trk'],
       js: { 'marketo.munchkin': /./ },
     },
   },
@@ -1773,15 +1809,15 @@ const rules: DetectionRule[] = [
     categories: ['ESP/Marketing Automation'],
     patterns: {
       // Belegbar über Web-/Code-based-Experiences: Edge liefert Propositions mit decisionProvider "AJO".
+      // Links/Erwähnungen (journey-optimizer, ajo.adobe) sind kein Implementierungsbeleg mehr.
       edge: [/^decisionProvider:AJO$/],
-      html: [/journey-optimizer/, /ajo\.adobe/],
     },
   },
   {
     name: 'Adobe Campaign',
     categories: ['ESP/Marketing Automation'],
     patterns: {
-      html: [/adobecampaign/, /neolane/i],
+      html: [asset('adobecampaign'), asset('neolane')],
       cookies: ['nllastdelid'],
     },
   },
@@ -1789,16 +1825,16 @@ const rules: DetectionRule[] = [
     name: 'Salesforce Marketing Cloud',
     categories: ['ESP/Marketing Automation'],
     patterns: {
-      scriptSrc: [/exacttarget\.com/, /salesforce-mc/],
-      html: [/exacttarget/i],
+      scriptSrc: [/exacttarget\.com/, /salesforce-mc/, /exacttargetapis\.com\//],
+      html: [asset('exacttarget')],
     },
   },
   {
     name: 'Eloqua',
     categories: ['ESP/Marketing Automation'],
     patterns: {
-      scriptSrc: [/eloqua\.com/, /elqtrack/],
-      html: [/eloqua/i, /elqTrack/],
+      scriptSrc: [/eloqua\.com/, /elqtrack/, /(^|[\/.])en25\.com\//],
+      html: [asset('eloqua'), /elqTrack/],
     },
   },
   {
@@ -1806,8 +1842,8 @@ const rules: DetectionRule[] = [
     categories: ['ESP/Marketing Automation'],
     patterns: {
       scriptSrc: [/pardot\.com/, /pi\.pardot/],
-      html: [/pardot/i],
-      cookies: ['_pardot'],
+      html: [asset('pardot')],
+      cookies: ['_pardot', /^visitor_id\d+$/, /^pi_opt_in\d*$/],
     },
   },
   {
@@ -1822,8 +1858,14 @@ const rules: DetectionRule[] = [
     name: 'HubSpot Marketing',
     categories: ['ESP/Marketing Automation'],
     patterns: {
-      scriptSrc: [/hubspot\.com/, /js\.hs-scripts\.com/],
-      cookies: ['_hssc', '_hssrc', 'hubspotutk'],
+      scriptSrc: [
+        /(^|[\/.])js(-[a-z]{2}\d)?\.hs-scripts\.com\//,
+        /(^|[\/.])js(-[a-z]{2}\d)?\.hs-analytics\.net\//,
+        /(^|[\/.])js(-[a-z]{2}\d)?\.hsforms\.net\//,
+        /(^|[\/.])js\.hubspot\.com\//,
+      ],
+      requests: [/track\.hubspot\.com\/__ptq\.gif/, /forms(-[a-z]{2}\d)?\.hsforms\.com\/embed\//],
+      cookies: ['__hstc', '__hssc', '__hssrc', 'hubspotutk'],
     },
   },
   {
@@ -1892,9 +1934,10 @@ const rules: DetectionRule[] = [
   },
   {
     name: 'Emarsys',
-    categories: ['ESP/Marketing Automation'],
+    categories: ['ESP/Marketing Automation', 'Personalization & Optimization'],
     patterns: {
-      scriptSrc: [/emarsys\.com/],
+      scriptSrc: [host('emarsys.com'), /scarabresearch\.com\//, /(^|\/)scarab[\w-]*\.js/],
+      cookies: ['scarab.'],
     },
   },
   {
@@ -2128,8 +2171,8 @@ const rules: DetectionRule[] = [
     categories: ['Tag Management'],
     patterns: {
       scriptSrc: [/tiqcdn\.com/, /tealium\.com/],
-      html: [/utag\.js/, /tealium/i],
-      cookies: ['utag_main', 'utag_env'],
+      html: [/utag\.js/, asset('tealium')],
+      cookies: [/^utag_main(_v_id)?$/, 'utag_env_'],
     },
   },
   {
@@ -2144,7 +2187,7 @@ const rules: DetectionRule[] = [
     name: 'Signal (BrightTag)',
     categories: ['Tag Management'],
     patterns: {
-      scriptSrc: [/btstatic\.com/, /signal\.co/],
+      scriptSrc: [/(^|[\/.])s\.btstatic\.com\/|(^|[\/.])signal\.co\//],
     },
   },
   {
@@ -2152,7 +2195,7 @@ const rules: DetectionRule[] = [
     categories: ['Tag Management'],
     patterns: {
       scriptSrc: [/tagcommander\.com/, /commandersact\.com/],
-      cookies: ['tc_'],
+      cookies: ['TCPID', 'TC_PRIVACY', 'TC_PRIVACY_CENTER'],
     },
   },
   {
@@ -2160,13 +2203,6 @@ const rules: DetectionRule[] = [
     categories: ['Tag Management'],
     patterns: {
       scriptSrc: [/piwik\.pro\/tag/],
-    },
-  },
-  {
-    name: 'Qubit (now Coveo)',
-    categories: ['Tag Management'],
-    patterns: {
-      scriptSrc: [/qubit\.com/, /d3c3cq33003psk\.cloudfront\.net/],
     },
   },
   {
@@ -2201,15 +2237,16 @@ const rules: DetectionRule[] = [
     categories: ['Consent Management'],
     patterns: {
       scriptSrc: [/usercentrics\.com/, /usercentrics\.eu/],
-      cookies: ['uc_'],
+      cookies: ['uc_user_interaction', 'uc_settings'],
     },
   },
   {
     name: 'Sourcepoint',
     categories: ['Consent Management'],
     patterns: {
-      scriptSrc: [/sourcepoint\.com/],
-      cookies: ['_sp_'],
+      scriptSrc: [/sourcepoint\.com/, /(^|[\/.])privacy-mgmt\.com\//],
+      // _sp_ allein kollidiert mit Snowplow (_sp_id./_sp_ses.).
+      cookies: [/^_sp_user_consent_/, '_sp_local_state'],
     },
   },
   {
@@ -2280,15 +2317,16 @@ const rules: DetectionRule[] = [
     name: 'Consentmanager.net',
     categories: ['Consent Management'],
     patterns: {
+      requests: [/\.delivery\.consentmanager\.net\/delivery\/cmp\.php/],
       scriptSrc: [/consentmanager\.net/],
-      cookies: ['cmpro'],
+      cookies: ['cmpro', '__cmpcc', '__cmpcvc'],
     },
   },
   {
     name: 'Klaro',
     categories: ['Consent Management'],
     patterns: {
-      scriptSrc: [/klaro/],
+      scriptSrc: [/(^|[\/@])klaro([\/@.]|$)/],
       cookies: ['klaro'],
     },
   },
@@ -2319,7 +2357,7 @@ const rules: DetectionRule[] = [
     name: 'Borlabs Cookie',
     categories: ['Consent Management'],
     patterns: {
-      scriptSrc: [/borlabs/],
+      scriptSrc: [/(^|[\/@])borlabs(-cookie)?([\/@.]|$)/],
       cookies: ['borlabs-cookie'],
     },
   },
@@ -2355,8 +2393,25 @@ const rules: DetectionRule[] = [
     name: 'Google Ads',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/googleads\.g\.doubleclick\.net/, /pagead2\.googlesyndication/],
-      cookies: ['_gcl_au', '_gcl_dc', '_gac_'],
+      // pagead2.googlesyndication = AdSense (Publisher), nicht Google Ads (Advertiser).
+      // _gcl_au setzt jeder gtag-/GTM-Conversion-Linker → eigene Regel „Google Tag (gtag.js)“.
+      scriptSrc: [
+        /googleads\.g\.doubleclick\.net/,
+        /googletagmanager\.com\/gtag\/js\?id=AW-/,
+        /googleadservices\.com\/pagead\/conversion/,
+      ],
+      requests: [/googleadservices\.com\/pagead\/conversion/, /google\.[a-z.]+\/pagead\/1p-(user-list|conversion)/],
+      html: [/['"]AW-\d{6,}['"]/],
+      cookies: ['_gcl_dc', '_gac_'],
+    },
+  },
+  {
+    name: 'Google Marketing Platform',
+    categories: ['Advertising'],
+    patterns: {
+      scriptSrc: [/googletagmanager\.com\/gtag\/js\?id=DC-/],
+      requests: [/fls\.doubleclick\.net\/activity/, /ad\.doubleclick\.net\/activity/],
+      html: [/['"]DC-\d{6,}['"]/, /fls\.doubleclick\.net/],
     },
   },
   {
@@ -2364,7 +2419,7 @@ const rules: DetectionRule[] = [
     categories: ['Advertising'],
     patterns: {
       scriptSrc: [/securepubads\.g\.doubleclick\.net/],
-      html: [/googletag/, /gpt\.js/],
+      html: [/googletag\.(cmd|pubads|defineSlot)\b/, /\/gpt\.js/],
     },
   },
   {
@@ -2372,14 +2427,14 @@ const rules: DetectionRule[] = [
     categories: ['Advertising'],
     patterns: {
       scriptSrc: [/pagead2\.googlesyndication\.com/],
-      html: [/adsbygoogle/],
+      html: [/adsbygoogle/, /data-ad-client="ca-pub-/],
     },
   },
   {
     name: 'Facebook / Meta Pixel',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/connect\.facebook\.net/],
+      scriptSrc: [/connect\.facebook\.net\/[\w_]+\/fbevents\.js|connect\.facebook\.net\/signals\//],
       html: [/fbq\(/, /facebook\.com\/tr/],
       cookies: ['_fbp', '_fbc'],
     },
@@ -2404,9 +2459,10 @@ const rules: DetectionRule[] = [
     name: 'Twitter / X Pixel',
     categories: ['Advertising'],
     patterns: {
+      requests: [/analytics\.twitter\.com\/(1\/)?i\/adsct/, /\bt\.co\/(1\/)?i\/adsct/],
       scriptSrc: [/static\.ads-twitter\.com/],
       html: [/twq\(/],
-      cookies: ['personalization_id'],
+      cookies: ['personalization_id', '_twpid'],
     },
   },
   {
@@ -2422,7 +2478,7 @@ const rules: DetectionRule[] = [
     name: 'Pinterest Tag',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/pintrk/, /ct\.pinterest\.com/],
+      scriptSrc: [/pintrk/, /ct\.pinterest\.com/, /s\.pinimg\.com\/ct\/core\.js/],
       cookies: ['_pinterest_sess'],
     },
   },
@@ -2431,14 +2487,15 @@ const rules: DetectionRule[] = [
     categories: ['Advertising'],
     patterns: {
       scriptSrc: [/sc-static\.net/],
-      cookies: ['_scid'],
+      requests: [/sc-static\.net\/scevent(-dh)?\.min\.js/, /tr\.snapchat\.com\//],
+      cookies: ['_scid', '_scid_r', '_sctr'],
     },
   },
   {
     name: 'Reddit Pixel',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/alb\.reddit\.com/, /reddit\.com\/static\/ads/],
+      scriptSrc: [/alb\.reddit\.com/, /reddit\.com\/static\/ads/, /redditstatic\.com\/ads\/pixel\.js/],
       cookies: ['_rdt_uuid'],
     },
   },
@@ -2511,7 +2568,9 @@ const rules: DetectionRule[] = [
     categories: ['Advertising'],
     patterns: {
       scriptSrc: [/adsrvr\.org/],
-      cookies: ['_tt_'],
+      requests: [/(insight|match)\.adsrvr\.org\/track\//, /js\.adsrvr\.org\/(up_loader|universal_pixel)/],
+      // _tt_ entfernt: kollidiert mit TikToks _tt_enable_cookie.
+      cookies: ['TDID', 'TDCPM'],
     },
   },
   {
@@ -2561,7 +2620,8 @@ const rules: DetectionRule[] = [
     name: 'Yahoo Advertising',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/ads\.yahoo\.com/, /verizonmedia\.com/],
+      scriptSrc: [/ads\.yahoo\.com/, /verizonmedia\.com/, /s\.yimg\.com\/wi\/ytc\.js/],
+      requests: [/sp\.analytics\.yahoo\.com\/spp?\.pl/, /s\.yimg\.com\/wi\/config\/\d+\.json/],
     },
   },
   {
@@ -2583,7 +2643,9 @@ const rules: DetectionRule[] = [
     name: 'TripleLift',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/triplelift\.com/],
+      scriptSrc: [host('triplelift.com'), host('3lift.com')],
+      requests: [/\.3lift\.com\/(xuid|sync|getuid)/],
+      cookies: ['tluid'],
     },
   },
   {
@@ -2604,7 +2666,7 @@ const rules: DetectionRule[] = [
     name: 'Media.net',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/media\.net/],
+      scriptSrc: [/(^|[\/.])(contextual|static)\.media\.net\//],
     },
   },
   {
@@ -2688,7 +2750,7 @@ const rules: DetectionRule[] = [
     name: 'Prebid.js',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/prebid/],
+      scriptSrc: [/(^|[\/.-])prebid([\d.]+)?(\.min)?\.js|\/prebid\/|cdn\.jsdelivr\.net\/npm\/prebid\.js/],
       html: [/pbjs\.que/, /pbjs\.setConfig/],
     },
   },
@@ -2747,14 +2809,7 @@ const rules: DetectionRule[] = [
     name: 'Verizon Media / Oath',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/oath\.com/, /adtech\.advertising\.com/],
-    },
-  },
-  {
-    name: 'Lotame Panorama ID',
-    categories: ['Advertising'],
-    patterns: {
-      scriptSrc: [/lotame\.com.*panorama/],
+      scriptSrc: [host('oath.com'), /adtech\.advertising\.com/],
     },
   },
   {
@@ -2770,7 +2825,7 @@ const rules: DetectionRule[] = [
     name: 'Awin',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/awin1\.com/, /awin\.com/],
+      scriptSrc: [host('awin1.com'), host('awin.com'), /(^|[\/.])dwin1\.com\//],
       cookies: ['awin'],
     },
   },
@@ -2794,7 +2849,7 @@ const rules: DetectionRule[] = [
     name: 'Impact',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/impact\.com/],
+      scriptSrc: [host('impact.com')],
       cookies: ['impact_'],
     },
   },
@@ -2802,7 +2857,8 @@ const rules: DetectionRule[] = [
     name: 'Rakuten Advertising',
     categories: ['Advertising'],
     patterns: {
-      scriptSrc: [/rakuten\.com/, /linksynergy\.com/],
+      cookies: ['rmStore'],
+      scriptSrc: [host('rakuten.com'), /linksynergy\.com/, /tag\.rmp\.rakuten\.com\/\d+\.ct\.js/, /(intl)?js\.rmtag\.com\/\d+\.ct\.js/],
     },
   },
   {
@@ -2936,7 +2992,7 @@ const rules: DetectionRule[] = [
     name: 'Genesys',
     categories: ['Customer Support'],
     patterns: {
-      scriptSrc: [/genesys\.com/, /mypurecloud\.com/],
+      scriptSrc: [/genesys\.com/, /mypurecloud\.(com|de|ie|jp|com\.au)\//],
     },
   },
   {
@@ -3053,21 +3109,14 @@ const rules: DetectionRule[] = [
     categories: ['Search'],
     patterns: {
       scriptSrc: [/algolia\.net/, /algoliasearch/, /algolia\.com/],
-      html: [/algolia/i],
+      html: [asset('algolia')],
     },
   },
   {
     name: 'Elasticsearch',
     categories: ['Search'],
     patterns: {
-      html: [/elasticsearch/i],
-    },
-  },
-  {
-    name: 'Coveo Search',
-    categories: ['Search'],
-    patterns: {
-      scriptSrc: [/coveo\.com/],
+      html: [asset('elasticsearch')],
     },
   },
   {
@@ -3123,7 +3172,7 @@ const rules: DetectionRule[] = [
     name: 'Typesense',
     categories: ['Search'],
     patterns: {
-      scriptSrc: [/typesense/],
+      scriptSrc: [/(^|[\/@])typesense(-instantsearch-adapter)?([\/@.]|$)/],
     },
   },
   {
@@ -3186,7 +3235,8 @@ const rules: DetectionRule[] = [
     name: 'YouTube Embed',
     categories: ['Social'],
     patterns: {
-      html: [/youtube\.com\/embed/, /youtube-nocookie\.com\/embed/],
+      scriptSrc: [/youtube\.com\/iframe_api/],
+      html: [/youtube\.com\/embed/, /youtube-nocookie\.com\/embed/, /youtube\.com\/iframe_api/],
     },
   },
   {
@@ -3324,8 +3374,8 @@ const rules: DetectionRule[] = [
     name: 'Stripe',
     categories: ['Payments'],
     patterns: {
-      scriptSrc: [/js\.stripe\.com/],
-      html: [/stripe\.com/],
+      scriptSrc: [/(^|\/\/)js\.stripe\.com\//],
+      html: [/<script[^>]+src="https:\/\/js\.stripe\.com\/v\d/],
     },
   },
   {
@@ -3333,7 +3383,7 @@ const rules: DetectionRule[] = [
     categories: ['Payments'],
     patterns: {
       scriptSrc: [/paypal\.com/, /paypalobjects\.com/],
-      html: [/paypal\.com/],
+      html: [/paypal\.com\/sdk\/js/, /paypalobjects\.com\/api\/checkout/],
     },
   },
   {
@@ -3341,7 +3391,7 @@ const rules: DetectionRule[] = [
     categories: ['Payments'],
     patterns: {
       scriptSrc: [/adyen\.com/],
-      html: [/adyen/i],
+      html: [asset('adyen')],
     },
   },
   {
@@ -3362,8 +3412,8 @@ const rules: DetectionRule[] = [
     name: 'Klarna',
     categories: ['Payments'],
     patterns: {
-      scriptSrc: [/klarna\.com/],
-      html: [/klarna/i],
+      scriptSrc: [/(^|[\/.])(x\.|js\.)?klarnacdn\.net\//, /(^|[\/.])klarnaservices\.com\//, host('klarna.com')],
+      html: [/klarna-(payments|placement|osm)|<klarna-placement/],
     },
   },
   {
@@ -3378,7 +3428,7 @@ const rules: DetectionRule[] = [
     categories: ['Payments'],
     patterns: {
       scriptSrc: [/mollie\.com/],
-      html: [/mollie/i],
+      html: [asset('mollie')],
     },
   },
   {
@@ -3392,23 +3442,23 @@ const rules: DetectionRule[] = [
     name: 'Checkout.com',
     categories: ['Payments'],
     patterns: {
-      scriptSrc: [/checkout\.com/],
+      scriptSrc: [host('checkout.com')],
     },
   },
   {
     name: 'Apple Pay',
     categories: ['Payments'],
     patterns: {
-      html: [/apple-pay/, /ApplePaySession/],
-      scriptSrc: [/applepay/],
+      scriptSrc: [/applepay\.cdn-apple\.com\/jsapi\//],
+      html: [/ApplePaySession|<apple-pay-button/],
     },
   },
   {
     name: 'Google Pay',
     categories: ['Payments'],
     patterns: {
-      scriptSrc: [/pay\.google\.com/],
-      html: [/google-pay/, /gpay/],
+      scriptSrc: [/pay\.google\.com\/gp\/p\/js\/pay\.js/],
+      html: [/pay\.google\.com\/gp\/p\/js\/pay\.js/, /<google-pay-button/],
     },
   },
   {
@@ -3422,7 +3472,7 @@ const rules: DetectionRule[] = [
     name: 'Shop Pay (Shopify)',
     categories: ['Payments'],
     patterns: {
-      scriptSrc: [/shop\.app/, /shopify\.com.*shop-pay/],
+      scriptSrc: [host('shop.app'), /shopify\.com\/[^"'\s]*shop-pay/],
     },
   },
   {
@@ -3492,7 +3542,7 @@ const rules: DetectionRule[] = [
     name: 'Fastly',
     categories: ['CDN/Infrastructure'],
     patterns: {
-      headers: { 'x-served-by': /cache-/, via: /varnish/, 'x-fastly-request-id': /.*/ },
+      headers: { 'x-served-by': /cache-/, 'x-fastly-request-id': /./ },
     },
   },
   {
@@ -3503,17 +3553,18 @@ const rules: DetectionRule[] = [
     },
   },
   {
-    name: 'Google Cloud CDN',
+    name: 'Google Cloud (Load Balancer)',
     categories: ['CDN/Infrastructure'],
     patterns: {
-      headers: { via: /google/, server: /gws/ },
+      // via: 1.1 google = Google Front End / Cloud Load Balancer (auch ohne CDN, z. B. Cloud Run).
+      headers: { via: /\bgoogle\b/ },
     },
   },
   {
     name: 'Azure CDN',
     categories: ['CDN/Infrastructure'],
     patterns: {
-      headers: { 'x-azure-ref': /.*/, server: /Microsoft/ },
+      headers: { 'x-azure-ref': /./, 'x-msedge-ref': /./, 'x-azure-fdid': /./ },
     },
   },
   {
@@ -3602,8 +3653,7 @@ const rules: DetectionRule[] = [
     name: 'React',
     categories: ['JavaScript Framework'],
     patterns: {
-      html: [/data-reactroot/, /data-reactid/, /__NEXT_DATA__/, /react-app/],
-      scriptSrc: [/react\.production\.min/, /react-dom/],
+      html: [/data-reactroot/, /data-reactid/],
     },
   },
   {
@@ -3627,16 +3677,15 @@ const rules: DetectionRule[] = [
     name: 'Nuxt.js',
     categories: ['JavaScript Framework'],
     patterns: {
-      html: [/__NUXT__/, /nuxt/, /_nuxt\//],
-      scriptSrc: [/_nuxt\//],
+      html: [/__NUXT__/, /\/_nuxt\//, /<div id="__nuxt"/],
     },
   },
   {
     name: 'Angular',
     categories: ['JavaScript Framework'],
     patterns: {
-      html: [/ng-version/, /ng-app/, /\[ngClass\]/, /\*ngIf/],
-      scriptSrc: [/angular/, /zone\.js/],
+      scriptSrc: [/(^|[\/@])angular(js)?([\/.@-]|$)|angular(\.min)?\.js|@angular\/core/, /(^|\/)zone(\.min)?\.js/],
+      html: [/\sng-version="/, /\sng-app(=|\s|>)/],
     },
   },
   {
@@ -3644,7 +3693,7 @@ const rules: DetectionRule[] = [
     categories: ['JavaScript Framework'],
     patterns: {
       html: [/svelte-[a-z0-9]+/, /__sveltekit/],
-      scriptSrc: [/svelte/],
+      scriptSrc: [/(^|[\/@])svelte(kit)?([\/@.]|$)/],
     },
   },
   {
@@ -3652,7 +3701,7 @@ const rules: DetectionRule[] = [
     categories: ['JavaScript Framework'],
     patterns: {
       html: [/___gatsby/, /gatsby-image/],
-      scriptSrc: [/gatsby/],
+      scriptSrc: [/(^|[\/@])gatsby([\/@.]|$)/],
     },
   },
   {
@@ -3675,22 +3724,22 @@ const rules: DetectionRule[] = [
     categories: ['JavaScript Framework'],
     patterns: {
       html: [/data-ember-action/, /ember-view/],
-      scriptSrc: [/ember/],
+      scriptSrc: [/(^|[\/@])ember(\.debug|\.prod)?(\.min)?\.js|(^|\/)ember-source\//],
     },
   },
   {
     name: 'jQuery',
     categories: ['JavaScript Framework'],
     patterns: {
-      scriptSrc: [/jquery\.min\.js/, /jquery-\d/, /code\.jquery\.com/],
+      scriptSrc: [/jquery\.min\.js/, /jquery-\d/, /code\.jquery\.com/, /ajax\.googleapis\.com\/ajax\/libs\/jquery\//],
     },
   },
   {
     name: 'Alpine.js',
     categories: ['JavaScript Framework'],
     patterns: {
-      html: [/x-data/, /x-bind/, /x-on:/, /@click/],
-      scriptSrc: [/alpine/],
+      scriptSrc: [/(^|[\/@])alpinejs(@[\d.]+)?\/|(^|\/)alpine(js)?(\.min)?\.js/],
+      html: [/\sx-data(=|\s|>)/, /\sx-bind:/, /\sx-on:/],
     },
   },
   {
@@ -3712,30 +3761,30 @@ const rules: DetectionRule[] = [
     name: 'Preact',
     categories: ['JavaScript Framework'],
     patterns: {
-      scriptSrc: [/preact/],
+      scriptSrc: [/(^|[\/@])preact([\/@.]|$)/],
     },
   },
   {
     name: 'Stimulus (Hotwire)',
     categories: ['JavaScript Framework'],
     patterns: {
-      html: [/data-controller/, /data-action/],
-      scriptSrc: [/stimulus/, /hotwire/],
+      scriptSrc: [/@hotwired\/stimulus|(^|\/)stimulus(\.umd)?(\.min)?\.js/],
+      html: [/data-action="[\w-]+->[\w-]+#[\w-]+"/],
     },
   },
   {
     name: 'Turbo (Hotwire)',
     categories: ['JavaScript Framework'],
     patterns: {
-      html: [/data-turbo/, /turbo-frame/],
-      scriptSrc: [/turbo/],
+      scriptSrc: [/@hotwired\/turbo|(^|\/)turbo(\.es2017-(esm|umd))?(\.min)?\.js(\?|$)/],
+      html: [/<turbo-frame\b/, /\sdata-turbo(-track|-frame|-permanent|-method|-action)?=/],
     },
   },
   {
     name: 'Qwik',
     categories: ['JavaScript Framework'],
     patterns: {
-      html: [/q:container/, /qwik/],
+      html: [/\sq:container=/, /qwikloader/],
     },
   },
   {
@@ -3760,15 +3809,15 @@ const rules: DetectionRule[] = [
     name: 'Bootstrap',
     categories: ['CSS Framework'],
     patterns: {
-      html: [/class="[^"]*\bcontainer\b[^"]*".*class="[^"]*\brow\b[^"]*"/, /class="[^"]*\bcol-[a-z]+-\d/],
-      scriptSrc: [/bootstrap\.min\.js/, /bootstrap\.bundle/],
+      scriptSrc: [/(^|\/)bootstrap(\.bundle)?(\.min)?\.js(\?|$)/],
+      html: [/(^|["'\/])bootstrap(\.bundle)?(\.min)?\.(css|js)\b/, /data-bs-(toggle|target|dismiss)=/],
     },
   },
   {
     name: 'Tailwind CSS',
     categories: ['CSS Framework'],
     patterns: {
-      html: [/class="[^"]*\bflex\b[^"]*\bitems-center\b/, /class="[^"]*\bbg-\w+-\d{3}\b/],
+      html: [/--tw-[\w-]+:/],
     },
   },
   {
@@ -3791,7 +3840,7 @@ const rules: DetectionRule[] = [
     name: 'Bulma',
     categories: ['CSS Framework'],
     patterns: {
-      html: [/class="[^"]*\bcolumns\b[^"]*".*class="[^"]*\bcolumn\b/, /class="[^"]*\bhero\b[^"]*\bis-/],
+      html: [/bulma(\.min)?\.css|class="[^"]*\bcolumns\b[^"]*\bis-(multiline|mobile|desktop|gapless|centered)\b/],
     },
   },
 
@@ -3810,22 +3859,25 @@ const rules: DetectionRule[] = [
     name: 'Adobe Sign',
     categories: ['Other'],
     patterns: {
-      scriptSrc: [/echosign\.com/, /acrobat\.com/],
-      html: [/adobe\.com\/sign/, /echosign\.com/],
+      scriptSrc: [/(^|[\/.])(adobesign|echosign)\.com\//],
+      html: [/<iframe[^>]+src="https:\/\/[\w.-]*(adobesign|echosign)\.com\//],
     },
   },
   {
     name: 'Adobe Workfront',
     categories: ['Other'],
+    maxConfidence: 60,
     patterns: {
-      html: [/workfront\.com/, /attask\.com/],
+      // Nur eingebettete Workfront-Inhalte; Links auf workfront.com sind kein Beleg.
+      html: [/<iframe[^>]+src="https:\/\/[\w.-]+\.my\.workfront\.com\//],
     },
   },
   {
     name: 'Adobe GenStudio',
     categories: ['Other'],
+    maxConfidence: 60,
     patterns: {
-      html: [/genstudio\.adobe/],
+      html: [/<(iframe|script)[^>]+src="https:\/\/[\w.-]*genstudio\.adobe\.com\//],
     },
   },
 
@@ -3938,8 +3990,8 @@ const rules: DetectionRule[] = [
     name: 'PerimeterX / HUMAN',
     categories: ['Security'],
     patterns: {
-      scriptSrc: [/perimeterx\.net/, /px-cdn\.net/],
-      cookies: ['_px_'],
+      scriptSrc: [/perimeterx\.net/, /px-cdn\.net/, /(^|[\/.])px-cloud\.net\//],
+      cookies: ['_pxvid', '_pxhd', '_pxde', /^_px\d$/],
     },
   },
   {
@@ -3961,7 +4013,7 @@ const rules: DetectionRule[] = [
     name: 'Shape Security (F5)',
     categories: ['Security'],
     patterns: {
-      scriptSrc: [/shape\.com/],
+      scriptSrc: [host('shape.com')],
     },
   },
 
@@ -3987,7 +4039,7 @@ const rules: DetectionRule[] = [
     name: 'Brightcove',
     categories: ['Video'],
     patterns: {
-      scriptSrc: [/brightcove\.com/, /brightcovecdn\.com/],
+      scriptSrc: [/brightcove\.com/, /brightcovecdn\.com/, /players\.brightcove\.net\//],
       html: [/brightcove-player/],
     },
   },
@@ -4065,7 +4117,7 @@ const rules: DetectionRule[] = [
     name: 'Cal.com',
     categories: ['Scheduling'],
     patterns: {
-      scriptSrc: [/cal\.com/],
+      scriptSrc: [/(^|\/\/|\.)(app\.)?cal\.com\/(embed|[\w-]+\/)/],
       html: [/cal-embed/],
     },
   },
@@ -4253,7 +4305,7 @@ const rules: DetectionRule[] = [
     name: 'Datadog RUM',
     categories: ['Performance'],
     patterns: {
-      scriptSrc: [/datadoghq\.com/, /dd_rum/],
+      scriptSrc: [/datadoghq\.com/, /dd_rum/, /datadoghq-browser-agent\.com\//],
     },
   },
   {
@@ -4275,7 +4327,7 @@ const rules: DetectionRule[] = [
     name: 'Sentry',
     categories: ['Performance'],
     patterns: {
-      scriptSrc: [/sentry\.io/, /browser\.sentry-cdn\.com/],
+      scriptSrc: [/sentry\.io/, /(^|[\/.])(browser|js)\.sentry-cdn\.com\//],
     },
   },
   {
@@ -4324,7 +4376,7 @@ const rules: DetectionRule[] = [
     name: 'mPulse (Akamai)',
     categories: ['Performance'],
     patterns: {
-      scriptSrc: [/mpulse/, /go-mpulse\.net/],
+      scriptSrc: [/(^|\/\/|\.)s\.go-mpulse\.net\/boomerang\//],
     },
   },
   {
@@ -4348,11 +4400,18 @@ const SIGNAL_STRENGTH: Record<string, number> = {
   html: 64,
 };
 
+// Neue Regeln aus der Bibliotheks-Recherche (docs/library-research/01–03).
+rules.push(...ADTECH_B2B_RULES, ...MARTECH_RULES);
+
 /** Hängt Netzwerk-/JS-Signale an bestehende Regeln an (Tabelle in signalLayers.ts). */
 for (const layer of SIGNAL_LAYERS) {
   const rule = rules.find((r) => r.name === layer.name);
   if (!rule) throw new Error(`signalLayers: unknown rule "${layer.name}"`);
-  if (layer.requests) rule.patterns.requests = [...(rule.patterns.requests ?? []), ...layer.requests];
+  if (layer.requests) {
+    const known = new Set((rule.patterns.requests ?? []).map(String));
+    const fresh = layer.requests.filter((re) => !known.has(String(re)) && known.add(String(re)));
+    rule.patterns.requests = [...(rule.patterns.requests ?? []), ...fresh];
+  }
   if (layer.js) rule.patterns.js = { ...(rule.patterns.js ?? {}), ...layer.js };
 }
 
@@ -4401,12 +4460,9 @@ export function customDetect(scraped: ScrapedData): DetectedTech[] {
 
     if (rule.patterns.cookies) {
       const cookieKeys = Object.keys(scraped.cookies);
-      const cookieHit = rule.patterns.cookies.some((name) => {
-        if (name.endsWith('_')) {
-          return cookieKeys.some((k) => k.startsWith(name.slice(0, -1)));
-        }
-        return name in scraped.cookies;
-      });
+      const cookieHit = rule.patterns.cookies.some((pattern) =>
+        cookieKeys.some((k) => cookieMatches(pattern, k)),
+      );
       if (cookieHit) signals.push('cookies');
     }
 
@@ -4436,7 +4492,7 @@ export function customDetect(scraped: ScrapedData): DetectedTech[] {
     seen.add(rule.name);
     const base = Math.max(...signals.map((s) => SIGNAL_STRENGTH[s] ?? 70));
     const multiSignalBonus = Math.min(7, (signals.length - 1) * 3);
-    const confidence = Math.min(95, base + multiSignalBonus);
+    const confidence = Math.min(rule.maxConfidence ?? 95, base + multiSignalBonus);
 
     detected.push({
       name: rule.name,

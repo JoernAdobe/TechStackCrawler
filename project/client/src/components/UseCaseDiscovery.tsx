@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Lightbulb, CheckCircle2, Sparkles, TrendingUp } from 'lucide-react';
+import { Lightbulb, CheckCircle2, ScanSearch, Sparkles, TrendingUp } from 'lucide-react';
 import type { AnalysisResult, UseCaseItem } from '../types/analysis';
 
 gsap.registerPlugin(useGSAP);
@@ -81,10 +81,10 @@ export default function UseCaseDiscovery({
   );
 
   return (
-    <section className="px-6 py-8 max-w-7xl mx-auto">
+    <section id="section-use-cases" className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
       <div className="mb-8 bg-ts-surface-card rounded-2xl border border-ts-border overflow-hidden">
         {/* Header */}
-        <div className="relative bg-gradient-to-br from-ts-accent/10 via-ts-surface-card to-adobe-red/5 p-6 border-b border-ts-border">
+        <div className="relative bg-gradient-to-br from-ts-accent/10 via-ts-surface-card to-adobe-red/5 p-4 sm:p-6 border-b border-ts-border">
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-ts-text-primary flex items-center gap-2">
@@ -110,7 +110,7 @@ export default function UseCaseDiscovery({
 
         {/* Loading state — stepper progress */}
         {loading && (
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-6">
             {/* Stepper */}
             <div className="flex items-center justify-between gap-1">
               {PROGRESS_STEPS.map((step, i) => (
@@ -178,7 +178,7 @@ export default function UseCaseDiscovery({
 
         {/* Error state */}
         {error && (
-          <div className="p-6 flex flex-col items-center gap-3">
+          <div className="p-4 sm:p-6 flex flex-col items-center gap-3">
             <p className="text-ts-text-secondary text-center">{error}</p>
             <button
               onClick={onDiscover}
@@ -191,7 +191,7 @@ export default function UseCaseDiscovery({
 
         {/* Results */}
         {displayResult && !loading && (
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-6">
             {displayResult.summary && (
               <p className="text-ts-text-secondary leading-relaxed text-sm">
                 {displayResult.summary}
@@ -279,6 +279,23 @@ function UseCaseCard({ useCase }: { useCase: UseCaseItem }) {
           {useCase.description}
         </p>
       </div>
+
+      {useCase.evidence && useCase.evidence.findings.length > 0 && (
+        <div className="px-5 pb-4">
+          <p
+            className="flex items-start gap-1.5 rounded-lg border border-ts-accent/30 bg-ts-accent/10 px-3 py-2 text-[11px] text-ts-text-secondary leading-relaxed"
+            title={useCase.evidence.findingIds.join(', ')}
+          >
+            <ScanSearch className="w-3.5 h-3.5 text-ts-accent shrink-0 mt-px" strokeWidth={1.75} aria-hidden="true" />
+            <span>
+              <span className="font-semibold text-ts-text-primary">
+                {useCase.evidence.ruleBased ? 'Derived from ObservePoint findings' : 'Based on ObservePoint findings'}:
+              </span>{' '}
+              {useCase.evidence.findings.join(' · ')}
+            </span>
+          </p>
+        </div>
+      )}
 
       {/* Adobe Products — prominent row */}
       {useCase.adobeProducts.length > 0 && (

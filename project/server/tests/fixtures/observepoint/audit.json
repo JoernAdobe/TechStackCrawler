@@ -1,0 +1,24 @@
+{
+  "id": 2206959,
+  "name": "https://www.lazardassetmanagement.com/us/en_us/home",
+  "startingUrls": [
+    "https://www.lazardassetmanagement.com/us/en_us/home"
+  ],
+  "filters": {
+    "include": [
+      {
+        "value": "^https?://([^/:\\?]*\\.)?lazardassetmanagement.com([^.]|$)",
+        "includeLimit": 0
+      }
+    ],
+    "exclude": []
+  },
+  "domainId": 549174,
+  "folderId": 100718,
+  "created": "2026-10-13T19:57:25.000+02:00",
+  "lastUpdated": "2026-10-13T20:04:03.000+02:00",
+  "lastRun": "2026-10-13T20:00:55.000+02:00",
+  "webAuditRunning": false,
+  "limit": 1,
+  "frequency": "once"
+}

@@ -12,7 +12,8 @@
   --color-ts-surface-card: #1A1A1E;
   --color-ts-border: #2A2A2F;
   --color-ts-text-primary: #EDEDF0;
-  --color-ts-text-secondary: #7C7C8A;
+  /* #9494A1: ≥ 5.2:1 auf allen Surfaces (vorher #7C7C8A: 4.2:1 auf Cards, WCAG-AA-Fail). */
+  --color-ts-text-secondary: #9494A1;
   --color-ts-accent: #8B8FA0;
   --color-ts-accent-light: #A8ACBC;
   --color-ts-success: #4ADE80;
@@ -114,6 +115,11 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Sichtbarer Tastatur-Fokus für alle interaktiven Elemente (WCAG 2.4.7). */
+  :focus-visible {
+    outline: 2px solid var(--color-ts-accent-light);
+    outline-offset: 2px;
   }
 }
 

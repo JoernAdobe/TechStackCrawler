@@ -49,6 +49,7 @@ export async function initParityTables(p: DbHandle): Promise<void> {
         created_at TEXT NOT NULL
       )
     `);
+    await addBatchItemEnrichmentsColumn(p);
     return;
   }
 
@@ -95,4 +96,20 @@ export async function initParityTables(p: DbHandle): Promise<void> {
       created_at DATETIME NOT NULL
     )
   `);
+  await addBatchItemEnrichmentsColumn(p);
+}
+
+/** Additive Migration: kompakte Enrichments pro Batch-Item (Traffic, Lighthouse, ObservePoint …). */
+async function addBatchItemEnrichmentsColumn(p: DbHandle): Promise<void> {
+  const { rows } =
+    p.dialect === 'sqlite'
+      ? await p.execute(`SELECT name FROM pragma_table_info('batch_items') WHERE name = 'enrichments_json'`)
+      : await p.execute(
+          `SELECT COLUMN_NAME AS name FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'batch_items' AND COLUMN_NAME = 'enrichments_json'`,
+        );
+  if (rows.length > 0) return;
+  await p.execute(
+    `ALTER TABLE batch_items ADD COLUMN enrichments_json ${p.dialect === 'sqlite' ? 'TEXT' : 'LONGTEXT'}`,
+  );
 }

@@ -55,20 +55,20 @@ export default function ResultsTable({ results }: ResultsTableProps) {
   ).length;
 
   return (
-    <div className="px-6 py-8 max-w-7xl mx-auto">
+    <div className="px-4 sm:px-6 py-8 max-w-7xl mx-auto">
       {/* Summary */}
-      <div className="mb-8 bg-ts-surface-card rounded-xl border border-ts-border p-6">
+      <div id="section-summary" className="mb-8 bg-ts-surface-card rounded-xl border border-ts-border p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-3">
           <ClipboardList className="w-5 h-5 text-ts-accent" strokeWidth={1.5} />
           <h2 className="text-lg font-semibold text-ts-text-primary">
             Executive Summary
           </h2>
         </div>
-        <p className="text-ts-text-secondary leading-relaxed text-sm">
+        <p className="text-ts-text-primary/85 leading-relaxed text-sm max-w-[80ch]">
           {results.summary}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-ts-text-secondary">
-          <span>
+          <span className="min-w-0 break-all">
             URL:{' '}
             <a
               href={safeUrl}
@@ -102,23 +102,23 @@ export default function ResultsTable({ results }: ResultsTableProps) {
       </div>
 
       {/* Stats row */}
-      <div className="mb-8 grid grid-cols-3 gap-4">
-        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-5 text-center">
+      <div className="mb-8 grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-3 sm:p-5 text-center">
           <AnimatedCounter value={results.categories.length} className="text-2xl font-bold text-ts-text-primary" />
           <p className="text-xs text-ts-text-secondary mt-1">Categories</p>
         </div>
-        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-5 text-center">
+        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-3 sm:p-5 text-center">
           <AnimatedCounter value={detectedCount} className="text-2xl font-bold text-ts-success" />
           <p className="text-xs text-ts-text-secondary mt-1">Detected</p>
         </div>
-        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-5 text-center">
+        <div className="bg-ts-surface-card rounded-xl border border-ts-border p-3 sm:p-5 text-center">
           <AnimatedCounter value={results.rawDetections.length} className="text-2xl font-bold text-ts-accent-light" />
           <p className="text-xs text-ts-text-secondary mt-1">Technologies</p>
         </div>
       </div>
 
       {/* Category Grid Header */}
-      <div className="mb-5 flex items-center justify-between">
+      <div id="section-stack" className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h2 className="text-lg font-semibold text-ts-text-primary">
           Technology Stack Analysis
         </h2>
@@ -224,7 +224,9 @@ export default function ResultsTable({ results }: ResultsTableProps) {
       )}
 
       {/* Adobe Opportunity Insights — separate section */}
-      <AdobeOpportunityCharts results={results} />
+      <div id="section-insights">
+        <AdobeOpportunityCharts results={results} />
+      </div>
     </div>
   );
 }

@@ -192,18 +192,24 @@ async function fetchTranco(domain: string): Promise<number | undefined> {
   return parseTrancoRanks(await res.json());
 }
 
-export async function getTraffic(domainOrUrl: string): Promise<TrafficResult> {
+export interface TrafficOptions {
+  /** false = Semrush überspringen (spart API-Units, z. B. im Bulk-Lauf). Default: true. */
+  semrush?: boolean;
+}
+
+export async function getTraffic(domainOrUrl: string, opts: TrafficOptions = {}): Promise<TrafficResult> {
   const domain = normalizeDomain(domainOrUrl);
   const notes: string[] = [];
   const result: TrafficResult = { domain, fetchedAt: new Date().toISOString(), sources: [] };
-  const apiKey = process.env.SEMRUSH_API_KEY?.trim();
+  const apiKey = opts.semrush === false ? undefined : process.env.SEMRUSH_API_KEY?.trim();
 
   const [semrush, tranco] = await Promise.allSettled([
     apiKey ? fetchSemrush(domain, apiKey, notes) : Promise.resolve(null),
     fetchTranco(domain),
   ]);
 
-  if (!apiKey) notes.push('SEMRUSH_API_KEY not configured – visit metrics unavailable');
+  if (opts.semrush === false) notes.push('Semrush skipped for this run');
+  else if (!apiKey) notes.push('SEMRUSH_API_KEY not configured – visit metrics unavailable');
   if (semrush.status === 'fulfilled' && semrush.value) {
     result.semrush = semrush.value;
     result.sources.push('semrush');

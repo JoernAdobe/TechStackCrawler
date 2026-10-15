@@ -17,6 +17,21 @@ export interface DetectedTechnology {
   evidence?: string[];
 }
 
+/** Hinweis zur Scan-Qualität (Fehlerseite, Bot-Wall, KI-Ausfall …), im Client als Banner. */
+export interface ScanWarning {
+  code:
+    | 'http_error'
+    | 'error_page'
+    | 'bot_challenge'
+    | 'thin_content'
+    | 'few_detections'
+    | 'http_fallback'
+    | 'ai_unavailable';
+  severity: 'info' | 'warning' | 'error';
+  /** Englischer, user-sichtbarer Text. */
+  message: string;
+}
+
 export interface CategoryResult {
   category: string;
   currentTechnology: string;
@@ -41,6 +56,8 @@ export interface AnalysisResult {
   sitemapUrls?: string[];
   /** On-Demand-Anreicherungen (EAA-Parität), werden nachträglich in result_json gemergt. */
   enrichments?: AnalysisEnrichments;
+  /** Qualitätswarnungen zum Scan; fehlt bei älteren Analysen. */
+  scanWarnings?: ScanWarning[];
 }
 
 export interface UseCaseItem {
@@ -60,6 +77,17 @@ export interface UseCaseItem {
   timeToValue?: string;
   /** Geschäftlicher Impact. */
   impact?: 'Low' | 'Medium' | 'High';
+  /** Gemessene Evidenz, auf der der Use Case basiert (z. B. ObservePoint-Findings). */
+  evidence?: UseCaseEvidence;
+}
+
+export interface UseCaseEvidence {
+  source: 'ObservePoint';
+  findingIds: string[];
+  /** Kurztitel der referenzierten Findings (für die Anzeige). */
+  findings: string[];
+  /** true = Use Case regelbasiert aus Findings erzeugt (nicht vom LLM). */
+  ruleBased?: boolean;
 }
 
 export interface UseCaseDiscoveryResult {

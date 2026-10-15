@@ -1,21 +1,44 @@
-import { useState, type FormEvent } from 'react';
-import { Zap, Sparkles, Lightbulb } from 'lucide-react';
+import { useRef, useState, type FormEvent } from 'react';
+import { Zap, Sparkles, Lightbulb, AlertCircle } from 'lucide-react';
 import LetterGlitch from './LetterGlitch';
+import { checkUrlInput, type UrlCheck } from '../lib/urlValidation';
 
 interface UrlInputProps {
   onSubmit: (url: string) => void;
   disabled?: boolean;
+  /** Vorbelegung, z. B. nach "Edit URL" im Fehlerzustand. */
+  initialValue?: string;
 }
 
-export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
-  const [url, setUrl] = useState('');
+type UrlProblem = Extract<UrlCheck, { ok: false }>;
+
+export default function UrlInput({ onSubmit, disabled, initialValue = '' }: UrlInputProps) {
+  const [url, setUrl] = useState(initialValue);
+  const [problem, setProblem] = useState<UrlProblem | null>(null);
+  const submittedRef = useRef(false);
+
+  const submit = (value: string) => {
+    // Schutz gegen Doppelklick/Enter-Repeat, bevor der Analyse-View übernimmt.
+    if (submittedRef.current || disabled) return;
+    const check = checkUrlInput(value);
+    if (!check.ok) {
+      setProblem(check);
+      return;
+    }
+    setProblem(null);
+    submittedRef.current = true;
+    onSubmit(value.trim());
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = url.trim();
-    if (trimmed) {
-      onSubmit(trimmed);
-    }
+    submit(url);
+  };
+
+  const handleBlur = () => {
+    if (!url.trim()) return;
+    const check = checkUrlInput(url);
+    setProblem(check.ok ? null : check);
   };
 
   return (
@@ -64,12 +87,12 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
 
       {/* Hero section — plain text with CSS animations, no SplitText */}
       <div className="text-center mb-12 max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <h2 className="text-5xl font-bold bg-gradient-to-r from-white via-white/90 to-ts-text-secondary bg-clip-text text-transparent leading-tight">
+        <h2 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-white via-white/90 to-ts-text-secondary bg-clip-text text-transparent leading-tight">
           Analyze Any Website&apos;s
           <br />
           Tech Stack
         </h2>
-        <p className="text-ts-text-secondary text-lg leading-relaxed mt-6">
+        <p className="text-ts-text-secondary text-base sm:text-lg leading-relaxed mt-6">
           Enter a URL to discover the technology stack, identify challenges, and
           uncover Adobe product opportunities.
         </p>
@@ -78,9 +101,10 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
       {/* Input form */}
       <form onSubmit={handleSubmit} className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 fill-mode-both">
         <div className="relative group">
-          <div className="relative flex items-center bg-ts-surface-card rounded-2xl border border-ts-border group-focus-within:border-ts-text-secondary/30 transition-colors duration-300 p-2">
-            <div className="pl-4 pr-2 text-ts-text-secondary">
+          <div className="relative flex items-center bg-ts-surface-card rounded-2xl border border-ts-border group-focus-within:border-ts-accent-light transition-colors duration-300 p-1.5 sm:p-2">
+            <div className="hidden sm:block pl-4 pr-2 text-ts-text-secondary">
               <svg
+                aria-hidden="true"
                 className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
@@ -96,25 +120,59 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
             </div>
             <input
               type="text"
+              inputMode="url"
+              aria-label="Website URL to analyze"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="Enter website URL (e.g., adobe.com)"
-              className="flex-1 bg-transparent text-ts-text-primary placeholder-text-secondary/50 text-lg py-3 px-2 outline-none"
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (problem) setProblem(null);
+              }}
+              onBlur={handleBlur}
+              aria-invalid={problem ? true : undefined}
+              aria-describedby={problem ? 'url-input-error' : undefined}
+              placeholder="e.g. adobe.com"
+              className="flex-1 min-w-0 bg-transparent text-ts-text-primary placeholder:text-ts-text-secondary/70 text-base sm:text-lg py-3 px-2 outline-none"
               disabled={disabled}
               autoFocus
             />
             <button
               type="submit"
               disabled={disabled || !url.trim()}
-              className="relative flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-semibold rounded-xl hover:from-adobe-red-dark hover:to-[#B03522] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 whitespace-nowrap shadow-glow-red hover:shadow-[0_0_30px_rgba(232,80,58,0.25)]"
+              className="relative shrink-0 flex items-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-semibold rounded-xl hover:from-adobe-red-dark hover:to-[#B03522] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 whitespace-nowrap shadow-glow-red hover:shadow-[0_0_30px_rgba(232,80,58,0.25)]"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               Analyze
             </button>
           </div>
         </div>
+        {problem && (
+          <div
+            id="url-input-error"
+            role="alert"
+            className="mt-3 flex items-start gap-2 px-4 py-3 rounded-xl border border-adobe-red/40 bg-adobe-red/10 text-sm text-left"
+          >
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-adobe-red" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-ts-text-primary">{problem.message}</p>
+              {problem.suggestion ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUrl(problem.suggestion!);
+                    submit(problem.suggestion!);
+                  }}
+                  className="mt-1 text-ts-accent-light hover:text-white underline underline-offset-2"
+                >
+                  Did you mean {problem.suggestion}?
+                </button>
+              ) : (
+                problem.hint && <p className="mt-0.5 text-ts-text-secondary">{problem.hint}</p>
+              )}
+            </div>
+          </div>
+        )}
       </form>
 
       {/* Example URLs */}
@@ -124,7 +182,10 @@ export default function UrlInput({ onSubmit, disabled }: UrlInputProps) {
           (example) => (
             <button
               key={example}
-              onClick={() => { setUrl(example); }}
+              onClick={() => {
+                setUrl(example);
+                setProblem(null);
+              }}
               className="text-sm text-ts-accent-light hover:text-white hover:bg-ts-accent/30 bg-ts-accent/10 px-4 py-2 rounded-full transition-all duration-200 hover:scale-105 active:scale-100 border border-ts-border/50 hover:border-ts-accent/50 hover:shadow-glow-accent"
               disabled={disabled}
             >

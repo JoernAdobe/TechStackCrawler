@@ -1,11 +1,12 @@
 import { config } from '../config.js';
 import { getBedrockClient } from './bedrockClient.js';
+import { callLlm } from './llmCall.js';
+import { RetryableResponseError } from '../utils/retry.js';
 import { parseAIJson } from '../utils/aiJson.js';
-import { buildUseCaseDiscoveryPrompt } from '../prompts/useCaseDiscoveryPrompt.js';
+import { buildUseCaseDiscoveryPrompt, observePointFindings } from '../prompts/useCaseDiscoveryPrompt.js';
+import { applyFindingsToUseCases, ruleBasedUseCases } from './observepoint/findings.js';
 import { fetchSitemapUrls } from './sitemap.js';
 import type { AnalysisResult, UseCaseDiscoveryResult } from '../types/analysis.js';
-
-const client = getBedrockClient();
 
 export interface DiscoverUseCasesResult {
   result: UseCaseDiscoveryResult;
@@ -18,8 +19,14 @@ export async function discoverUseCases(
   const useMock =
     process.env.USE_MOCK_AI === '1' || process.env.BEDROCK_SKIP_SIMULATE === '1';
 
+  const findings = observePointFindings(analysis);
+
   if (useMock) {
-    return { result: getMockUseCases(analysis), sitemapUrls: [] };
+    const mock = getMockUseCases(analysis);
+    // Demo-Modus: regelbasierte OP-Use-Cases voranstellen, Gesamtzahl bleibt 10.
+    const rules = ruleBasedUseCases(findings);
+    const useCases = [...rules, ...mock.useCases].slice(0, mock.useCases.length).map((uc, i) => ({ ...uc, rank: i + 1 }));
+    return { result: { ...mock, useCases: applyFindingsToUseCases(useCases, findings) }, sitemapUrls: [] };
   }
 
   const sitemapUrls = await fetchSitemapUrls(analysis.url);
@@ -27,51 +34,50 @@ export async function discoverUseCases(
 
   const runOnce = async (
     maxTokens: number,
+    signal: AbortSignal,
   ): Promise<{ text: string; stopReason: string | null }> => {
-    const response = await client.messages.create({
-      model: config.bedrock.model,
-      max_tokens: maxTokens,
-      system: 'You are a senior enterprise martech consultant. You always respond with valid JSON only, no markdown or code fences.',
-      messages: [{ role: 'user', content: userPrompt }],
-    });
+    const response = await getBedrockClient().messages.create(
+      {
+        model: config.bedrock.model,
+        max_tokens: maxTokens,
+        system: 'You are a senior enterprise martech consultant. You always respond with valid JSON only, no markdown or code fences.',
+        messages: [{ role: 'user', content: userPrompt }],
+      },
+      { signal, maxRetries: 0 },
+    );
 
     const text =
       response.content?.[0]?.type === 'text' ? response.content[0].text : '';
     return { text, stopReason: response.stop_reason };
   };
 
-  try {
-    let { text, stopReason } = await runOnce(config.bedrock.maxTokens);
+  // Retry/Timeout/Fehlerklassen zentral in callLlm (LlmError → errorHandler).
+  const result = await callLlm('use-case-discovery', async (signal) => {
+    let { text, stopReason } = await runOnce(config.bedrock.maxTokens, signal);
 
     // Bei Truncation einmalig mit doppeltem Budget wiederholen.
     if (stopReason === 'max_tokens') {
       console.warn(
         `Use-Case-Antwort bei ${config.bedrock.maxTokens} Tokens abgeschnitten – Retry mit ${config.bedrock.maxTokens * 2}.`,
       );
-      ({ text, stopReason } = await runOnce(config.bedrock.maxTokens * 2));
+      ({ text, stopReason } = await runOnce(config.bedrock.maxTokens * 2, signal));
     }
 
-    const parsed = parseAIJson<UseCaseDiscoveryResult>(text);
-
-    if (!parsed.useCases || !Array.isArray(parsed.useCases)) {
-      throw new Error('Invalid use case response structure');
+    let parsed: UseCaseDiscoveryResult;
+    try {
+      parsed = parseAIJson<UseCaseDiscoveryResult>(text);
+    } catch (err) {
+      throw new RetryableResponseError('Use case response is not valid JSON', { cause: err });
     }
-
-    return { result: parsed, sitemapUrls };
-  } catch (e) {
-    const msg = (e as Error).message;
-    if (
-      msg.includes('403') ||
-      msg.includes('expired') ||
-      msg.includes('unauthorized') ||
-      msg.includes('credentials')
-    ) {
-      throw new Error(
-        'Bedrock-Zugriff fehlgeschlagen. Nutze IAM: aws configure ODER AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY in .env.',
-      );
+    if (!parsed?.useCases || !Array.isArray(parsed.useCases)) {
+      throw new RetryableResponseError('Invalid use case response structure');
     }
-    throw e;
-  }
+    return parsed;
+  });
+
+  // OP-Evidenz verknüpfen (validierte LLM-IDs, Keyword-Fallback, regelbasierte Lückenfüller).
+  result.useCases = applyFindingsToUseCases(result.useCases, findings);
+  return { result, sitemapUrls };
 }
 
 function getMockUseCases(analysis: AnalysisResult): UseCaseDiscoveryResult {

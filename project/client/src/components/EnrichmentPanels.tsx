@@ -75,7 +75,7 @@ function EnrichmentCard({ title, description, icon: Icon, hasData, loading, erro
             type="button"
             onClick={onRun}
             disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-medium rounded-xl hover:opacity-90 transition-all duration-200 disabled:opacity-60"
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 border border-ts-border text-ts-text-primary font-medium rounded-xl hover:border-ts-accent-light hover:bg-ts-surface-light transition-all duration-200 disabled:opacity-60"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             {loading ? 'Running…' : 'Run'}
@@ -108,7 +108,7 @@ export default function EnrichmentPanels({ analysis, onUpdate }: EnrichmentPanel
 
   if (!analysis.id) {
     return (
-      <section className="px-6 py-8 max-w-7xl mx-auto">
+      <section>
         <div className="rounded-2xl border border-ts-border bg-ts-surface-card p-5 text-sm text-ts-text-secondary">
           Website performance, traffic and mobile app insights are available once the analysis has been saved.
         </div>
@@ -149,7 +149,7 @@ export default function EnrichmentPanels({ analysis, onUpdate }: EnrichmentPanel
     'w-full rounded-lg border border-ts-border bg-ts-surface-light/40 px-3 py-1.5 text-xs text-ts-text-primary placeholder:text-ts-text-secondary focus:outline-none focus:border-ts-accent';
 
   return (
-    <section className="px-6 py-8 max-w-7xl mx-auto">
+    <section>
       <div className="grid gap-4 lg:grid-cols-3">
         <EnrichmentCard
           title="Website Performance"

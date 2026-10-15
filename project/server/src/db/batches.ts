@@ -5,6 +5,8 @@
 import type { DbHandle } from './types.js';
 import { toMysqlDatetime } from './analyses.js';
 import { buildSolutionMatrix } from '../services/keyFindings.js';
+import { buildAccountView } from '../services/accountView.js';
+import type { BatchEnrichmentOptions, BatchItemEnrichments } from '../types/batchAccount.js';
 import type {
   AssessmentLens,
   BatchItem,
@@ -22,6 +24,8 @@ export interface BatchMeta {
   industry?: string;
   opportunityId?: string;
   aiAnalysis: boolean;
+  /** Pro Item auszuführende Enrichments (fehlt bei Batches von vor dem Ausbau → keine). */
+  enrichmentOptions?: BatchEnrichmentOptions;
 }
 
 export interface CreateBatchInput extends BatchMeta {
@@ -56,12 +60,13 @@ interface ItemRow {
   analysis_id: number | null;
   error: string | null;
   detections_json: string | null;
+  enrichments_json?: string | null;
   started_at: Date | string | null;
   finished_at: Date | string | null;
 }
 
 const ITEM_COLUMNS =
-  'id, batch_id, position, url, label, status, analysis_id, error, detections_json, started_at, finished_at';
+  'id, batch_id, position, url, label, status, analysis_id, error, detections_json, enrichments_json, started_at, finished_at';
 const INSERT_CHUNK = 100;
 
 function nowFor(db: DbHandle): string {
@@ -97,6 +102,16 @@ function parseDetections(json: string | null): CompactDetection[] | undefined {
   }
 }
 
+function parseEnrichments(json: string | null | undefined): BatchItemEnrichments | undefined {
+  if (!json) return undefined;
+  try {
+    const parsed = JSON.parse(json) as unknown;
+    return parsed && typeof parsed === 'object' ? (parsed as BatchItemEnrichments) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function mapItem(r: ItemRow): BatchItem {
   return {
     id: Number(r.id),
@@ -106,6 +121,7 @@ function mapItem(r: ItemRow): BatchItem {
     analysisId: r.analysis_id !== null && r.analysis_id !== undefined ? Number(r.analysis_id) : undefined,
     error: r.error ?? undefined,
     detections: parseDetections(r.detections_json),
+    enrichments: parseEnrichments(r.enrichments_json),
     startedAt: toIso(r.started_at),
     finishedAt: toIso(r.finished_at),
   };
@@ -122,6 +138,7 @@ function mapBatch(r: BatchRow): BatchJob {
     industry: meta.industry,
     opportunityId: meta.opportunityId,
     aiAnalysis: meta.aiAnalysis,
+    ...(meta.enrichmentOptions ? { enrichmentOptions: meta.enrichmentOptions } : {}),
     status: r.status as BatchStatus,
     createdBy: r.created_by ?? undefined,
     createdAt: toIso(r.created_at) ?? '',
@@ -145,6 +162,7 @@ export async function createBatch(db: DbHandle, input: CreateBatchInput): Promis
     industry: input.industry,
     opportunityId: input.opportunityId,
     aiAnalysis: input.aiAnalysis,
+    ...(input.enrichmentOptions ? { enrichmentOptions: input.enrichmentOptions } : {}),
   };
   const { insertId } = await db.execute(
     `INSERT INTO batches (kind, title, status, meta_json, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -196,6 +214,7 @@ export async function getBatch(db: DbHandle, id: number): Promise<BatchJob | nul
         detections: i.detections ?? [],
       })),
     );
+    batch.accountView = buildAccountView(items) ?? undefined;
   }
   return batch;
 }
@@ -242,18 +261,21 @@ export interface ItemUpdate {
   analysisId?: number;
   error?: string;
   detections?: CompactDetection[];
+  enrichments?: BatchItemEnrichments;
 }
 
 export async function updateBatchItem(db: DbHandle, itemId: number, patch: ItemUpdate): Promise<void> {
   const finished = patch.status === 'done' || patch.status === 'failed' || patch.status === 'skipped';
   await db.execute(
     `UPDATE batch_items SET status = ?, analysis_id = COALESCE(?, analysis_id), error = ?,
-       detections_json = COALESCE(?, detections_json), finished_at = ? WHERE id = ?`,
+       detections_json = COALESCE(?, detections_json), enrichments_json = COALESCE(?, enrichments_json),
+       finished_at = ? WHERE id = ?`,
     [
       patch.status,
       patch.analysisId ?? null,
       patch.error ? patch.error.slice(0, 2000) : null,
       patch.detections ? JSON.stringify(patch.detections) : null,
+      patch.enrichments ? JSON.stringify(patch.enrichments) : null,
       finished ? nowFor(db) : null,
       itemId,
     ],

@@ -1,0 +1,193 @@
+{
+  "tags": [
+    {
+      "tagId": 1,
+      "tagName": "Adobe Analytics",
+      "tagCategoryId": 42,
+      "tagCategoryName": "Web Analytics",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 15,
+      "tagName": "Floodlight Counter",
+      "tagCategoryId": 3,
+      "tagCategoryName": "Advertising & Paid Media",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 2
+    },
+    {
+      "tagId": 16,
+      "tagName": "Google Ads Conversion Tracking",
+      "tagCategoryId": 3,
+      "tagCategoryName": "Advertising & Paid Media",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 2
+    },
+    {
+      "tagId": 24,
+      "tagName": "Adobe Target",
+      "tagCategoryId": 4,
+      "tagCategoryName": "A/B Testing & Optimization",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 81,
+      "tagName": "Marketo Engage",
+      "tagCategoryId": 16,
+      "tagCategoryName": "Marketing Automation & Email",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 184,
+      "tagName": "Google Ads Remarketing",
+      "tagCategoryId": 52,
+      "tagCategoryName": "Retargeting",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 211,
+      "tagName": "Data Layer",
+      "tagCategoryId": 13,
+      "tagCategoryName": "Data Management (DMP)",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 5
+    },
+    {
+      "tagId": 336,
+      "tagName": "Adobe Experience Manager",
+      "tagCategoryId": 50,
+      "tagCategoryName": "Content & Asset Management",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 378,
+      "tagName": "Marketo Engage Loader",
+      "tagCategoryId": 16,
+      "tagCategoryName": "Marketing Automation & Email",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 556,
+      "tagName": "Adobe Launch",
+      "tagCategoryId": 6,
+      "tagCategoryName": "Tag Management",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 655,
+      "tagName": "Google Tag",
+      "tagCategoryId": 6,
+      "tagCategoryName": "Tag Management",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 2
+    },
+    {
+      "tagId": 810,
+      "tagName": "OneTrust CMP Loader",
+      "tagCategoryId": 14,
+      "tagCategoryName": "Privacy & Consent",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 2
+    },
+    {
+      "tagId": 837,
+      "tagName": "Adobe Launch Loader",
+      "tagCategoryId": 6,
+      "tagCategoryName": "Tag Management",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 944,
+      "tagName": "Adobe Extensions",
+      "tagCategoryId": 6,
+      "tagCategoryName": "Tag Management",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 1111,
+      "tagName": "Interaction Studio Loader",
+      "tagCategoryId": 5,
+      "tagCategoryName": "Personalization",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 1113,
+      "tagName": "Interaction Studio PR",
+      "tagCategoryId": 5,
+      "tagCategoryName": "Personalization",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 1204,
+      "tagName": "OneTrust CMP Metadata",
+      "tagCategoryId": 14,
+      "tagCategoryName": "Privacy & Consent",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 1205,
+      "tagName": "OneTrust CMP Language Configuration",
+      "tagCategoryId": 14,
+      "tagCategoryName": "Privacy & Consent",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 1206,
+      "tagName": "OneTrust CMP Banner",
+      "tagCategoryId": 14,
+      "tagCategoryName": "Privacy & Consent",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 1243,
+      "tagName": "OneTrust Geolocation",
+      "tagCategoryId": 14,
+      "tagCategoryName": "Privacy & Consent",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    },
+    {
+      "tagId": 1462,
+      "tagName": "OneTrust CMP Assets",
+      "tagCategoryId": 14,
+      "tagCategoryName": "Privacy & Consent",
+      "tagPresentPageCount": 1,
+      "tagAbsentPageCount": 0,
+      "filteredTagAccountCount": 1
+    }
+  ]
+}

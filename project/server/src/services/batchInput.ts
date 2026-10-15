@@ -1,8 +1,9 @@
 /**
  * Reine Parser/Validatoren für Account- und Bulk-Assessments (EAA "Web Assessment" / "Bulk Assessment").
  * Keine I/O – DNS-Prüfung passiert erst beim Scrapen (scrapePage → sanitizeUrlWithDns).
+ * Syntax-Regeln (TLD, Leerzeichen, Schema …) teilen sich Einzel- und Batch-Analyse über validateUrlInput.
  */
-import { sanitizeUrl } from '../utils/sanitize.js';
+import { validateUrlInput } from '../utils/urlInput.js';
 
 export const MAX_BULK_URLS = 1000;
 export const MAX_ACCOUNT_URLS = 30;
@@ -30,20 +31,19 @@ const LABEL_START = /^[\p{L}\p{N}_]/u;
 const HEADER_URL = new Set(['url', 'urls', 'website', 'websites', 'domain', 'site', 'link']);
 const HEADER_LABEL = new Set(['label', 'title', 'brand', 'name', 'country', 'geo', 'stage', 'competitor']);
 
+/** Prüft/normalisiert eine URL; liefert bei Fehlern den konkreten Grund (englisch). */
+export function checkBatchUrl(input: string): { url: string } | { error: string } {
+  const raw = input.trim().replace(/^["']|["']$/g, '');
+  if (raw.length > MAX_URL_LENGTH) return { error: 'URL is too long' };
+  const result = validateUrlInput(raw);
+  if (!result.ok) return { error: result.hint ? `${result.message} ${result.hint}` : result.message };
+  return { url: result.url };
+}
+
 /** Normalisiert eine URL (https:// ergänzen, private/ungültige Hosts ablehnen). */
 export function normalizeBatchUrl(input: string): string | null {
-  const raw = input.trim().replace(/^["']|["']$/g, '');
-  if (!raw || raw.length > MAX_URL_LENGTH || /\s/.test(raw)) return null;
-  const sanitized = sanitizeUrl(raw);
-  if (!sanitized) return null;
-  try {
-    const u = new URL(sanitized);
-    if (!u.hostname.includes('.')) return null;
-    u.hash = '';
-    return u.toString();
-  } catch {
-    return null;
-  }
+  const checked = checkBatchUrl(input);
+  return 'url' in checked ? checked.url : null;
 }
 
 function dedupeKey(url: string): string {
@@ -90,11 +90,12 @@ export function normalizeBatchItems(
 
   rows.forEach((row, idx) => {
     const where = `Line ${row.line ?? idx + 1}`;
-    const url = normalizeBatchUrl(row.url ?? '');
-    if (!url) {
-      errors.push(`${where}: invalid or disallowed URL "${(row.url ?? '').slice(0, 120)}"`);
+    const checked = checkBatchUrl(row.url ?? '');
+    if (!('url' in checked)) {
+      errors.push(`${where}: invalid or disallowed URL "${(row.url ?? '').slice(0, 120)}" – ${checked.error}`);
       return;
     }
+    const { url } = checked;
     const label = row.label?.trim() || undefined;
     if (label !== undefined) {
       if (!LABEL_START.test(label)) {
