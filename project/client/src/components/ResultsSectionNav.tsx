@@ -11,6 +11,7 @@ const RESULT_SECTIONS = [
   { id: 'section-deep-dive', label: 'Deep Dive' },
   { id: 'section-observepoint', label: 'ObservePoint' },
   { id: 'section-geo', label: 'GEO Score' },
+  { id: 'section-license', label: 'License Sizing' },
 ] as const;
 
 function headerBottom(): number {

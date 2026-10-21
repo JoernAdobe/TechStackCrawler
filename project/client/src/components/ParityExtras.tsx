@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AnalysisResult } from '../types/analysis';
 import EnrichmentPanels from './EnrichmentPanels';
 import GeoScorePanel from './GeoScorePanel';
+import LicenseSizingPanel from './LicenseSizingPanel';
 import ObservePointPanel from './ObservePointPanel';
 import StackHistory from './StackHistory';
 import FeedbackWidget from './FeedbackWidget';
@@ -33,6 +34,9 @@ export default function ParityExtras({ analysis }: { analysis: AnalysisResult })
       </ErrorBoundary>
       <ErrorBoundary label="GEO score" compact resetKey={current}>
         <GeoScorePanel analysis={current} onUpdate={setCurrent} />
+      </ErrorBoundary>
+      <ErrorBoundary label="License sizing" compact resetKey={current}>
+        <LicenseSizingPanel analysis={current} />
       </ErrorBoundary>
       <ErrorBoundary label="Stack history" compact resetKey={current.url}>
         <StackHistory url={current.finalUrl ?? current.url} />
