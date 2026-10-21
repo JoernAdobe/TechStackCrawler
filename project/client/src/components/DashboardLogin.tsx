@@ -47,7 +47,7 @@ export default function DashboardLogin({ onLogin }: Props) {
             </svg>
           </div>
           <h1 className="text-xl font-bold text-ts-text-primary">Usage Dashboard</h1>
-          <p className="text-sm text-ts-text-secondary mt-1">TechStack Analyzer — Management View</p>
+          <p className="text-sm text-ts-text-secondary mt-1">Account Radar — Management View</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

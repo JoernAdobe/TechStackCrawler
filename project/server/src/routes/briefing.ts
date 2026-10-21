@@ -13,11 +13,17 @@ import {
   getBriefingState,
   getLatestBriefingForAnalysis,
 } from '../services/briefing/queue.js';
+import { htmlToPdf, PdfUnavailableError } from '../services/briefing/pdf.js';
+import { renderBriefingHtml } from '../services/briefing/render.js';
+import { analysisHost, buildAnalysisReportHtml } from '../services/analysisReport.js';
+import { getAnalysisById } from '../db/analyses.js';
+import { getLatestDoneBriefingResult } from '../db/briefingJobs.js';
 import type { BriefingJob, BriefingStateResponse } from '../types/briefing.js';
 import {
   DbUnavailableError,
   ForbiddenError,
   NotFoundError,
+  ServiceUnavailableError,
   asyncHandler,
   parseBody,
   parseParams,
@@ -70,6 +76,15 @@ export function briefingFilename(companyName: string | undefined, jobId: number)
     .slice(0, 60)
     .replace(/-+$/, '');
   return `${kebab || `briefing-${jobId}`}-client-pre-briefing.html`;
+}
+
+async function renderPdf(html: string): Promise<Buffer> {
+  try {
+    return await htmlToPdf(html);
+  } catch (err) {
+    if (err instanceof PdfUnavailableError) throw new ServiceUnavailableError(err.message);
+    throw err;
+  }
 }
 
 export function createBriefingRoutes(opts: { startLimiter?: RequestHandler; readLimiter?: RequestHandler } = {}): Router {
@@ -153,6 +168,44 @@ export function createBriefingRoutes(opts: { startLimiter?: RequestHandler; read
         res.setHeader('Content-Disposition', `attachment; filename="${briefingFilename(job?.companyName, jobId)}"`);
       }
       res.type('text/html; charset=utf-8').send(html);
+    }),
+  );
+
+  router.get(
+    '/api/briefings/:jobId(\\d+)/report.pdf',
+    ...read,
+    asyncHandler(async (req, res) => {
+      const { jobId } = parseParams(jobIdSchema, req.params);
+      requireDb();
+      const html = await getBriefingHtml(jobId);
+      if (html === null) throw new NotFoundError('Briefing report not ready');
+      const pdf = await renderPdf(html);
+      const { job } = await getBriefingState(jobId);
+      const filename = briefingFilename(job?.companyName, jobId).replace(/\.html$/, '.pdf');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.type('application/pdf').send(pdf);
+    }),
+  );
+
+  // Komplettreport der Analyse (Pre-Briefing, falls vorhanden, + Tech Stack, Opportunities, Use Cases).
+  router.get(
+    '/api/analyses/:id(\\d+)/report.pdf',
+    ...read,
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(analysisIdSchema, req.params);
+      requireDb();
+      const pool = getPool()!;
+      const analysis = await getAnalysisById(pool, id);
+      if (!analysis) throw new NotFoundError('Analysis not found');
+      const briefing = await getLatestDoneBriefingResult(pool, id);
+      const pdf = await renderPdf(buildAnalysisReportHtml(analysis, briefing ? renderBriefingHtml(briefing) : null));
+      const host = analysisHost(analysis).toLowerCase().replace(/[^a-z0-9.-]+/g, '-').slice(0, 60) || `analysis-${id}`;
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Disposition', `attachment; filename="${host}-account-radar.pdf"`);
+      res.type('application/pdf').send(pdf);
     }),
   );
 

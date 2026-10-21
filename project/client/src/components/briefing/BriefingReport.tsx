@@ -1,9 +1,9 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ArrowDown } from 'lucide-react';
 import type { BriefingResult, BriefingSection, BriefingSectionStatus } from '../../types/briefing';
 import BriefingBlocks from './BriefingBlocks';
 import { SourceList } from './BriefingSources';
-import type { DrillHandler } from './DrillLink';
-import { sectionAnchor, sectionMeta } from './meta';
+import { ADOBE_OPPORTUNITY_SECTION, MERGED_OPPORTUNITY_ANCHOR, stickyChromeBottom } from './briefingStore';
+import { prefersReducedMotion, sectionAnchor, sectionMeta } from './meta';
 import SectionIcon from './SectionIcon';
 
 const STATUS_BADGE: Partial<Record<BriefingSectionStatus, { label: string; cls: string }>> = {
@@ -69,37 +69,56 @@ function ReportSection({ section, highlighted }: { section: BriefingSection; hig
 interface BriefingReportProps {
   result: BriefingResult;
   highlightId: string | null;
-  onDrill: DrillHandler;
+}
+
+function hasMergedContent(section: BriefingSection): boolean {
+  return section.status !== 'skipped' && (section.blocks.length > 0 || section.gaps.length > 0);
+}
+
+/** Verweis statt Duplikat: Adobe Opportunity steht in der Sektion „Opportunities“. */
+function MergedOpportunityPointer({ section }: { section: BriefingSection }) {
+  const jump = () => {
+    const el = document.getElementById(MERGED_OPPORTUNITY_ANCHOR);
+    if (!el) return;
+    window.scrollTo({
+      top: el.getBoundingClientRect().top + window.scrollY - stickyChromeBottom() - 16,
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    });
+    el.focus({ preventScroll: true });
+  };
+  return (
+    <section
+      id={sectionAnchor(section.id)}
+      tabIndex={-1}
+      className="scroll-mt-32 flex flex-col gap-3 rounded-2xl border border-dashed border-ts-border p-4 focus:outline-none sm:flex-row sm:items-center sm:justify-between sm:p-6"
+    >
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-adobe-red">{section.eyebrow}</p>
+        <p className="mt-1 text-sm text-ts-text-secondary">
+          <span className="font-semibold text-ts-text-primary">{section.title}</span> is shown once, together with the
+          tech-stack opportunities, so nothing is counted twice.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={jump}
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-ts-border px-3 py-1.5 text-sm font-medium text-ts-text-primary hover:border-ts-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-adobe-red"
+      >
+        Go to Opportunities <ArrowDown className="h-4 w-4" aria-hidden="true" />
+      </button>
+    </section>
+  );
 }
 
 /** Vollständiges Briefing nativ in React (Drilldown unter der Executive-Ansicht). */
-export default function BriefingReport({ result, highlightId, onDrill }: BriefingReportProps) {
+export default function BriefingReport({ result, highlightId }: BriefingReportProps) {
   return (
     <div className="space-y-4">
-      <nav aria-label="Briefing sections">
-        <ul className="flex flex-wrap gap-1.5">
-          {result.sections.map((s) => (
-            <li key={s.id}>
-              <button
-                type="button"
-                onClick={() => onDrill(s.id)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-adobe-red ${
-                  s.status === 'skipped'
-                    ? 'border-ts-border/60 text-ts-text-secondary/70 hover:text-ts-text-secondary'
-                    : 'border-ts-border text-ts-text-secondary hover:border-ts-accent/50 hover:text-ts-text-primary'
-                }`}
-              >
-                {s.title}
-                {s.status === 'thin' && <span className="ml-1 text-amber-300" aria-label="thin data">•</span>}
-                {s.status === 'error' && <span className="ml-1 text-red-300" aria-label="research failed">•</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      {result.sections.map((s) => (
-        <ReportSection key={s.id} section={s} highlighted={highlightId === sectionAnchor(s.id)} />
-      ))}
+      {result.sections.map((s) =>
+        s.id === ADOBE_OPPORTUNITY_SECTION && hasMergedContent(s)
+          ? <MergedOpportunityPointer key={s.id} section={s} />
+          : <ReportSection key={s.id} section={s} highlighted={highlightId === sectionAnchor(s.id)} />,
+      )}
     </div>
   );
 }

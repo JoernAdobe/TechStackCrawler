@@ -24,7 +24,7 @@ export function briefingAssetsPath(...parts: string[]): string {
 }
 
 let cssCache: string | null = null;
-function stylesCss(): string {
+export function stylesCss(): string {
   cssCache ??= readFileSync(briefingAssetsPath('design', 'styles.css'), 'utf8');
   return cssCache;
 }

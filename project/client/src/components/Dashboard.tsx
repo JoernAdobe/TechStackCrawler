@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import ApiTokenManager from './ApiTokenManager';
 import FeedbackList from './FeedbackList';
+import UsageSections, { type UsageStats } from './UsageSections';
 import { apiRequest, ApiError, isAbortError } from '../lib/apiClient';
 
 interface TechCount {
@@ -41,6 +42,9 @@ interface Stats {
   categoryBreakdown: TechCount[];
   firstAnalysisDate: string | null;
   daysSinceFirstUse: number;
+  analysesLast30d?: number;
+  topAccounts?: TechCount[];
+  usage?: UsageStats;
 }
 
 interface Props {
@@ -146,7 +150,7 @@ export default function Dashboard({ token, onLogout }: Props) {
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight">Usage Dashboard</h1>
-              <p className="text-xs text-ts-text-secondary">TechStack Analyzer — ROI & Adoption</p>
+              <p className="text-xs text-ts-text-secondary">Account Radar — Adoption, Usage & ROI</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -209,6 +213,10 @@ export default function Dashboard({ token, onLogout }: Props) {
             color="text-ts-success"
           />
         </section>
+
+        {stats.usage && (
+          <UsageSections usage={stats.usage} topAccounts={stats.topAccounts ?? []} analysesLast30d={stats.analysesLast30d ?? 0} />
+        )}
 
         {/* Charts Row */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">

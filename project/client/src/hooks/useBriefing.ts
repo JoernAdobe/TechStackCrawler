@@ -41,6 +41,10 @@ export function briefingReportUrl(jobId: number, download = false): string {
   return `/api/briefings/${jobId}/report.html${download ? '?download=1' : ''}`;
 }
 
+export function briefingPdfUrl(jobId: number): string {
+  return `/api/briefings/${jobId}/report.pdf`;
+}
+
 interface UseBriefingOptions {
   /** Abschnitte, mit denen beim Mount sofort ein Job gestartet wird (Checkbox im Analyzer). */
   autoStartSections?: BriefingSectionId[] | null;

@@ -5,6 +5,7 @@
  * mit eigenem Fehler-Parsing, eigenem Auth-Header und ohne Abbruch bei Unmount.
  * Hier ist all das an einer Stelle gebündelt.
  */
+import { getVisitorId } from './visitor';
 
 /** Fehler einer API-Antwort inkl. HTTP-Status und Server-Fehlercode. */
 export class ApiError extends Error {
@@ -98,6 +99,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       headers: {
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'X-Visitor-Id': getVisitorId(),
         ...headers,
       },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

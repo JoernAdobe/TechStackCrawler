@@ -34,10 +34,10 @@ export default function Header() {
           />
           <div className="min-w-0">
             <h1 className="text-base sm:text-xl font-bold text-ts-text-primary tracking-tight truncate">
-              TechStack Analyzer
+              Account Radar
             </h1>
             <p className="hidden sm:block text-xs text-ts-text-secondary">
-              AI-Powered Account Intelligence
+              Tech Stack · Pre-Briefing · Adobe Plays
             </p>
           </div>
         </div>

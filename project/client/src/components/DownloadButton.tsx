@@ -1,8 +1,11 @@
 import { createPortal } from 'react-dom';
-import { FileSpreadsheet, FileDown, RotateCcw } from 'lucide-react';
+import { FileSpreadsheet, FileDown, FileText, RotateCcw } from 'lucide-react';
 import type { AnalysisResult } from '../types/analysis';
 import { downloadMarkdown } from '../lib/markdown';
 import { downloadExcel } from '../lib/excel';
+import { trackUsage } from '../lib/visitor';
+
+
 
 interface DownloadButtonProps {
   results: AnalysisResult;
@@ -41,9 +44,22 @@ export default function DownloadButton({ results, onReset, resetLabel = 'New Ana
             <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
             {resetLabel}
           </button>
+          {results.id != null && (
+            <a
+              href={`/api/analyses/${results.id}/report.pdf`}
+              download
+              aria-label="Download PDF report"
+              title="Full report as PDF (incl. Pre-Briefing, if available)"
+              className="flex flex-1 md:flex-none items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-ts-text-primary border border-ts-border rounded-lg hover:bg-ts-surface-card hover:border-ts-accent/30 transition-all whitespace-nowrap"
+            >
+              <FileText className="w-4 h-4" aria-hidden="true" />
+              <span className="sm:hidden">PDF</span>
+              <span className="hidden sm:inline">Download PDF</span>
+            </a>
+          )}
           <button
             type="button"
-            onClick={() => downloadMarkdown(results)}
+            onClick={() => { downloadMarkdown(results); trackUsage('export_markdown', results.id); }}
             aria-label="Download Markdown report"
             className="flex flex-1 md:flex-none items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-ts-text-primary border border-ts-border rounded-lg hover:bg-ts-surface-card hover:border-ts-accent/30 transition-all whitespace-nowrap"
           >
@@ -53,7 +69,7 @@ export default function DownloadButton({ results, onReset, resetLabel = 'New Ana
           </button>
           <button
             type="button"
-            onClick={() => downloadExcel(results)}
+            onClick={() => { downloadExcel(results); trackUsage('export_excel', results.id); }}
             aria-label="Download Excel report"
             className="flex flex-1 md:flex-none items-center justify-center gap-2 px-3 sm:px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-adobe-red to-adobe-red-dark rounded-lg hover:from-adobe-red-dark hover:to-[#B03522] transition-all hover:shadow-glow-red active:scale-[0.98] whitespace-nowrap"
           >

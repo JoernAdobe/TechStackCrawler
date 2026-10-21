@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { AlertCircle, ChevronDown, Download, ExternalLink, FileSearch, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertCircle, ChevronDown, Download, ExternalLink, FileDown, FileSearch, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { BRIEFING_CREDIT, type BriefingSectionId } from '../../types/briefing';
-import { briefingReportUrl, useBriefing } from '../../hooks/useBriefing';
+import { briefingPdfUrl, briefingReportUrl, useBriefing } from '../../hooks/useBriefing';
 import { BriefingSectionPicker } from './BriefingSectionPicker';
 import BriefingProgress from './BriefingProgress';
 import ExecutiveSummary from './ExecutiveSummary';
@@ -9,6 +9,8 @@ import BriefingReport from './BriefingReport';
 import ReviewSourcesNote from './ReviewSourcesNote';
 import { loadBriefingSections } from './prefs';
 import { normalizeSections, prefersReducedMotion, sectionAnchor } from './meta';
+import { BRIEFING_SUBNAV_LABEL, BRIEFING_SUMMARY_ANCHOR, publishBriefingResult } from './briefingStore';
+import BriefingSubNav from './BriefingSubNav';
 
 interface BriefingPanelProps {
   analysisId?: number;
@@ -55,6 +57,25 @@ export default function BriefingPanel({ analysisId, autoStartSections, onAutoSta
   const [scrollRequest, setScrollRequest] = useState(0);
   const scrollTarget = useRef<string | null>(null);
 
+  useEffect(() => {
+    if (analysisId == null) return;
+    publishBriefingResult(analysisId, job?.status === 'done' ? result : null);
+  }, [analysisId, job?.status, result]);
+
+  useEffect(() => () => {
+    if (analysisId != null) publishBriefingResult(analysisId, null);
+  }, [analysisId]);
+
+  const scrollToEl = useCallback((el: HTMLElement) => {
+    // Sticky Header + Sektions-Nav + Pre-Briefing-Subnav überdecken sonst den Abschnittsanfang.
+    const header = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
+    const nav = document.querySelector('nav[aria-label="Result sections"]')?.getBoundingClientRect().height ?? 0;
+    const sub = document.querySelector(`nav[aria-label="${BRIEFING_SUBNAV_LABEL}"]`)?.getBoundingClientRect().height ?? 0;
+    const top = el.getBoundingClientRect().top + window.scrollY - Math.max(0, header) - nav - sub - 16;
+    window.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    el.focus({ preventScroll: true });
+  }, []);
+
   const drill = useCallback((id: BriefingSectionId) => {
     scrollTarget.current = sectionAnchor(id);
     setReportOpen(true);
@@ -66,17 +87,10 @@ export default function BriefingPanel({ analysisId, autoStartSections, onAutoSta
     const target = scrollTarget.current;
     if (!scrollRequest || !target) return;
     const el = document.getElementById(target);
-    if (el) {
-      // Sticky Header + Sektions-Nav überdecken sonst den Abschnittsanfang.
-      const header = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
-      const nav = document.querySelector('nav[aria-label="Result sections"]')?.getBoundingClientRect().height ?? 0;
-      const top = el.getBoundingClientRect().top + window.scrollY - Math.max(0, header) - nav - 16;
-      window.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-      el.focus({ preventScroll: true });
-    }
+    if (el) scrollToEl(el);
     const timer = setTimeout(() => setHighlight(null), 2200);
     return () => clearTimeout(timer);
-  }, [scrollRequest]);
+  }, [scrollRequest, scrollToEl]);
 
   const handleStart = async (sections: BriefingSectionId[]) => {
     await start(sections);
@@ -127,7 +141,17 @@ export default function BriefingPanel({ analysisId, autoStartSections, onAutoSta
   } else {
     body = (
       <div className="space-y-6">
-        <ExecutiveSummary result={result} onDrill={drill} />
+        <BriefingSubNav
+          result={result}
+          onSection={drill}
+          onSummary={() => {
+            const el = document.getElementById(BRIEFING_SUMMARY_ANCHOR);
+            if (el) scrollToEl(el);
+          }}
+        />
+        <div id={BRIEFING_SUMMARY_ANCHOR} tabIndex={-1} className="focus:outline-none">
+          <ExecutiveSummary result={result} onDrill={drill} />
+        </div>
         <ReviewSourcesNote />
         <div className="border-t border-ts-border pt-4">
           <button
@@ -146,7 +170,7 @@ export default function BriefingPanel({ analysisId, autoStartSections, onAutoSta
             <ChevronDown className={`h-5 w-5 text-ts-text-secondary transition-transform motion-reduce:transition-none ${reportOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
           </button>
           <div id="briefing-full-report" className="mt-4" hidden={!reportOpen}>
-            {reportOpen && <BriefingReport result={result} highlightId={highlight} onDrill={drill} />}
+            {reportOpen && <BriefingReport result={result} highlightId={highlight} />}
           </div>
         </div>
       </div>
@@ -155,7 +179,7 @@ export default function BriefingPanel({ analysisId, autoStartSections, onAutoSta
 
   return (
     <section id="section-briefing" aria-labelledby="briefing-panel-title" className="mx-auto max-w-7xl scroll-mt-28 px-4 py-8 sm:px-6">
-      <div className="overflow-hidden rounded-2xl border border-ts-border bg-ts-surface-card">
+      <div className="overflow-clip rounded-2xl border border-ts-border bg-ts-surface-card">
         <div className="flex flex-col gap-4 border-b border-ts-border bg-gradient-to-br from-adobe-red/10 via-ts-surface-card to-ts-accent/5 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
             <h2 id="briefing-panel-title" className="flex items-center gap-2 text-xl font-semibold text-ts-text-primary">
@@ -168,6 +192,9 @@ export default function BriefingPanel({ analysisId, autoStartSections, onAutoSta
             <div className="flex flex-wrap gap-2">
               <a href={briefingReportUrl(job.id)} target="_blank" rel="noopener noreferrer" className={btnPrimary}>
                 <ExternalLink className="h-4 w-4" aria-hidden="true" /> Open full report
+              </a>
+              <a href={briefingPdfUrl(job.id)} className={btnGhost} download>
+                <FileDown className="h-4 w-4" aria-hidden="true" /> Download PDF
               </a>
               <a href={briefingReportUrl(job.id, true)} className={btnGhost} download>
                 <Download className="h-4 w-4" aria-hidden="true" /> Download HTML

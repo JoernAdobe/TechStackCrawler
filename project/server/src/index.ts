@@ -35,6 +35,7 @@ import { createAuthRoutes } from './routes/oktaAuth.js';
 import { createTokenRoute, listTokensRoute, revokeTokenRoute } from './routes/apiTokens.js';
 import { createMcpRoutes } from './mcp/server.js';
 import { requireMcpAuth } from './mcp/auth.js';
+import { usageTracking, usageBeaconRoute } from './services/usageTracking.js';
 import { initDb, getPool, closeDb } from './db/index.js';
 import { resumeAutoScans } from './services/observepoint/autoScan.js';
 import { config, validateConfig } from './config.js';
@@ -86,6 +87,7 @@ app.use(
 );
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
+app.use(usageTracking);
 
 const analysisLimiter = rateLimit({
   windowMs: 60_000,
@@ -215,6 +217,7 @@ app.get('/api/analyses', asyncHandler(listAnalysesRoute));
 app.get('/api/library', asyncHandler(libraryRoute));
 app.get('/api/analyses/:id', asyncHandler(getAnalysisRoute));
 app.post('/api/dashboard/login', loginLimiter, asyncHandler(dashboardLogin));
+app.post('/api/usage', lightLimiter, usageBeaconRoute);
 app.get('/api/dashboard/stats', requireDashboardAuth, asyncHandler(dashboardStats));
 
 // Okta OIDC + Session-Status (/auth/login, /auth/callback, /auth/logout, /api/dashboard/session)

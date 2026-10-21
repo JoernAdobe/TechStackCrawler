@@ -5,6 +5,7 @@ import { getPool } from '../db/index.js';
 import type { AnalysisResult } from '../types/analysis.js';
 import { createSession, getSession } from '../services/sessionStore.js';
 import { config } from '../config.js';
+import { computeUsageStats, type FunnelInput, type UsageStats } from '../services/usageStats.js';
 import { ServiceUnavailableError, UnauthorizedError, ForbiddenError, DbUnavailableError, parseBody } from '../utils/http.js';
 
 const MANUAL_HOURS_PER_ANALYSIS = 3.5;
@@ -107,6 +108,9 @@ interface DashboardStats {
   categoryBreakdown: TechCount[];
   firstAnalysisDate: string | null;
   daysSinceFirstUse: number;
+  analysesLast30d: number;
+  topAccounts: TechCount[];
+  usage: UsageStats;
 }
 
 function extractDomain(url: string): string {
@@ -148,13 +152,19 @@ export async function dashboardStats(_req: Request, res: Response) {
     let totalTech = 0;
     let adobeOpps = 0;
     let useCaseCount = 0;
+    let last30 = 0;
+    const domainCounts = new Map<string, number>();
+    const funnel: FunnelInput[] = [];
 
     for (const row of analyses) {
-      domains.add(extractDomain(row.url));
+      const domain = extractDomain(row.url);
+      domains.add(domain);
+      domainCounts.set(domain, (domainCounts.get(domain) ?? 0) + 1);
 
       const dateStr = typeof row.analyzed_at === 'string'
         ? row.analyzed_at
         : row.analyzed_at.toISOString();
+      if (Date.now() - new Date(dateStr).getTime() <= 30 * 86400000) last30++;
       const weekKey = getWeekKey(dateStr);
       weekCounts.set(weekKey, (weekCounts.get(weekKey) ?? 0) + 1);
 
@@ -188,6 +198,12 @@ export async function dashboardStats(_req: Request, res: Response) {
       if (parsed.useCaseDiscovery?.useCases?.length) {
         useCaseCount++;
       }
+      funnel.push({
+        analysisId: row.id,
+        domain,
+        hasUseCases: Boolean(parsed.useCaseDiscovery?.useCases?.length),
+        hasGeo: Boolean(parsed.enrichments?.geo),
+      });
     }
 
     const totalAnalyses = analyses.length;
@@ -228,6 +244,12 @@ export async function dashboardStats(_req: Request, res: Response) {
       categoryBreakdown,
       firstAnalysisDate: firstDate,
       daysSinceFirstUse: daysSinceFirst,
+      analysesLast30d: last30,
+      topAccounts: [...domainCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([name, count]) => ({ name, count })),
+      usage: await computeUsageStats(pool, funnel, config.adminEmails),
     };
 
     res.json(stats);
