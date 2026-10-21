@@ -21,6 +21,13 @@ import { batchToCsv, exportFilename } from '../services/batchExport.js';
 import { batchToMarkdown } from '../services/accountExport.js';
 import { MAX_COSTLY_ITEMS_LIMIT, resolveEnrichmentOptions } from '../services/batchEnrichment.js';
 import { isObservePointConfigured } from '../services/observepoint/index.js';
+import {
+  MAX_BRIEFING_ITEMS,
+  briefingsZipFilename,
+  buildBriefingsZip,
+  refreshBatchBriefings,
+} from '../services/batchBriefing.js';
+import { BRIEFING_SECTION_IDS } from '../types/briefing.js';
 import { getStackHistory, normalizeHostname } from '../services/stackHistory.js';
 import { getSession } from '../services/sessionStore.js';
 import { requireDashboardAuth } from './dashboard.js';
@@ -74,6 +81,9 @@ const createSchema = z
         useCases: z.boolean().optional(),
         multiPage: z.boolean().optional(),
         maxCostlyItems: z.coerce.number().int().min(1).max(MAX_COSTLY_ITEMS_LIMIT).optional(),
+        /** Client Pre-Briefing für die ersten min(maxCostlyItems, 20) erfolgreichen Items. */
+        briefing: z.boolean().optional(),
+        briefingSections: z.array(z.enum(BRIEFING_SECTION_IDS)).max(BRIEFING_SECTION_IDS.length).optional(),
       })
       .optional(),
     input: z.string().max(2_000_000).optional(),
@@ -149,9 +159,9 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
       }
       const aiAnalysis = body.aiAnalysis ?? body.kind === 'account';
       const enrichmentOptions = resolveEnrichmentOptions(body.kind, aiAnalysis, body.enrichments ?? {});
-      // Anonyme Bulk-Batches mit KI-Analyse oder LLM-Enrichments (GEO, Use Cases) verursachen
-      // Bedrock-Kosten pro URL → immer Admin-Freigabe.
-      const usesLlm = aiAnalysis || enrichmentOptions.geo || enrichmentOptions.useCases;
+      // Anonyme Bulk-Batches mit KI-Analyse oder LLM-Enrichments (GEO, Use Cases, Pre-Briefing)
+      // verursachen Bedrock-Kosten pro URL → immer Admin-Freigabe.
+      const usesLlm = aiAnalysis || enrichmentOptions.geo || enrichmentOptions.useCases || enrichmentOptions.briefing;
       const needsApproval =
         body.kind === 'bulk' && (parsed.items.length > batchApprovalThreshold() || (usesLlm && !session));
       const status: BatchStatus = needsApproval ? 'pending_approval' : 'queued';
@@ -184,6 +194,7 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
       semrush: Boolean(process.env.SEMRUSH_API_KEY?.trim()),
       pagespeedKey: Boolean(process.env.PAGESPEED_API_KEY?.trim()),
       maxCostlyItemsLimit: MAX_COSTLY_ITEMS_LIMIT,
+      maxBriefingItems: MAX_BRIEFING_ITEMS,
       defaults: {
         account: resolveEnrichmentOptions('account', true),
         bulk: resolveEnrichmentOptions('bulk', false),
@@ -205,10 +216,30 @@ export function createBatchRoutes(opts: { limiter?: RequestHandler } = {}): Rout
     '/api/batches/:id(\\d+)',
     asyncHandler(async (req, res) => {
       const { id } = parseParams(idSchema, req.params);
-      const batch = await getBatch(requireDb(), id);
+      const db = requireDb();
+      const batch = await getBatch(db, id);
       if (!batch) throw new NotFoundError('Batch not found');
+      await refreshBatchBriefings(db, batch);
       res.setHeader('Cache-Control', 'no-store');
       res.json(redactCreator(batch, req));
+    }),
+  );
+
+  /** Alle fertigen Client Pre-Briefings (HTML) + briefing-scores.csv als ZIP. */
+  router.get(
+    '/api/batches/:id(\\d+)/briefings.zip',
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(idSchema, req.params);
+      const db = requireDb();
+      const batch = await getBatch(db, id);
+      if (!batch) throw new NotFoundError('Batch not found');
+      await refreshBatchBriefings(db, batch);
+      const zip = await buildBriefingsZip(batch);
+      if (!zip) throw new NotFoundError('No finished Client Pre-Briefings in this batch yet');
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${briefingsZipFilename(batch)}"`);
+      res.setHeader('Cache-Control', 'no-store');
+      res.send(zip.buffer);
     }),
   );
 

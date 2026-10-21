@@ -1,7 +1,12 @@
 /**
  * Account-/Bulk-Assessment: optionale Enrichments pro Item und aggregierte Account-Sicht.
- * Identische Kopie liegt in client/src/types/batchAccount.ts – synchron halten.
+ * Identische Kopie liegt in client/src/types/batchAccount.ts – synchron halten
+ * (einziger Unterschied: Import-Suffix `.js` auf dem Server).
  */
+import type { BriefingSectionId, BriefingSummary } from './briefing';
+
+/** Client Pre-Briefing (powered by Chris Whitehead): Obergrenze pro Batch, zusätzlich ≤ maxCostlyItems. */
+export const MAX_BRIEFING_ITEMS = 20;
 
 /** Quellen, die pro Batch-Item zusätzlich zur Detection laufen können. */
 export type BatchEnrichmentSource =
@@ -12,7 +17,8 @@ export type BatchEnrichmentSource =
   | 'lighthouse'
   | 'geo'
   | 'useCases'
-  | 'multiPage';
+  | 'multiPage'
+  | 'briefing';
 
 export interface BatchEnrichmentOptions {
   /** Tranco-Rang (frei, 1 Anfrage/Sekunde). */
@@ -33,6 +39,14 @@ export interface BatchEnrichmentOptions {
   multiPage: boolean;
   /** Obergrenze an Items für quotierte/teure Quellen (lighthouse, semrush, geo, useCases). */
   maxCostlyItems: number;
+  /**
+   * Client Pre-Briefing (async Job, 5–10 Min/Account) für die ersten min(maxCostlyItems, 20)
+   * erfolgreichen Items. Im Detection-Modus bekommen diese Items eine volle KI-Analyse als Basis.
+   * Fehlt bei alten Batches (gespeicherte Optionen) → wie false behandeln.
+   */
+  briefing: boolean;
+  /** Abschnitte des Briefings (Default: alle; s14 immer enthalten). */
+  briefingSections?: BriefingSectionId[];
 }
 
 export interface BatchItemTraffic {
@@ -90,6 +104,8 @@ export interface BatchItemEnrichments {
   geo?: BatchItemGeo;
   useCases?: Array<{ title: string; adobeProducts: string[]; impact?: string; effort?: string }>;
   scanWarnings?: Array<{ code: string; severity: 'info' | 'warning' | 'error'; message: string }>;
+  /** Client Pre-Briefing dieses Items (Status/Score werden beim Lesen aktualisiert). */
+  briefing?: BriefingSummary;
   /** Quelle → kurze, nutzerlesbare Fehlermeldung. */
   errors?: Partial<Record<BatchEnrichmentSource, string>>;
   /** Quelle → Grund, warum sie bewusst nicht lief (Budget, Quota, Konfiguration). */

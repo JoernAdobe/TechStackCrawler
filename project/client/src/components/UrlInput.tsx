@@ -1,21 +1,39 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { Zap, Sparkles, Lightbulb, AlertCircle } from 'lucide-react';
+import { Zap, Sparkles, Lightbulb, AlertCircle, BookOpen } from 'lucide-react';
 import LetterGlitch from './LetterGlitch';
 import { checkUrlInput, type UrlCheck } from '../lib/urlValidation';
+import BriefingOptions from './briefing/BriefingOptions';
+import { loadBriefingEnabled, loadBriefingSections, saveBriefingPrefs } from './briefing/prefs';
+import type { BriefingSectionId } from '../types/briefing';
+import type { LibraryAccount } from '../types/library';
+import { findAccountForUrl, formatDate, relativeAge } from '../lib/library';
 
 interface UrlInputProps {
-  onSubmit: (url: string) => void;
+  /** briefingSections = null → kein Client Pre-Briefing anfordern. */
+  onSubmit: (url: string, briefingSections: BriefingSectionId[] | null) => void;
   disabled?: boolean;
   /** Vorbelegung, z. B. nach "Edit URL" im Fehlerzustand. */
   initialValue?: string;
+  /** Library-Accounts: Treffer auf die eingegebene Domain → Hinweis „schon analysiert“. */
+  existingAccounts?: LibraryAccount[];
+  onOpenExisting?: (analysisId: number) => void;
 }
 
 type UrlProblem = Extract<UrlCheck, { ok: false }>;
 
-export default function UrlInput({ onSubmit, disabled, initialValue = '' }: UrlInputProps) {
+export default function UrlInput({ onSubmit, disabled, initialValue = '', existingAccounts, onOpenExisting }: UrlInputProps) {
   const [url, setUrl] = useState(initialValue);
   const [problem, setProblem] = useState<UrlProblem | null>(null);
   const submittedRef = useRef(false);
+  const [briefingEnabled, setBriefingEnabled] = useState(loadBriefingEnabled);
+  const [briefingSections, setBriefingSections] = useState(loadBriefingSections);
+  const existing = existingAccounts ? findAccountForUrl(existingAccounts, url) : undefined;
+
+  const updateBriefing = (enabled: boolean, sections: BriefingSectionId[]) => {
+    setBriefingEnabled(enabled);
+    setBriefingSections(sections);
+    saveBriefingPrefs(enabled, sections);
+  };
 
   const submit = (value: string) => {
     // Schutz gegen Doppelklick/Enter-Repeat, bevor der Analyse-View übernimmt.
@@ -27,7 +45,7 @@ export default function UrlInput({ onSubmit, disabled, initialValue = '' }: UrlI
     }
     setProblem(null);
     submittedRef.current = true;
-    onSubmit(value.trim());
+    onSubmit(value.trim(), briefingEnabled ? briefingSections : null);
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -88,13 +106,14 @@ export default function UrlInput({ onSubmit, disabled, initialValue = '' }: UrlI
       {/* Hero section — plain text with CSS animations, no SplitText */}
       <div className="text-center mb-12 max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
         <h2 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-white via-white/90 to-ts-text-secondary bg-clip-text text-transparent leading-tight">
-          Analyze Any Website&apos;s
+          From Any Website to
           <br />
-          Tech Stack
+          Account Intelligence
         </h2>
         <p className="text-ts-text-secondary text-base sm:text-lg leading-relaxed mt-6">
-          Enter a URL to discover the technology stack, identify challenges, and
-          uncover Adobe product opportunities.
+          Enter a URL to map the tech stack, size traffic and uncover Adobe opportunities –
+          plus an optional C-level Client Pre-Briefing with an overall score.
+          Already analyzed? Reuse it from the Library.
         </p>
       </div>
 
@@ -173,6 +192,40 @@ export default function UrlInput({ onSubmit, disabled, initialValue = '' }: UrlI
             </div>
           </div>
         )}
+        {existing && !problem && (
+          <div
+            role="status"
+            className="mt-3 flex items-start gap-2 px-4 py-3 rounded-xl border border-ts-accent/40 bg-ts-accent/10 text-sm text-left"
+          >
+            <BookOpen className="w-4 h-4 mt-0.5 shrink-0 text-ts-accent-light" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-ts-text-primary">
+                <span className="font-semibold">{existing.name}</span> is already in the Library – last analyzed{' '}
+                {formatDate(existing.latest.analyzedAt)} ({relativeAge(existing.latest.analyzedAt)})
+                {existing.briefing?.overallScore != null && ` · Pre-Briefing ${Math.round(existing.briefing.overallScore)}`}.
+              </p>
+              <p className="mt-0.5 text-ts-text-secondary">
+                {onOpenExisting && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenExisting(existing.latest.id)}
+                    className="text-ts-accent-light hover:text-white underline underline-offset-2"
+                  >
+                    Open existing analysis
+                  </button>
+                )}
+                {onOpenExisting ? ' to save time and AI costs, or click Analyze for fresh data.' : 'Click Analyze to refresh it.'}
+              </p>
+            </div>
+          </div>
+        )}
+        <BriefingOptions
+          enabled={briefingEnabled}
+          onEnabledChange={(enabled) => updateBriefing(enabled, briefingSections)}
+          sections={briefingSections}
+          onSectionsChange={(sections) => updateBriefing(briefingEnabled, sections)}
+          disabled={disabled}
+        />
       </form>
 
       {/* Example URLs */}
@@ -198,9 +251,9 @@ export default function UrlInput({ onSubmit, disabled, initialValue = '' }: UrlI
       {/* Feature highlights */}
       <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 fill-mode-both">
         {[
-          { icon: Zap, iconClass: 'text-ts-accent', bgClass: 'bg-ts-accent/20', title: 'Instant Detection', desc: 'Detection in seconds' },
-          { icon: Sparkles, iconClass: 'text-ts-accent', bgClass: 'bg-ts-accent/20', title: 'AI-Powered', desc: 'Claude analyzes the stack' },
-          { icon: Lightbulb, iconClass: 'text-adobe-red', bgClass: 'bg-adobe-red/20', title: 'Adobe Opportunities', desc: 'Use case recommendations' },
+          { icon: Zap, iconClass: 'text-ts-accent', bgClass: 'bg-ts-accent/20', title: 'Stack & Traffic', desc: 'Detection, Semrush & Tranco' },
+          { icon: Lightbulb, iconClass: 'text-adobe-red', bgClass: 'bg-adobe-red/20', title: 'Adobe Opportunities', desc: 'Use cases & tech case' },
+          { icon: Sparkles, iconClass: 'text-ts-accent', bgClass: 'bg-ts-accent/20', title: 'Client Pre-Briefing', desc: 'C-level score & drilldown' },
         ].map(({ icon: Icon, iconClass, bgClass, title, desc }) => (
           <div
             key={title}

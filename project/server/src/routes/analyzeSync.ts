@@ -9,11 +9,17 @@ import { sanitizeUrlWithDns } from '../utils/sanitize.js';
 import { validateUrlInput } from '../utils/urlInput.js';
 import { preflightUrl } from '../services/urlPreflight.js';
 import { findDomainSuggestion } from '../services/domainSuggest.js';
-import { BadRequestError, parseBody } from '../utils/http.js';
+import { BadRequestError, DbUnavailableError, NotFoundError, parseBody, parseParams } from '../utils/http.js';
+import { getPool } from '../db/index.js';
+import { getAnalysisById } from '../db/analyses.js';
+import { finishAnalysisRun, getAnalysisRun, insertAnalysisRun, listInterruptedAnalysisRuns } from '../db/resumeStore.js';
+import type { AnalysisResult } from '../types/analysis.js';
 
 const analyzeSchema = z.object({
   // Inhaltliche Prüfung (leer, mehrere URLs, TLD …) macht validateUrlInput mit konkreter Meldung.
   url: z.string().max(4096),
+  /** Vom Client erzeugte ID, um das Ergebnis nach einem Verbindungsabbruch abzuholen. */
+  requestId: z.string().max(64).optional(),
 });
 
 interface UserFacingError {
@@ -73,36 +79,113 @@ export async function analyzeSyncRoute(req: Request, res: Response) {
     throw new BadRequestError('This URL cannot be analyzed (private, internal or unresolvable address).');
   }
 
-  const collector = createSyncCollector();
+  const requestId = parsedRequestId(req.body);
+  const pool = getPool();
+  if (pool && requestId) await insertAnalysisRun(pool, requestId, sanitizedUrl).catch(() => undefined);
 
+  // Läuft bis zum Ende weiter und speichert, auch wenn der Client die Verbindung verliert;
+  // der Client holt das Ergebnis dann über GET /api/analysis-runs/:requestId ab.
+  const outcome = await executeAnalysis(sanitizedUrl, input.hostname, requestId);
+  res.status(outcome.status).json(outcome.body);
+}
+
+const requestIdSchema = z.string().regex(/^[A-Za-z0-9-]{8,64}$/);
+
+function parsedRequestId(body: unknown): string | null {
+  const raw = (body as { requestId?: unknown } | null)?.requestId;
+  const r = requestIdSchema.safeParse(raw);
+  return r.success ? r.data : null;
+}
+
+interface AnalysisOutcome {
+  status: number;
+  body: Record<string, unknown>;
+}
+
+/** Führt die Analyse aus und schreibt das Ergebnis (bzw. den Fehler) in analysis_runs. */
+async function executeAnalysis(url: string, hostname: string, requestId: string | null): Promise<AnalysisOutcome> {
+  const collector = createSyncCollector();
+  const pool = getPool();
+  let outcome: AnalysisOutcome;
   try {
-    await analyzeUrl(sanitizedUrl, collector);
-    const result = collector.getResult();
-    if (result) {
-      res.json({ ok: true, result, progress: collector.getProgress() });
-    } else {
-      res.status(500).json({
-        error: 'The analysis finished without a result.',
-        code: 'no_result',
-        hint: 'Please try again.',
-        progress: collector.getProgress(),
-      });
+    await analyzeUrl(url, collector);
+    const result = collector.getResult() as AnalysisResult | null;
+    outcome = result
+      ? { status: 200, body: { ok: true, result, progress: collector.getProgress() } }
+      : {
+        status: 500,
+        body: { error: 'The analysis finished without a result.', code: 'no_result', hint: 'Please try again.', progress: collector.getProgress() },
+      };
+    if (pool && requestId) {
+      await finishAnalysisRun(pool, requestId, result?.id
+        ? { status: 'done', analysisId: result.id }
+        : { status: 'error', error: outcome.body }).catch(() => undefined);
     }
   } catch (error) {
     const raw = error instanceof Error ? error.message : 'Unknown error';
     console.error('Analysis error:', raw);
     const friendly = toUserFriendlyError(raw);
     const suggestion = friendly.suggestTypo
-      ? await findDomainSuggestion(input.hostname).catch(() => null)
+      ? await findDomainSuggestion(hostname).catch(() => null)
       : null;
-    res.status(500).json({
+    const body = {
       error: friendly.message,
       code: friendly.code,
       hint: suggestion ? `Did you mean ${suggestion}?` : friendly.hint,
       ...(suggestion ? { suggestion } : {}),
-      progress: collector.getProgress(),
-    });
+    };
+    if (pool && requestId) await finishAnalysisRun(pool, requestId, { status: 'error', error: body }).catch(() => undefined);
+    outcome = { status: 500, body: { ...body, progress: collector.getProgress() } };
   }
+  return outcome;
+}
+
+const runParamSchema = z.object({ requestId: requestIdSchema });
+
+/** GET /api/analysis-runs/:requestId – Status/Ergebnis eines Analyse-Laufs (Wiederaufnahme nach Verbindungsabbruch). */
+export async function analysisRunRoute(req: Request, res: Response) {
+  const { requestId } = parseParams(runParamSchema, req.params);
+  const pool = getPool();
+  if (!pool) throw new DbUnavailableError();
+  const run = await getAnalysisRun(pool, requestId);
+  if (!run) throw new NotFoundError('Analysis run not found');
+  if (run.status === 'done' && run.analysisId) {
+    const result = await getAnalysisById(pool, run.analysisId);
+    if (result) {
+      res.json({ status: 'done', result });
+      return;
+    }
+  }
+  if (run.status === 'running') {
+    res.json({ status: 'running', url: run.url });
+    return;
+  }
+  res.json({ status: 'error', error: run.error ?? { error: 'Analysis failed', code: 'unknown' } });
+}
+
+/** Nach einem Neustart: unterbrochene Analyse-Läufe (≤ 30 min alt) neu starten. */
+export async function resumeAnalysisRuns(): Promise<number> {
+  const pool = getPool();
+  if (!pool) return 0;
+  const runs = await listInterruptedAnalysisRuns(pool, 30 * 60_000);
+  for (const run of runs) {
+    void (async () => {
+      const safe = await sanitizeUrlWithDns(run.url).catch(() => null);
+      if (!safe) {
+        await finishAnalysisRun(pool, run.requestId, { status: 'error', error: { error: 'This URL cannot be analyzed.', code: 'bad_request' } }).catch(() => undefined);
+        return;
+      }
+      let host = '';
+      try {
+        host = new URL(safe).hostname;
+      } catch {
+        host = '';
+      }
+      console.log(`Resuming interrupted analysis ${run.requestId} (${safe})`);
+      await executeAnalysis(safe, host, run.requestId);
+    })();
+  }
+  return runs.length;
 }
 
 interface FriendlyError {

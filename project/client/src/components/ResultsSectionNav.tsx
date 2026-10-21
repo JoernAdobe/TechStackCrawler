@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** Anker-IDs der Ergebnis-Sektionen; nur tatsächlich gerenderte Sektionen erscheinen in der Nav. */
 const RESULT_SECTIONS = [
+  { id: 'section-briefing', label: 'Pre-Briefing' },
   { id: 'section-summary', label: 'Summary' },
   { id: 'section-stack', label: 'Tech Stack' },
   { id: 'section-insights', label: 'Opportunities' },

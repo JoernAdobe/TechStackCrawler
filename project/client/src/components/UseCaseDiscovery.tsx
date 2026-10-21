@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Lightbulb, CheckCircle2, ScanSearch, Sparkles, TrendingUp } from 'lucide-react';
-import type { AnalysisResult, UseCaseItem } from '../types/analysis';
+import { Lightbulb, CheckCircle2, ScanSearch, Sparkles, TrendingUp, RefreshCw, Database, Loader2 } from 'lucide-react';
+import type { AnalysisResult, UseCaseDiscoveryResult, UseCaseItem } from '../types/analysis';
 
 gsap.registerPlugin(useGSAP);
 
 const PROGRESS_STEPS = [
   { label: 'Sitemap', description: 'Loading sitemap and page structure...' },
   { label: 'Pages', description: 'Analyzing relevant page content...' },
-  { label: 'Context', description: 'Evaluating site context and tech stack...' },
+  { label: 'Context', description: 'Combining tech stack, traffic, GEO & Pre-Briefing insights...' },
   { label: 'AI Analysis', description: 'Generating personalized use cases...' },
   { label: 'Finishing', description: 'Preparing recommendations...' },
 ];
@@ -18,8 +18,12 @@ interface UseCaseDiscoveryProps {
   analysis: AnalysisResult;
   onDiscover: () => void;
   loading: boolean;
-  result: { useCases: UseCaseItem[]; summary: string } | null;
+  result: UseCaseDiscoveryResult | null;
   error: string | null;
+  /** Serverseitiger (automatischer) Lauf ist aktiv. */
+  autoRunning?: boolean;
+  /** Ein Pre-Briefing läuft noch – danach werden die Use Cases mit dessen Insights aktualisiert. */
+  briefingPending?: boolean;
 }
 
 function useElapsedTime(isActive: boolean) {
@@ -48,14 +52,21 @@ export default function UseCaseDiscovery({
   loading,
   result,
   error,
+  autoRunning = false,
+  briefingPending = false,
 }: UseCaseDiscoveryProps) {
   const displayResult = result ?? analysis.useCaseDiscovery;
+  // Ohne vorhandenes Ergebnis zeigt ein automatischer Lauf denselben Fortschritt wie ein manueller.
+  const busy = loading || (autoRunning && !displayResult);
+  const updating = !busy && !!displayResult && autoRunning;
+  const awaitingBriefing =
+    !busy && !!displayResult && briefingPending && !displayResult.basedOn?.includes('Client Pre-Briefing');
   const [progressStep, setProgressStep] = useState(0);
   const gridRef = useRef<HTMLDivElement>(null);
-  const elapsed = useElapsedTime(loading);
+  const elapsed = useElapsedTime(busy);
 
   useEffect(() => {
-    if (!loading) {
+    if (!busy) {
       setProgressStep(0);
       return;
     }
@@ -65,11 +76,11 @@ export default function UseCaseDiscovery({
       );
     }, 4000);
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [busy]);
 
   useGSAP(
     () => {
-      if (!gridRef.current || !displayResult || loading) return;
+      if (!gridRef.current || !displayResult || busy) return;
       const cards = gridRef.current.querySelectorAll(':scope > *');
       gsap.fromTo(
         cards,
@@ -77,7 +88,7 @@ export default function UseCaseDiscovery({
         { opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.08, ease: 'power3.out' },
       );
     },
-    { dependencies: [displayResult, loading], scope: gridRef },
+    { dependencies: [displayResult, busy], scope: gridRef },
   );
 
   return (
@@ -92,24 +103,35 @@ export default function UseCaseDiscovery({
                 Use Case Discovery
               </h2>
               <p className="mt-1 text-sm text-ts-text-secondary max-w-xl">
-                AI-powered recommendations: Top 10 use cases based on your tech
-                stack and site context — with Adobe solutions for each.
+                Top 10 use cases with Adobe solutions — generated automatically from
+                everything we know: tech stack, site content, traffic, GEO score and
+                Client Pre-Briefing insights.
               </p>
             </div>
-            {!displayResult && !loading && (
+            {!displayResult && !busy && (
               <button
                 onClick={onDiscover}
-                disabled={loading}
                 className="shrink-0 px-5 py-2.5 bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-medium rounded-xl hover:opacity-90 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
                 Discover Use Cases
+              </button>
+            )}
+            {displayResult && !busy && (
+              <button
+                onClick={onDiscover}
+                disabled={updating}
+                title="Run the discovery again with the latest data"
+                className="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-ts-surface-light border border-ts-border rounded-xl text-sm text-ts-text-primary hover:border-ts-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${updating ? 'animate-spin' : ''}`} strokeWidth={1.75} />
+                {updating ? 'Updating…' : 'Re-run'}
               </button>
             )}
           </div>
         </div>
 
         {/* Loading state — stepper progress */}
-        {loading && (
+        {busy && (
           <div className="p-4 sm:p-6 space-y-6">
             {/* Stepper */}
             <div className="flex items-center justify-between gap-1">
@@ -171,13 +193,15 @@ export default function UseCaseDiscovery({
             </div>
 
             <p className="text-xs text-ts-text-secondary text-center">
-              Multiple pages are analyzed — this may take a minute
+              {loading
+                ? 'Multiple pages are analyzed — this may take a minute'
+                : 'Running automatically on the server — results are saved and appear here when ready'}
             </p>
           </div>
         )}
 
         {/* Error state */}
-        {error && (
+        {error && !busy && (
           <div className="p-4 sm:p-6 flex flex-col items-center gap-3">
             <p className="text-ts-text-secondary text-center">{error}</p>
             <button
@@ -190,8 +214,32 @@ export default function UseCaseDiscovery({
         )}
 
         {/* Results */}
-        {displayResult && !loading && (
+        {displayResult && !busy && (
           <div className="p-4 sm:p-6 space-y-6">
+            {(updating || awaitingBriefing) && (
+              <p className="flex items-center gap-2 rounded-lg border border-ts-accent/30 bg-ts-accent/10 px-3 py-2 text-xs text-ts-text-secondary">
+                <Loader2 className="w-3.5 h-3.5 text-ts-accent animate-spin shrink-0" aria-hidden="true" />
+                {updating
+                  ? 'Updating use cases with the latest data…'
+                  : 'Client Pre-Briefing is running — use cases will be refined with its insights automatically.'}
+              </p>
+            )}
+            {displayResult.basedOn && displayResult.basedOn.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider text-ts-text-secondary font-semibold mr-1">
+                  <Database className="w-3.5 h-3.5" strokeWidth={1.75} aria-hidden="true" />
+                  Based on
+                </span>
+                {displayResult.basedOn.map((src) => (
+                  <span
+                    key={src}
+                    className="text-[11px] font-medium text-ts-text-primary bg-ts-surface-light border border-ts-border rounded-md px-2 py-0.5"
+                  >
+                    {src}
+                  </span>
+                ))}
+              </div>
+            )}
             {displayResult.summary && (
               <p className="text-ts-text-secondary leading-relaxed text-sm">
                 {displayResult.summary}
@@ -206,11 +254,11 @@ export default function UseCaseDiscovery({
         )}
 
         {/* Empty state */}
-        {!displayResult && !loading && !error && (
+        {!displayResult && !busy && !error && (
           <div className="p-8 text-center">
             <p className="text-ts-text-secondary text-sm">
-              Click &quot;Discover Use Cases&quot; to generate AI-powered
-              recommendations.
+              Use cases are generated automatically after each analysis. Click
+              &quot;Discover Use Cases&quot; to start them right now.
             </p>
           </div>
         )}

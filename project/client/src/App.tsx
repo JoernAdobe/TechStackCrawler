@@ -7,7 +7,8 @@ import ResultsTable from './components/ResultsTable';
 import UseCaseDiscovery from './components/UseCaseDiscovery';
 import TechCaseInsights from './components/TechCaseInsights';
 import DownloadButton from './components/DownloadButton';
-import PastAnalyses from './components/PastAnalyses';
+import Library from './components/library/Library';
+import { useLibrary } from './hooks/useLibrary';
 import AnimatedView from './components/AnimatedView';
 import DashboardLogin from './components/DashboardLogin';
 import Dashboard from './components/Dashboard';
@@ -17,20 +18,22 @@ import DeckButton from './components/DeckButton';
 import ResultsSectionNav from './components/ResultsSectionNav';
 import ErrorBoundary from './components/ErrorBoundary';
 import ScanWarningsBanner from './components/ScanWarningsBanner';
+import BriefingPanel from './components/briefing/BriefingPanel';
 import { TooltipProvider } from './components/ui/tooltip';
 import { useAnalysis, type AnalysisErrorInfo } from './hooks/useAnalysis';
 import AnalysisError from './components/AnalysisError';
 import { useUseCaseDiscovery } from './hooks/useUseCaseDiscovery';
 import { useStaticAudio } from './hooks/useStaticAudio';
-import { Search, Clock, Layers } from 'lucide-react';
+import { Search, BookOpen, Layers } from 'lucide-react';
 import { apiRequest, isAbortError } from './lib/apiClient';
 import type { AnalysisResult, ProgressEvent, AppState } from './types/analysis';
+import type { BriefingSectionId } from './types/briefing';
 
-type TabId = 'analyzer' | 'history' | 'batch';
+type TabId = 'analyzer' | 'library' | 'batch';
 
 const TABS: Array<{ id: TabId; label: string; icon: typeof Search }> = [
   { id: 'analyzer', label: 'Analyzer', icon: Search },
-  { id: 'history', label: 'Past Analyses', icon: Clock },
+  { id: 'library', label: 'Library', icon: BookOpen },
   { id: 'batch', label: 'Account / Bulk', icon: Layers },
 ];
 
@@ -151,11 +154,14 @@ function Analyzer() {
   // Zuletzt abgeschickte Eingabe (für „Try Again“) und Vorbelegung des Eingabefelds („Edit URL“).
   const [lastUrl, setLastUrl] = useState('');
   const [draftUrl, setDraftUrl] = useState('');
+  // Abschnitte für das Client Pre-Briefing, das nach Abschluss der Analyse automatisch startet.
+  const [pendingBriefing, setPendingBriefing] = useState<BriefingSectionId[] | null>(null);
   const welcomePlayedRef = useRef(false);
   const [userInteracted, setUserInteracted] = useState(false);
   const [analysesRefreshTrigger, setAnalysesRefreshTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState<TabId>('analyzer');
   const { playStatic } = useStaticAudio();
+  const library = useLibrary(analysesRefreshTrigger);
 
   // WAI-ARIA Tabs: Pfeiltasten wechseln den Tab, Fokus wandert mit.
   const handleTabKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -199,6 +205,8 @@ function Analyzer() {
     [playStatic],
   );
 
+  const clearPendingBriefing = useCallback(() => setPendingBriefing(null), []);
+
   const handleError = useCallback((info: AnalysisErrorInfo) => {
     setError(info);
     setState('error');
@@ -216,11 +224,14 @@ function Analyzer() {
     result: useCaseResult,
     error: useCaseError,
     reset: resetUseCases,
-  } = useUseCaseDiscovery();
+    autoRunning: useCaseAutoRunning,
+    briefingPending: useCaseBriefingPending,
+  } = useUseCaseDiscovery(results);
 
-  const handleSubmit = (url: string) => {
+  const handleSubmit = (url: string, briefingSections: BriefingSectionId[] | null = null) => {
     // Doppeltes Absenden (Doppelklick, Enter-Repeat) ignorieren.
     if (state === 'analyzing') return;
+    setPendingBriefing(briefingSections);
     setLastUrl(url);
     setDraftUrl(url);
     setState('analyzing');
@@ -239,6 +250,7 @@ function Analyzer() {
     setResults(null);
     setError(null);
     setDraftUrl('');
+    setPendingBriefing(null);
   };
 
   // Abbrechen/„Edit URL“: zurück zur Eingabe, die eingegebene URL bleibt erhalten.
@@ -268,6 +280,7 @@ function Analyzer() {
       try {
         const data = await apiRequest<AnalysisResult>(`/api/analyses/${analysisId}`);
         resetUseCases();
+        setPendingBriefing(null);
         setResults(data);
         setState('results');
         window.scrollTo({ top: 0 });
@@ -328,11 +341,24 @@ function Analyzer() {
             </div>
           ) : activeTab === 'analyzer' ? (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-              <UrlInput key={draftUrl} onSubmit={handleSubmit} initialValue={draftUrl} />
+              <UrlInput
+                key={draftUrl}
+                onSubmit={handleSubmit}
+                initialValue={draftUrl}
+                existingAccounts={library.data?.accounts}
+                onOpenExisting={(id) => void handleOpenAnalysis(id)}
+              />
             </div>
           ) : (
             <div className="py-8">
-              <PastAnalyses onSelectNew={() => setActiveTab('analyzer')} refreshTrigger={analysesRefreshTrigger} />
+              <Library
+                data={library.data}
+                loading={library.loading}
+                error={library.error}
+                onReload={library.reload}
+                onSelectNew={() => setActiveTab('analyzer')}
+                onReanalyze={(url, sections) => handleSubmit(url, sections)}
+              />
             </div>
           )}
           </div>
@@ -350,6 +376,14 @@ function Analyzer() {
           {/* Robustheit: je Bereich eine ErrorBoundary, Scan-Warnungen als Banner */}
           <ResultsSectionNav />
           <ScanWarningsBanner warnings={results.scanWarnings} />
+          <ErrorBoundary label="Client Pre-Briefing" resetKey={results}>
+            <BriefingPanel
+              key={results.id ?? 'none'}
+              analysisId={results.id}
+              autoStartSections={pendingBriefing}
+              onAutoStartConsumed={clearPendingBriefing}
+            />
+          </ErrorBoundary>
           <ErrorBoundary label="Results table" resetKey={results}>
             <ResultsTable results={results} />
           </ErrorBoundary>
@@ -360,6 +394,8 @@ function Analyzer() {
               loading={useCaseLoading}
               result={useCaseResult}
               error={useCaseError}
+              autoRunning={useCaseAutoRunning}
+              briefingPending={useCaseBriefingPending}
             />
           </ErrorBoundary>
           <ErrorBoundary label="Tech case insights" resetKey={results}>
@@ -382,9 +418,9 @@ function Analyzer() {
           <AnalysisError
             error={error}
             url={lastUrl}
-            onRetry={() => (lastUrl ? handleSubmit(lastUrl) : handleReset())}
+            onRetry={() => (lastUrl ? handleSubmit(lastUrl, pendingBriefing) : handleReset())}
             onEdit={handleEditUrl}
-            onSuggestion={handleSubmit}
+            onSuggestion={(url) => handleSubmit(url, pendingBriefing)}
           />
         </AnimatedView>
       )}

@@ -2,8 +2,7 @@ import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
 import { getPool } from '../db/index.js';
 import { getAnalysisById } from '../db/analyses.js';
-import { saveEnrichment } from '../db/enrichments.js';
-import { runGeoScore } from '../services/geoScore.js';
+import { autoGeoStatus, runTrackedGeo } from '../services/geoAuto.js';
 import { asyncHandler, DbUnavailableError, NotFoundError, parseBody, parseParams } from '../utils/http.js';
 
 const idParamSchema = z.object({ id: z.coerce.number().int().positive() });
@@ -26,6 +25,25 @@ export function createGeoRoutes(opts: { limiter?: RequestHandler } = {}): Router
   const router = Router();
   const guards: RequestHandler[] = opts.limiter ? [opts.limiter] : [];
 
+  /** GET /api/analyses/:id/enrich/geo/status – Status des automatischen GEO-Laufs (Client pollt). */
+  router.get(
+    '/api/analyses/:id/enrich/geo/status',
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(idParamSchema, req.params);
+      const pool = getPool();
+      if (!pool) throw new DbUnavailableError();
+      const auto = autoGeoStatus(id);
+      if (auto.status === 'running') {
+        res.json(auto);
+        return;
+      }
+      const analysis = await getAnalysisById(pool, id);
+      if (!analysis) throw new NotFoundError('Analysis not found');
+      const geo = analysis.enrichments?.geo;
+      res.json(geo ? { status: 'done', result: geo } : auto);
+    }),
+  );
+
   router.post(
     '/api/analyses/:id/enrich/geo',
     ...guards,
@@ -37,13 +55,12 @@ export function createGeoRoutes(opts: { limiter?: RequestHandler } = {}): Router
       const analysis = await getAnalysisById(pool, id);
       if (!analysis) throw new NotFoundError('Analysis not found');
 
-      const result = await runGeoScore(analysis, {
+      // Läuft serverseitig weiter und speichert sofort – auch wenn der Client die Verbindung verliert.
+      const result = await runTrackedGeo(pool, id, {
         ...body,
         brand: body.brand || undefined,
         country: body.country?.toUpperCase(),
       });
-
-      await saveEnrichment(pool, id, 'geo', result);
       res.json({ ok: true, result });
     }),
   );

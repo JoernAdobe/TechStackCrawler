@@ -4,6 +4,7 @@ import { getPool } from '../db/index.js';
 import { listAnalyses, getAnalysisById } from '../db/analyses.js';
 import { isDbUnavailableError, isSchemaOutdatedError } from '../db/errors.js';
 import { DbUnavailableError, NotFoundError, parseParams } from '../utils/http.js';
+import type { BriefingSummary } from '../types/briefing.js';
 
 const DB_WARN_INTERVAL_MS = 60_000;
 let lastDbWarn = 0;
@@ -29,6 +30,16 @@ const idParamSchema = z.object({
  * kein Fehler, sondern liefert eine leere Liste — die Startseite soll auch ohne
  * laufende MariaDB funktionieren.
  */
+/** Score-Badge in der Liste: nur die kompakte Briefing-Zusammenfassung aus result_json. */
+function briefingSummaryOf(resultJson: string): { briefing?: BriefingSummary } {
+  try {
+    const briefing = (JSON.parse(resultJson) as { enrichments?: { briefing?: BriefingSummary } })?.enrichments?.briefing;
+    return briefing && typeof briefing === 'object' ? { briefing } : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function listAnalysesRoute(req: Request, res: Response) {
   const pool = getPool();
   if (!pool) {
@@ -47,6 +58,7 @@ export async function listAnalysesRoute(req: Request, res: Response) {
         url: r.url,
         analyzedAt: r.analyzed_at,
         createdAt: r.created_at,
+        ...briefingSummaryOf(r.result_json),
       })),
     );
   } catch (error) {

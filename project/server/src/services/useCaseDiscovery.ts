@@ -3,10 +3,16 @@ import { getBedrockClient } from './bedrockClient.js';
 import { callLlm } from './llmCall.js';
 import { RetryableResponseError } from '../utils/retry.js';
 import { parseAIJson } from '../utils/aiJson.js';
-import { buildUseCaseDiscoveryPrompt, observePointFindings } from '../prompts/useCaseDiscoveryPrompt.js';
+import { buildUseCaseDiscoveryPrompt, observePointFindings, useCaseDataSources } from '../prompts/useCaseDiscoveryPrompt.js';
 import { applyFindingsToUseCases, ruleBasedUseCases } from './observepoint/findings.js';
 import { fetchSitemapUrls } from './sitemap.js';
 import type { AnalysisResult, UseCaseDiscoveryResult } from '../types/analysis.js';
+import type { BriefingResult } from '../types/briefing.js';
+
+export interface DiscoverUseCasesOptions {
+  /** Ergebnis des Client Pre-Briefings – fließt als Business-Kontext in den Prompt. */
+  briefing?: BriefingResult | null;
+}
 
 export interface DiscoverUseCasesResult {
   result: UseCaseDiscoveryResult;
@@ -15,7 +21,10 @@ export interface DiscoverUseCasesResult {
 
 export async function discoverUseCases(
   analysis: AnalysisResult,
+  opts: DiscoverUseCasesOptions = {},
 ): Promise<DiscoverUseCasesResult> {
+  const basedOn = useCaseDataSources(analysis, opts.briefing);
+  const generatedAt = new Date().toISOString();
   const useMock =
     process.env.USE_MOCK_AI === '1' || process.env.BEDROCK_SKIP_SIMULATE === '1';
 
@@ -26,11 +35,11 @@ export async function discoverUseCases(
     // Demo-Modus: regelbasierte OP-Use-Cases voranstellen, Gesamtzahl bleibt 10.
     const rules = ruleBasedUseCases(findings);
     const useCases = [...rules, ...mock.useCases].slice(0, mock.useCases.length).map((uc, i) => ({ ...uc, rank: i + 1 }));
-    return { result: { ...mock, useCases: applyFindingsToUseCases(useCases, findings) }, sitemapUrls: [] };
+    return { result: { ...mock, useCases: applyFindingsToUseCases(useCases, findings), basedOn, generatedAt }, sitemapUrls: [] };
   }
 
   const sitemapUrls = await fetchSitemapUrls(analysis.url);
-  const userPrompt = buildUseCaseDiscoveryPrompt(analysis, sitemapUrls);
+  const userPrompt = buildUseCaseDiscoveryPrompt(analysis, sitemapUrls, opts.briefing);
 
   const runOnce = async (
     maxTokens: number,
@@ -46,8 +55,8 @@ export async function discoverUseCases(
       { signal, maxRetries: 0 },
     );
 
-    const text =
-      response.content?.[0]?.type === 'text' ? response.content[0].text : '';
+    const textBlock = response.content?.find((b) => b.type === 'text');
+    const text = textBlock?.type === 'text' ? textBlock.text : '';
     return { text, stopReason: response.stop_reason };
   };
 
@@ -77,7 +86,7 @@ export async function discoverUseCases(
 
   // OP-Evidenz verknüpfen (validierte LLM-IDs, Keyword-Fallback, regelbasierte Lückenfüller).
   result.useCases = applyFindingsToUseCases(result.useCases, findings);
-  return { result, sitemapUrls };
+  return { result: { ...result, basedOn, generatedAt }, sitemapUrls };
 }
 
 function getMockUseCases(analysis: AnalysisResult): UseCaseDiscoveryResult {

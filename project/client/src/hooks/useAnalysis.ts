@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import type { AnalysisResult, ProgressEvent } from '../types/analysis';
-import { ApiError, apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
+import { ApiError, apiRequest, isAbortError, isConnectionError, newRequestId, sleep, toErrorMessage } from '../lib/apiClient';
 
 /** Fehler einer Analyse inkl. Handlungsempfehlung und optionalem Korrekturvorschlag. */
 export interface AnalysisErrorInfo {
@@ -21,6 +21,45 @@ interface AnalyzeResponse {
   result?: AnalysisResult;
   error?: string;
   progress?: Array<{ phase?: string; message: string } | string>;
+}
+
+interface AnalysisRunResponse {
+  status: 'running' | 'done' | 'error';
+  result?: AnalysisResult;
+  error?: { error?: string; code?: string; hint?: string; suggestion?: string };
+}
+
+/** Maximale Dauer, in der nach einem Verbindungsabbruch auf das Server-Ergebnis gewartet wird. */
+const RECOVERY_MAX_MS = 15 * 60_000;
+
+/**
+ * Nach einem Verbindungsabbruch: Die Analyse läuft serverseitig weiter (bzw. wird nach einem
+ * Neustart fortgesetzt) und landet in der DB. Hier wird der Lauf über seine Request-ID abgeholt.
+ */
+async function recoverAnalysisRun(
+  requestId: string,
+  signal: AbortSignal,
+  onReconnectNote: () => void,
+): Promise<AnalysisRunResponse | null> {
+  const started = Date.now();
+  let delay = 2000;
+  let notFound = 0;
+  onReconnectNote();
+  while (Date.now() - started < RECOVERY_MAX_MS) {
+    await sleep(delay, signal);
+    try {
+      const run = await apiRequest<AnalysisRunResponse>(`/api/analysis-runs/${encodeURIComponent(requestId)}`, { signal });
+      if (run.status !== 'running') return run;
+      notFound = 0;
+    } catch (err) {
+      if (isAbortError(err)) throw err;
+      // 404: Server hat den Lauf nie angenommen (Abbruch vor dem Start) → nach ein paar Versuchen aufgeben.
+      if (err instanceof ApiError && err.status === 404 && ++notFound >= 3) return null;
+      if (!isConnectionError(err) && !(err instanceof ApiError && err.status === 404)) return null;
+    }
+    delay = Math.min(delay * 1.5, 10_000);
+  }
+  return null;
 }
 
 /** Abstand zwischen den Platzhalter-Fortschrittsmeldungen. */
@@ -71,11 +110,31 @@ export function useAnalysis({ onProgress, onComplete, onError }: UseAnalysisOpti
           }
         }, PLACEHOLDER_INTERVAL_MS);
 
-        const data = await apiRequest<AnalyzeResponse>('/api/analyze-sync', {
-          method: 'POST',
-          body: { url },
-          signal: controller.signal,
-        });
+        const requestId = newRequestId();
+        let data: AnalyzeResponse;
+        try {
+          data = await apiRequest<AnalyzeResponse>('/api/analyze-sync', {
+            method: 'POST',
+            body: { url, requestId },
+            signal: controller.signal,
+          });
+        } catch (err) {
+          if (!isConnectionError(err)) throw err;
+          clearInterval(intervalId);
+          const run = await recoverAnalysisRun(requestId, controller.signal, () =>
+            onProgress({
+              phase: 'analyzing',
+              message: 'Connection lost – the analysis continues on the server, reconnecting…',
+              timestamp: Date.now(),
+            }),
+          );
+          if (!run) throw err;
+          if (run.status === 'error') {
+            const e = run.error ?? {};
+            throw new ApiError(500, e.error || 'Analysis failed', e.code, undefined, { hint: e.hint, suggestion: e.suggestion });
+          }
+          data = { ok: true, result: run.result };
+        }
 
         if (data.ok && data.result) {
           (data.progress ?? []).forEach((p) => {

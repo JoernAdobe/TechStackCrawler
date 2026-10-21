@@ -4,7 +4,7 @@ export default function Footer() {
   const buildLabel =
     commit && commit !== 'unknown' ? commit : '—';
   return (
-    <footer className="relative py-6">
+    <footer className="relative py-6 [body:has([data-bottom-bar])_&]:pb-32 sm:[body:has([data-bottom-bar])_&]:pb-28">
       {/* Top gradient separator */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-ts-border to-transparent" />
       <div className="text-center space-y-1">

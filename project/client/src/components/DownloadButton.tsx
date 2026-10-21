@@ -24,6 +24,7 @@ export default function DownloadButton({ results, onReset, resetLabel = 'New Ana
     <div
       role="region"
       aria-label="Analysis actions"
+      data-bottom-bar
       className="fixed bottom-0 left-0 right-0 bg-ts-surface/90 backdrop-blur-md border-t border-ts-border/50 z-40"
     >
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-ts-accent/30 to-transparent" />

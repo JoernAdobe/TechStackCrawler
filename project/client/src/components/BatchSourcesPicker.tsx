@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Layers } from 'lucide-react';
+import { Layers, Sparkles } from 'lucide-react';
 import type { BatchKind } from '../types/parity';
-import type { BatchEnrichmentOptions } from '../types/batchAccount';
+import { MAX_BRIEFING_ITEMS, type BatchEnrichmentOptions } from '../types/batchAccount';
+import { BRIEFING_CREDIT } from '../types/briefing';
 import { apiRequest } from '../lib/apiClient';
+import { BriefingSectionPicker } from './briefing/BriefingSectionPicker';
+import { ALL_SECTIONS } from './briefing/meta';
 
 interface SourcesStatus {
   observepoint: boolean;
   semrush: boolean;
   pagespeedKey: boolean;
   maxCostlyItemsLimit: number;
+  maxBriefingItems?: number;
   defaults: Record<BatchKind, BatchEnrichmentOptions>;
 }
 
-type BoolKey = Exclude<keyof BatchEnrichmentOptions, 'maxCostlyItems'>;
+type BoolKey = Exclude<keyof BatchEnrichmentOptions, 'maxCostlyItems' | 'briefing' | 'briefingSections'>;
 
 interface SourceDef {
   key: BoolKey;
@@ -86,7 +90,8 @@ export default function BatchSourcesPicker({ mode, aiAnalysis, value, onChange }
 
   if (!value) return null;
   const ctx = { aiAnalysis };
-  const costlySelected = SOURCES.some((s) => s.costly && value[s.key] && !s.unavailable?.(status, ctx));
+  const costlySelected =
+    SOURCES.some((s) => s.costly && value[s.key] && !s.unavailable?.(status, ctx)) || value.briefing === true;
   const limit = status?.maxCostlyItemsLimit ?? 50;
 
   return (
@@ -120,6 +125,12 @@ export default function BatchSourcesPicker({ mode, aiAnalysis, value, onChange }
           );
         })}
       </div>
+      <BriefingOption
+        value={value}
+        onChange={onChange}
+        aiAnalysis={aiAnalysis}
+        maxItems={status?.maxBriefingItems ?? MAX_BRIEFING_ITEMS}
+      />
       {costlySelected && (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ts-text-secondary">
           <label htmlFor="src-max">Run quota/LLM sources for at most</label>
@@ -138,11 +149,67 @@ export default function BatchSourcesPicker({ mode, aiAnalysis, value, onChange }
           {value.lighthouse && !status?.pagespeedKey && (
             <span className="text-ts-warning">No PageSpeed API key – shared quota, stops cleanly when exhausted.</span>
           )}
-          {(value.geo || value.useCases) && mode === 'bulk' && (
+          {(value.geo || value.useCases || value.briefing) && mode === 'bulk' && (
             <span className="text-ts-warning">LLM sources require admin approval for anonymous bulk runs.</span>
           )}
         </div>
       )}
     </fieldset>
+  );
+}
+
+interface BriefingOptionProps {
+  value: BatchEnrichmentOptions;
+  onChange: (v: BatchEnrichmentOptions) => void;
+  aiAnalysis: boolean;
+  maxItems: number;
+}
+
+/** Opt-in „Client Pre-Briefing“ für die ersten min(maxCostlyItems, 20) erfolgreichen URLs. */
+function BriefingOption({ value, onChange, aiAnalysis, maxItems }: BriefingOptionProps) {
+  const enabled = value.briefing === true;
+  const cap = Math.min(value.maxCostlyItems, maxItems);
+  return (
+    <div className="mt-3 border-t border-ts-border pt-3">
+      <label htmlFor="src-briefing" className="flex items-start gap-2 min-w-0">
+        <input
+          id="src-briefing"
+          type="checkbox"
+          className="mt-0.5 shrink-0"
+          checked={enabled}
+          onChange={(e) =>
+            onChange({
+              ...value,
+              briefing: e.target.checked,
+              briefingSections: value.briefingSections ?? [...ALL_SECTIONS],
+            })
+          }
+        />
+        <span className="min-w-0">
+          <span className="flex items-center gap-1.5 text-sm text-ts-text-primary">
+            <Sparkles className="w-3.5 h-3.5 text-ts-accent" aria-hidden="true" />
+            Client Pre-Briefing (max {maxItems} accounts)
+            <span className="text-[10px] uppercase tracking-wide text-ts-warning">LLM</span>
+          </span>
+          <span className="block text-xs text-ts-text-secondary">{BRIEFING_CREDIT}</span>
+          <span className="block text-xs text-ts-text-secondary">
+            ~5–10 min and ~$1–3 per account, runs after the scan. Sorted by Pre-Briefing Score in the results.
+          </span>
+        </span>
+      </label>
+      {enabled && (
+        <div className="mt-2 pl-6 space-y-2">
+          <p className="text-xs text-ts-text-secondary">
+            Briefings for the first {cap} successfully scanned URL{cap === 1 ? '' : 's'} (limit = min(max quota URLs, {maxItems})).
+            {!aiAnalysis && ' These URLs get a full AI analysis, because a briefing needs a saved analysis.'}
+          </p>
+          <BriefingSectionPicker
+            compact
+            value={value.briefingSections ?? [...ALL_SECTIONS]}
+            onChange={(v) => onChange({ ...value, briefingSections: v })}
+          />
+        </div>
+      )}
+    </div>
   );
 }

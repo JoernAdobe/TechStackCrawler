@@ -5,6 +5,8 @@ import type { DbHandle } from './types.js';
 import { createMysqlHandle } from './mysql.js';
 import { toMysqlDatetime } from './analyses.js';
 import { initParityTables } from './parityTables.js';
+import { initBriefingJobsTable } from './briefingJobs.js';
+import { initResumeTables } from './resumeStore.js';
 
 let db: DbHandle | null = null;
 
@@ -128,6 +130,8 @@ export async function initDb(): Promise<void> {
     }
 
     await initParityTables(p);
+    await initBriefingJobsTable(p);
+    await initResumeTables(p);
 
     // Migration: Lokale SQLite-Exporte in MariaDB importieren (falls DB leer)
     if (p.dialect === 'mysql') {

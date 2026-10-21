@@ -127,3 +127,63 @@ export async function updateAnalysis(
   ]);
   return true;
 }
+
+export interface LibrarySourceRow {
+  id: number;
+  url: string;
+  analyzedAt: string;
+  briefingJson: string | null;
+}
+
+const LIBRARY_MAX_ROWS = 5000;
+
+/** SQLite liefert „YYYY-MM-DD HH:MM:SS“ (UTC, ohne Zone), MySQL ein Date-Objekt → ISO. */
+export function toIsoTimestamp(value: Date | string): string {
+  if (value instanceof Date) return value.toISOString();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$/.test(value)) return `${value.replace(' ', 'T')}Z`;
+  return value;
+}
+
+/**
+ * Schlanke Liste aller Analysen für die Library: nur Metadaten plus die kompakte
+ * Briefing-Zusammenfassung (per JSON_EXTRACT, ohne das ganze result_json zu laden).
+ */
+export async function listLibraryRows(db: DbHandle): Promise<LibrarySourceRow[]> {
+  const { rows } = await db.execute(
+    `SELECT id, url, analyzed_at,
+            CASE WHEN JSON_VALID(result_json) THEN JSON_EXTRACT(result_json, '$.enrichments.briefing') END AS briefing_json
+     FROM analyses
+     ORDER BY analyzed_at DESC
+     LIMIT ?`,
+    [LIBRARY_MAX_ROWS],
+  );
+  return (Array.isArray(rows) ? rows : []).map((r) => {
+    const row = r as { id: number; url: string; analyzed_at: Date | string; briefing_json: unknown };
+    return {
+      id: Number(row.id),
+      url: row.url,
+      analyzedAt: toIsoTimestamp(row.analyzed_at),
+      briefingJson: typeof row.briefing_json === 'string' ? row.briefing_json : null,
+    };
+  });
+}
+
+/** Firmenname je Analyse aus dem jeweils neuesten Briefing-Job (falls vorhanden). */
+export async function listBriefingCompanyNames(db: DbHandle): Promise<Map<number, string>> {
+  const names = new Map<number, string>();
+  try {
+    const { rows } = await db.execute(
+      `SELECT analysis_id, company_name FROM briefing_jobs
+       WHERE company_name IS NOT NULL AND company_name <> ''
+       ORDER BY id DESC`,
+    );
+    for (const r of Array.isArray(rows) ? rows : []) {
+      const row = r as { analysis_id: number; company_name: string };
+      const id = Number(row.analysis_id);
+      if (!names.has(id)) names.set(id, row.company_name);
+    }
+  } catch {
+    // briefing_jobs fehlt (ältere DB) → Domain bleibt der Anzeigename.
+  }
+  return names;
+}

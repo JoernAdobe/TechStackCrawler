@@ -15,7 +15,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const apiKey = process.env.BEDROCK_API_KEY;
 const endpoint = process.env.BEDROCK_ENDPOINT || 'https://bedrock-runtime.us-west-2.amazonaws.com';
-const model = process.env.BEDROCK_MODEL_ID || process.env.BEDROCK_MODEL || 'us.anthropic.claude-sonnet-4-6';
+const model = process.env.BEDROCK_MODEL_ID || process.env.BEDROCK_MODEL || 'us.anthropic.claude-sonnet-5-5';
 const region = process.env.BEDROCK_REGION || process.env.AWS_REGION || 'us-west-2';
 
 async function main() {
@@ -45,7 +45,8 @@ async function main() {
       messages: [{ role: 'user', content: 'Antworte nur mit: OK' }],
     });
 
-    const text = response.content?.[0]?.type === 'text' ? response.content[0].text : '';
+    const textBlock = response.content?.find((b) => b.type === 'text');
+    const text = textBlock?.type === 'text' ? textBlock.text : '';
     console.log('Erfolg:', text.trim() || '(leere Antwort)');
     console.log('');
     console.log('Bedrock API-Key ist gültig.');

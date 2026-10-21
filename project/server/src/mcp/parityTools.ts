@@ -25,6 +25,10 @@ import { BUILDING_BLOCKS } from '../data/buildingBlocks.js';
 import { FEEDBACK_TYPES } from '../routes/feedback.js';
 import type { AnalysisResult } from '../types/analysis.js';
 import type { BatchStatus } from '../types/parity.js';
+import { resolveEnrichmentOptions } from '../services/batchEnrichment.js';
+import { MAX_BRIEFING_ITEMS, refreshBatchBriefings } from '../services/batchBriefing.js';
+import { BRIEFING_CREDIT, BRIEFING_SECTION_IDS } from '../types/briefing.js';
+import { registerBriefingTools } from './briefingTools.js';
 
 type ToolResult = CallToolResult;
 
@@ -64,6 +68,7 @@ export function registerParityTools(server: McpServer): void {
           { type: 'account', description: `Account / web assessment: up to ${MAX_ACCOUNT_URLS} URLs with lens + labels, solution mapping and key findings (tool: create-assessment).` },
           { type: 'bulk', description: `Bulk assessment: up to ${MAX_BULK_URLS} URLs, detection-only by default; above ${batchApprovalThreshold()} URLs admin approval is required.` },
           { type: 'enrichments', description: 'On-demand Lighthouse, traffic (Semrush/Tranco), mobile apps and GEO / AI visibility score per analysis.' },
+          { type: 'client-briefing', description: `${BRIEFING_CREDIT}: researched account briefing (14 sections) + Overall Pre-Briefing Score per analysis; runs 5–10 min asynchronously (tools: start-client-briefing, get-client-briefing; batch option briefing on create-assessment, max ${MAX_BRIEFING_ITEMS} accounts).` },
           { type: 'stack-history', description: 'Multi-run view of a domain with added/removed technologies.' },
         ],
         buildingBlocks: BUILDING_BLOCKS,
@@ -73,7 +78,9 @@ export function registerParityTools(server: McpServer): void {
 
   server.tool(
     'create-assessment',
-    'Create an account assessment (≤30 URLs) or bulk assessment (≤1000 URLs). Runs asynchronously – poll with get-assessment.',
+    'Create an account assessment (≤30 URLs) or bulk assessment (≤1000 URLs). Runs asynchronously – poll with get-assessment. ' +
+      `Optional briefing: Client Pre-Briefing (${BRIEFING_CREDIT}) for the first ${MAX_BRIEFING_ITEMS} successful URLs ` +
+      '(forces a full AI analysis for those; ~5–10 min and ~$1–3 per account after the scan; poll get-client-briefing).',
     {
       kind: z.enum(['account', 'bulk']).default('account'),
       title: z.string().min(1).max(255).regex(/^[\p{L}\p{N}_]/u, 'Title must start with a letter, digit or underscore'),
@@ -83,6 +90,9 @@ export function registerParityTools(server: McpServer): void {
       industry: z.string().max(255).optional(),
       opportunityId: z.string().max(64).optional(),
       aiAnalysis: z.boolean().optional().describe('Full Claude analysis per URL (default: true for account, false for bulk)'),
+      briefing: z.boolean().optional().describe(`Client Pre-Briefing for the first ${MAX_BRIEFING_ITEMS} successful URLs`),
+      briefingSections: z.array(z.enum(BRIEFING_SECTION_IDS)).max(BRIEFING_SECTION_IDS.length).optional()
+        .describe('Briefing sections s01–s14 (default: all)'),
     },
     async (args) =>
       withDb(async (db) => {
@@ -93,6 +103,14 @@ export function registerParityTools(server: McpServer): void {
         }
         const needsApproval = args.kind === 'bulk' && parsed.items.length > batchApprovalThreshold();
         const status: BatchStatus = needsApproval ? 'pending_approval' : 'queued';
+        const aiAnalysis = args.aiAnalysis ?? args.kind === 'account';
+        const enrichmentOptions = args.briefing
+          ? resolveEnrichmentOptions(args.kind, aiAnalysis, {
+              briefing: true,
+              briefingSections: args.briefingSections,
+              maxCostlyItems: MAX_BRIEFING_ITEMS,
+            })
+          : undefined;
         const id = await createBatch(db, {
           kind: args.kind,
           title: args.title,
@@ -101,9 +119,10 @@ export function registerParityTools(server: McpServer): void {
           accountName: args.accountName,
           industry: args.industry,
           opportunityId: args.opportunityId,
-          aiAnalysis: args.aiAnalysis ?? args.kind === 'account',
+          aiAnalysis,
           createdBy: 'mcp',
           items: parsed.items,
+          ...(enrichmentOptions ? { enrichmentOptions } : {}),
         });
         if (status === 'queued') enqueueBatch(id);
         return json({ id, status, urls: parsed.items.length, warnings: parsed.errors });
@@ -118,6 +137,7 @@ export function registerParityTools(server: McpServer): void {
       withDb(async (db) => {
         const batch = await getBatch(db, id);
         if (!batch) return fail(`Assessment ${id} not found`);
+        await refreshBatchBriefings(db, batch);
         return json(includeItems ? batch : { ...batch, items: undefined });
       }),
   );
@@ -289,6 +309,8 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
+  registerBriefingTools(server);
+
   server.prompt(
     'assessment-workflow',
     'Step-by-step workflow for an account tech assessment.',
@@ -307,6 +329,7 @@ export function registerParityTools(server: McpServer): void {
               '4. Interpret the solution mapping: key finding codes 1 = consistent, 2 = multiple on one property, -1 = inconsistent, -2 = different per property, 0 = none.',
               '5. Optionally enrich single analyses with lighthouse, traffic-insights, mobile-apps and geo-score.',
               '6. Generate the deck with generate-deck and summarize the top 3 Adobe opportunities.',
+              `7. Optionally run a Client Pre-Briefing (${BRIEFING_CREDIT}) with start-client-briefing and poll get-client-briefing (5–10 min).`,
             ].join('\n'),
           },
         },

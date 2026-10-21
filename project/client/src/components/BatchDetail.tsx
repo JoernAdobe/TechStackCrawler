@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { ArrowLeft, Ban, Check, FileDown, FileSpreadsheet, FileText, X } from 'lucide-react';
+import { ArrowLeft, Ban, Check, FileArchive, FileDown, FileSpreadsheet, FileText, X } from 'lucide-react';
 import type { BatchJob, BatchStatus } from '../types/parity';
 import { apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
 import { downloadBatchXlsx } from '../lib/batchExcel';
 import SolutionMatrix from './SolutionMatrix';
 import AccountDashboard from './AccountDashboard';
+import { BriefingScoreCell, BriefingSortHeader } from './BatchBriefingScore';
+import {
+  batchHasBriefings,
+  isBriefingOpen,
+  nextBriefingSort,
+  sortByBriefingScore,
+  type BriefingSort,
+} from '../lib/batchBriefing';
 
 const POLL_MS = 3000;
 
@@ -38,6 +46,7 @@ const SOURCE_NAMES: Record<string, string> = {
   geo: 'GEO',
   useCases: 'Use cases',
   multiPage: 'Subpages',
+  briefing: 'Pre-Briefing',
 };
 
 function enrichmentSummary(batch: BatchJob): string {
@@ -77,6 +86,7 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [tick, setTick] = useState(0);
+  const [briefingSort, setBriefingSort] = useState<BriefingSort>('none');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -91,7 +101,8 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
     return () => controller.abort();
   }, [batchId, tick]);
 
-  const active = batch?.status === 'queued' || batch?.status === 'running';
+  const briefingsOpen = (batch?.items ?? []).some((it) => isBriefingOpen(it.enrichments?.briefing));
+  const active = batch?.status === 'queued' || batch?.status === 'running' || briefingsOpen;
   useEffect(() => {
     if (!active) return;
     const t = setTimeout(() => setTick((n) => n + 1), POLL_MS);
@@ -119,6 +130,9 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
     return <p className="text-sm text-ts-text-secondary">Loading assessment…</p>;
   }
 
+  const showBriefing = batchHasBriefings(batch);
+  const briefingsDone = (batch.items ?? []).filter((it) => it.enrichments?.briefing?.status === 'done').length;
+  const items = sortByBriefingScore((batch.items ?? []).map((it, i) => ({ ...it, rowNo: i + 1 })), briefingSort);
   const processed = batch.done + batch.failed;
   const pct = batch.total > 0 ? Math.round((processed / batch.total) * 100) : 0;
   const btn =
@@ -172,6 +186,11 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
             <a className={btn} href={`/api/batches/${batch.id}/export.md`} download>
               <FileText className="w-3.5 h-3.5" /> Markdown
             </a>
+            {briefingsDone > 0 && (
+              <a className={btn} href={`/api/batches/${batch.id}/briefings.zip`} download>
+                <FileArchive className="w-3.5 h-3.5" /> Download briefings (ZIP)
+              </a>
+            )}
             {renderExtraActions?.(batch)}
           </div>
         </div>
@@ -211,15 +230,16 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
                 <th className="text-left px-3 py-2">Label</th>
                 <th className="text-left px-3 py-2">Status</th>
                 <th className="text-left px-3 py-2">Analysis</th>
+                {showBriefing && <BriefingSortHeader sort={briefingSort} onSort={() => setBriefingSort(nextBriefingSort)} />}
                 <th className="text-left px-3 py-2">Technologies</th>
                 <th className="text-left px-3 py-2">Sources</th>
                 <th className="text-left px-3 py-2">Error</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ts-border/60 bg-ts-surface-card">
-              {(batch.items ?? []).map((it, i) => (
+              {items.map((it) => (
                 <tr key={it.id}>
-                  <td className="px-3 py-2 text-ts-text-secondary">{i + 1}</td>
+                  <td className="px-3 py-2 text-ts-text-secondary">{it.rowNo}</td>
                   <td className="px-3 py-2 text-ts-text-primary max-w-[22rem] truncate" title={it.url}>{it.url}</td>
                   <td className="px-3 py-2 text-ts-text-secondary">{it.label ?? ''}</td>
                   <td className="px-3 py-2"><StatusPill status={it.status} /></td>
@@ -236,6 +256,11 @@ export default function BatchDetail({ batchId, onBack, onChanged, onOpenAnalysis
                       <span className="text-ts-text-secondary">—</span>
                     )}
                   </td>
+                  {showBriefing && (
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <BriefingScoreCell item={it} onOpenAnalysis={onOpenAnalysis} />
+                    </td>
+                  )}
                   <td className="px-3 py-2 text-ts-text-secondary">{it.detections ? it.detections.filter((d) => !d.weak).length : ''}</td>
                   <td className="px-3 py-2 text-ts-text-secondary whitespace-nowrap" title={itemSources(it).title}>{itemSources(it).text}</td>
                   <td className="px-3 py-2 text-adobe-red">{it.error ?? ''}</td>

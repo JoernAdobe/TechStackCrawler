@@ -34,6 +34,7 @@ import {
   type BatchEnrichmentState,
   type EnrichmentDeps,
 } from './batchEnrichment.js';
+import { briefingSlotAvailable, enqueueItemBriefing } from './batchBriefing.js';
 
 const queue: number[] = [];
 let loopRunning = false;
@@ -80,7 +81,7 @@ function noopWriter(onResult: (r: AnalysisResult) => void): AnalysisWriter {
   };
 }
 
-interface ItemScan {
+export interface ItemScan {
   analysisId?: number;
   detections: CompactDetection[];
   raw: DetectedTechnology[];
@@ -93,7 +94,7 @@ interface ItemScan {
 async function runFullAnalysis(url: string): Promise<ItemScan> {
   let result: AnalysisResult | null = null;
   // analyzeUrl speichert das Ergebnis selbst (saveAnalysis) und setzt result.id.
-  await analyzeUrl(url, noopWriter((r) => { result = r; }), { autoObservePoint: false });
+  await analyzeUrl(url, noopWriter((r) => { result = r; }), { autoObservePoint: false, autoTraffic: false, autoGeo: false, autoUseCases: false });
   const final = result as AnalysisResult | null;
   if (!final) throw new Error('No analysis result');
   const raw = final.rawDetections ?? [];
@@ -127,6 +128,12 @@ async function runDetectionOnly(url: string, multiPage: boolean): Promise<ItemSc
     scanWarnings: warnings,
   };
 }
+
+export interface ItemScanners {
+  full(url: string): Promise<ItemScan>;
+  detection(url: string, multiPage: boolean): Promise<ItemScan>;
+}
+const defaultScanners: ItemScanners = { full: runFullAnalysis, detection: runDetectionOnly };
 
 /** Enrichments ausführen und – falls eine Einzelanalyse existiert – dort voll persistieren. */
 async function enrichItem(
@@ -188,8 +195,21 @@ export function initialEnrichmentState(items: BatchItem[]): BatchEnrichmentState
           : Boolean(e[src as 'lighthouse' | 'geo' | 'useCases']));
       if (attempted) state.used[src] = (state.used[src] ?? 0) + 1;
     }
+    if (e.briefing) state.used.briefing = (state.used.briefing ?? 0) + 1;
   }
   return state;
+}
+
+function mergeEnrichments(
+  base: BatchItemEnrichments | undefined,
+  extra: Pick<BatchItemEnrichments, 'briefing' | 'errors' | 'skipped'>,
+): BatchItemEnrichments | undefined {
+  if (!extra.briefing && !extra.errors && !extra.skipped) return base;
+  const out: BatchItemEnrichments = { ...(base ?? {}) };
+  if (extra.briefing) out.briefing = extra.briefing;
+  if (extra.errors) out.errors = { ...(base?.errors ?? {}), ...extra.errors };
+  if (extra.skipped) out.skipped = { ...(base?.skipped ?? {}), ...extra.skipped };
+  return out;
 }
 
 export async function processItem(
@@ -198,12 +218,16 @@ export async function processItem(
   header: BatchJob,
   state: BatchEnrichmentState = createEnrichmentState(),
   deps?: EnrichmentDeps,
+  scanners: ItemScanners = defaultScanners,
 ): Promise<void> {
   let scan: ItemScan;
+  // Client Pre-Briefing braucht eine gespeicherte Analyse → Items innerhalb des Briefing-Caps
+  // bekommen auch im Detection-Modus die volle KI-Analyse.
+  const wantsBriefing = briefingSlotAvailable(header.enrichmentOptions, state);
   try {
-    scan = header.aiAnalysis
-      ? await runFullAnalysis(item.url)
-      : await runDetectionOnly(item.url, header.enrichmentOptions?.multiPage === true);
+    scan = header.aiAnalysis || wantsBriefing
+      ? await scanners.full(item.url)
+      : await scanners.detection(item.url, header.enrichmentOptions?.multiPage === true);
   } catch (err) {
     const raw = err instanceof Error ? err.message : String(err);
     console.error(`Batch item ${item.id} (${item.url}) failed:`, raw);
@@ -216,6 +240,18 @@ export async function processItem(
   } catch (err) {
     // Enrichments dürfen ein erfolgreich erkanntes Item nie scheitern lassen.
     console.error(`Batch item ${item.id} enrichments failed:`, err instanceof Error ? err.message : err);
+  }
+  if (scan.analysisId) {
+    enrichments = mergeEnrichments(
+      enrichments,
+      await enqueueItemBriefing({
+        analysisId: scan.analysisId,
+        options: header.enrichmentOptions,
+        state,
+        createdBy: header.createdBy,
+        batchId: header.id,
+      }),
+    );
   }
   await updateBatchItem(db, item.id, {
     status: 'done',

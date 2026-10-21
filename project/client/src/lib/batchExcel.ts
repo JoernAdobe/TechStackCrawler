@@ -155,6 +155,8 @@ export function downloadBatchXlsx(batch: BatchJob): void {
         'Tranco rank': it.enrichments?.traffic?.trancoRank ?? '',
         'Mobile perf.': it.enrichments?.lighthouse?.mobilePerformance ?? '',
         'GEO score': it.enrichments?.geo?.geoScore ?? '',
+        'Pre-Briefing score': it.enrichments?.briefing?.overallScore ?? '',
+        'Pre-Briefing status': it.enrichments?.briefing?.status ?? '',
         'Source errors': Object.values(it.enrichments?.errors ?? {}).join(' | '),
         Error: it.error ?? '',
       })),

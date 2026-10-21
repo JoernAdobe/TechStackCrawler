@@ -77,7 +77,7 @@ export default function AnalysisProgress({
   const CurrentIcon = phaseIcons[currentPhase] || Globe;
 
   return (
-    <div ref={containerRef} className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+    <div ref={containerRef} className="flex flex-col items-center justify-center min-h-[60vh] px-6 pt-14 pb-8 sm:pt-16">
       <div className="w-full max-w-xl">
         {/* Animated orbital center */}
         <div className="flex flex-col items-center justify-center mb-10">

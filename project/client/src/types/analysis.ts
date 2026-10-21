@@ -84,6 +84,8 @@ export interface UseCaseEvidence {
 export interface UseCaseDiscoveryResult {
   useCases: UseCaseItem[];
   summary: string;
+  basedOn?: string[];
+  generatedAt?: string;
 }
 
 export interface ProgressEvent {

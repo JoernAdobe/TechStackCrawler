@@ -9,8 +9,10 @@ import { sanitizeUrlWithDns } from '../utils/sanitize.js';
 import { validateUrlInput } from '../utils/urlInput.js';
 import { preflightUrl } from '../services/urlPreflight.js';
 import { getPool } from '../db/index.js';
-import { listAnalyses, getAnalysisById, updateAnalysis } from '../db/analyses.js';
+import { listAnalyses, getAnalysisById } from '../db/analyses.js';
 import { discoverUseCases } from '../services/useCaseDiscovery.js';
+import { getLatestDoneBriefingResult } from '../db/briefingJobs.js';
+import { saveUseCaseDiscovery } from '../db/enrichments.js';
 import type { AnalysisResult } from '../types/analysis.js';
 import { asyncHandler } from '../utils/http.js';
 import { registerParityTools } from './parityTools.js';
@@ -192,10 +194,11 @@ function createMcpServer(): McpServer {
       }
 
       try {
-        const { result, sitemapUrls } = await discoverUseCases(analysis);
+        const briefing = await getLatestDoneBriefingResult(pool, analysisId);
+        const { result, sitemapUrls } = await discoverUseCases(analysis, { briefing });
 
         try {
-          await updateAnalysis(pool, analysisId, { useCaseDiscovery: result, sitemapUrls });
+          await saveUseCaseDiscovery(pool, analysisId, { useCaseDiscovery: result, sitemapUrls });
         } catch {
           // non-critical
         }

@@ -3,6 +3,7 @@
  * Identische Kopie liegt in client/src/types/parity.ts – synchron halten.
  */
 import type { AccountView, BatchEnrichmentOptions, BatchItemEnrichments } from './batchAccount.js';
+import type { BriefingSummary } from './briefing.js';
 
 export interface AnalysisEnrichments {
   lighthouse?: LighthouseResult;
@@ -11,6 +12,8 @@ export interface AnalysisEnrichments {
   geo?: GeoScoreResult;
   observepoint?: ObservePointResult;
   evidenceMatrix?: EvidenceMatrix;
+  /** Client Pre-Briefing (powered by Chris Whitehead) – kompakte Zusammenfassung des neuesten Jobs. */
+  briefing?: BriefingSummary;
 }
 
 // ── ObservePoint (zweite, unabhängige Erkennungsquelle) ───────────────────

@@ -22,11 +22,14 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
-import { analyzeSyncRoute } from './routes/analyzeSync.js';
-import { useCaseDiscoveryRoute } from './routes/useCaseDiscovery.js';
+import { analysisRunRoute, analyzeSyncRoute, resumeAnalysisRuns } from './routes/analyzeSync.js';
+import { resumeGeoJobs } from './services/geoAuto.js';
+import { resumeUseCaseJobs } from './services/useCaseAuto.js';
+import { useCaseDiscoveryRoute, useCaseStatusRoute } from './routes/useCaseDiscovery.js';
 import { ttsRoute } from './routes/tts.js';
 import { isTtsAvailable } from './services/tts.js';
 import { listAnalysesRoute, getAnalysisRoute } from './routes/analyses.js';
+import { libraryRoute } from './routes/library.js';
 import { dashboardLogin, dashboardStats, requireDashboardAuth } from './routes/dashboard.js';
 import { createAuthRoutes } from './routes/oktaAuth.js';
 import { createTokenRoute, listTokensRoute, revokeTokenRoute } from './routes/apiTokens.js';
@@ -39,9 +42,11 @@ import { asyncHandler, errorHandler, notFoundHandler } from './utils/http.js';
 import { createEnrichmentRoutes } from './routes/enrichments.js';
 import { createGeoRoutes } from './routes/geo.js';
 import { createBatchRoutes } from './routes/batches.js';
+import { createBriefingRoutes } from './routes/briefing.js';
 import { createDeckRoutes } from './routes/deck.js';
 import { createFeedbackRoutes } from './routes/feedback.js';
 import { startBatchWorker } from './services/batchRunner.js';
+import { startBriefingWorker } from './services/briefing/queue.js';
 
 validateConfig();
 
@@ -144,7 +149,18 @@ await initDb().catch((err) => {
 // EAA-Parität: Batch-Queue nach DB-Init starten (setzt hängende Items zurück).
 if (getPool()) {
   startBatchWorker().catch((err) => console.error('Batch worker start failed:', err));
+  startBriefingWorker().catch((err) => console.error('Briefing worker start failed:', err));
   resumeAutoScans(getPool()!).catch((err) => console.error('ObservePoint auto-scan resume failed:', err));
+  // Wiederaufnahme nach Neustart: unterbrochene Analysen, GEO- und Use-Case-Läufe fortsetzen.
+  resumeAnalysisRuns()
+    .then((n) => n && console.log(`Resumed ${n} interrupted analysis run(s)`))
+    .catch((err) => console.error('Analysis run resume failed:', err));
+  resumeGeoJobs(getPool()!)
+    .then((n) => n && console.log(`Resumed ${n} GEO job(s)`))
+    .catch((err) => console.error('GEO resume failed:', err));
+  resumeUseCaseJobs(getPool()!)
+    .then((n) => n && console.log(`Resumed ${n} use case job(s)`))
+    .catch((err) => console.error('Use case resume failed:', err));
 }
 
 // EAA-Parität: eigene Limiter, damit der bestehende Analyse-Limiter unverändert bleibt.
@@ -163,6 +179,22 @@ const batchCreateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many assessments created – please try again later.', code: 'rate_limited' },
 });
+// Client Pre-Briefing: ein Job kostet viele LLM-/Web-Calls → eng begrenzen.
+const briefingStartLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 6,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many briefings started – please try again later.', code: 'rate_limited' },
+});
+// Status-Polling des Frontends (alle paar Sekunden) → großzügiger als lightLimiter.
+const briefingReadLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests – please try again later.', code: 'rate_limited' },
+});
 const lightLimiter = rateLimit({
   windowMs: 60_000,
   max: 30,
@@ -173,10 +205,13 @@ const lightLimiter = rateLimit({
 
 // API routes
 app.post('/api/analyze-sync', analysisLimiter, asyncHandler(analyzeSyncRoute));
+app.get('/api/analysis-runs/:requestId', asyncHandler(analysisRunRoute));
 app.post('/api/use-case-discovery', analysisLimiter, asyncHandler(useCaseDiscoveryRoute));
+app.get('/api/analyses/:id/use-cases/status', asyncHandler(useCaseStatusRoute));
 app.get('/api/tts/status', (_req, res) => res.json({ available: isTtsAvailable() }));
 app.post('/api/tts', ttsLimiter, asyncHandler(ttsRoute));
 app.get('/api/analyses', asyncHandler(listAnalysesRoute));
+app.get('/api/library', asyncHandler(libraryRoute));
 app.get('/api/analyses/:id', asyncHandler(getAnalysisRoute));
 app.post('/api/dashboard/login', loginLimiter, asyncHandler(dashboardLogin));
 app.get('/api/dashboard/stats', requireDashboardAuth, asyncHandler(dashboardStats));
@@ -194,6 +229,7 @@ app.delete('/api/tokens/:id', requireDashboardAuth, asyncHandler(revokeTokenRout
 app.use(createEnrichmentRoutes({ limiter: enrichLimiter }));
 app.use(createGeoRoutes({ limiter: enrichLimiter }));
 app.use(createBatchRoutes({ limiter: batchCreateLimiter }));
+app.use(createBriefingRoutes({ startLimiter: briefingStartLimiter, readLimiter: briefingReadLimiter }));
 app.use(createDeckRoutes({ limiter: lightLimiter }));
 app.use(createFeedbackRoutes({ limiter: lightLimiter }));
 

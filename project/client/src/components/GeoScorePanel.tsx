@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Radar, Loader2 } from 'lucide-react';
 import type { AnalysisResult } from '../types/analysis';
 import type { GeoScoreResult } from '../types/parity';
-import { apiRequest, isAbortError, toErrorMessage } from '../lib/apiClient';
+import { apiRequest, isAbortError, isConnectionError, toErrorMessage } from '../lib/apiClient';
 import GeoScoreDetails from './GeoScoreDetails';
 
 interface GeoScorePanelProps {
@@ -28,23 +28,74 @@ export default function GeoScorePanel({ analysis, onUpdate }: GeoScorePanelProps
   const [country, setCountry] = useState(existing?.country && existing.country !== 'GLOBAL' ? existing.country : '');
   const [queryCount, setQueryCount] = useState(existing?.queries.length || 20);
   const [loading, setLoading] = useState(false);
+  const [autoRunning, setAutoRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  /** >0: manueller Lauf hat die Verbindung verloren → Status pollen, bis das Server-Ergebnis da ist. */
+  const [reconnect, setReconnect] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
-    if (!loading) return;
+    if (!loading && !autoRunning) return;
     const start = Date.now();
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
     return () => {
       clearInterval(id);
       setElapsed(0);
     };
-  }, [loading]);
+  }, [loading, autoRunning]);
 
-  const disabled = !analysis.id || loading;
+  const disabled = !analysis.id || loading || autoRunning;
+
+  // Automatischer GEO-Lauf nach der Analyse: Status pollen, bis das Ergebnis da ist.
+  const analysisId = analysis.id;
+  const hasGeo = Boolean(existing);
+  const analysisRef = useRef(analysis);
+  analysisRef.current = analysis;
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+  useEffect(() => {
+    if (!analysisId || (hasGeo && reconnect === 0)) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      try {
+        const s = await apiRequest<{ status: 'running' | 'done' | 'failed' | 'idle'; result?: GeoScoreResult; error?: string }>(
+          `/api/analyses/${analysisId}/enrich/geo/status`,
+        );
+        if (cancelled) return;
+        if (s.status === 'running') {
+          setAutoRunning(true);
+          timer = setTimeout(() => void poll(), 5000);
+          return;
+        }
+        setAutoRunning(false);
+        setReconnect(0);
+        if (s.status === 'done' && s.result) {
+          const a = analysisRef.current;
+          onUpdateRef.current({ ...a, enrichments: { ...(a.enrichments ?? {}), geo: s.result } });
+        } else if (s.status === 'failed') {
+          setError(`Automatic GEO run failed: ${s.error ?? 'unknown error'} – start it manually above.`);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        // Server startet neu / Verbindung weg: weiter pollen, der Lauf wird serverseitig fortgesetzt.
+        if (isConnectionError(err)) {
+          timer = setTimeout(() => void poll(), 8000);
+          return;
+        }
+        setAutoRunning(false);
+        setReconnect(0);
+      }
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [analysisId, hasGeo, reconnect]);
 
   const run = async () => {
     if (!analysis.id) return;
@@ -79,7 +130,14 @@ export default function GeoScorePanel({ analysis, onUpdate }: GeoScorePanelProps
       );
       onUpdate({ ...analysis, enrichments: { ...(analysis.enrichments ?? {}), geo: data.result } });
     } catch (err) {
-      if (!isAbortError(err)) setError(toErrorMessage(err, 'GEO score failed'));
+      if (isAbortError(err)) return;
+      if (isConnectionError(err)) {
+        // Lauf geht serverseitig weiter und wird gespeichert – Ergebnis per Status-Polling abholen.
+        setAutoRunning(true);
+        setReconnect((k) => k + 1);
+      } else {
+        setError(toErrorMessage(err, 'GEO score failed'));
+      }
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null;
@@ -156,6 +214,9 @@ export default function GeoScorePanel({ analysis, onUpdate }: GeoScorePanelProps
                 </button>
               </div>
               <p className="md:col-span-12 text-xs text-ts-text-secondary">
+                {existing
+                  ? 'Re-run with your own brand, competitors or country to refine the result. '
+                  : 'Runs automatically after each analysis; re-run anytime with your own settings. '}
                 Takes about 1–2 minutes ({queryCount || 20} Claude calls). Leave fields empty to auto-detect from the analysis.
               </p>
             </form>
@@ -165,6 +226,13 @@ export default function GeoScorePanel({ analysis, onUpdate }: GeoScorePanelProps
             <div className="flex items-center gap-3 text-sm text-ts-text-secondary">
               <Loader2 className="w-4 h-4 animate-spin text-adobe-red" />
               Generating funnel queries and asking Claude… {formatTime(elapsed)}
+            </div>
+          )}
+
+          {autoRunning && !loading && (
+            <div className="flex items-center gap-3 text-sm text-ts-text-secondary">
+              <Loader2 className="w-4 h-4 animate-spin text-adobe-red" />
+              GEO score is running automatically with auto-detected brand, competitors and country (about 1–2 min)… {formatTime(elapsed)}
             </div>
           )}
 

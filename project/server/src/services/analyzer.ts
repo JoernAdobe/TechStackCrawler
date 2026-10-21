@@ -9,10 +9,16 @@ import type { ScrapedData } from './scraper.js';
 import { getPool } from '../db/index.js';
 import { saveAnalysis } from '../db/analyses.js';
 import { autoObservePoint } from './observepoint/autoScan.js';
+import { getTraffic } from './traffic.js';
+import { saveEnrichment } from '../db/enrichments.js';
+import { startAutoGeo } from './geoAuto.js';
+import { startAutoUseCases } from './useCaseAuto.js';
 import type { AnalysisResult, ScanWarning } from '../types/analysis.js';
 
 /** Wartezeit vor dem automatischen Re-Scan einer Fehler-/Leerseite (per Env abschaltbar mit 0). */
 const RESCAN_DELAY_MS = Number.parseInt(process.env.SCAN_RETRY_DELAY_MS ?? '4000', 10);
+/** Maximale Zusatzwartezeit auf Traffic/Semrush nach der KI-Phase; danach wird nachgespeichert. */
+const AUTO_TRAFFIC_WAIT_MS = Number.parseInt(process.env.AUTO_TRAFFIC_WAIT_MS ?? '15000', 10);
 
 /**
  * Teilergebnis, wenn die KI endgültig ausfällt: Erkennungen bleiben erhalten, nach
@@ -82,7 +88,7 @@ export interface AnalysisWriter {
 export async function analyzeUrl(
   url: string,
   sse: AnalysisWriter,
-  opts: { autoObservePoint?: boolean } = {},
+  opts: { autoObservePoint?: boolean; autoTraffic?: boolean; autoGeo?: boolean; autoUseCases?: boolean } = {},
 ): Promise<void> {
   sse.sendProgress('scraping', `Fetching ${url}…`);
 
@@ -94,6 +100,16 @@ export async function analyzeUrl(
     title: scraped.title,
     finalUrl: scraped.finalUrl,
   });
+
+  // Traffic (Tranco + Semrush, falls Key gesetzt) läuft parallel zu Erkennung und KI.
+  // Batch-Läufe steuern Semrush selbst über ihre Enrichment-Optionen.
+  const trafficPromise =
+    opts.autoTraffic === false
+      ? null
+      : getTraffic(scraped.finalUrl || url).catch((err: unknown) => {
+          console.warn('Auto traffic failed:', err instanceof Error ? err.message : err);
+          return null;
+        });
 
   // Phase 2: Detect technologies
   sse.sendProgress('detecting', 'Scanning for known technologies…');
@@ -195,6 +211,21 @@ export async function analyzeUrl(
     ...(scanWarnings.length ? { scanWarnings } : {}),
   };
 
+  let pendingTraffic: typeof trafficPromise = null;
+  if (trafficPromise) {
+    const timedOut = Symbol('timeout');
+    let timer: NodeJS.Timeout | undefined;
+    const traffic = await Promise.race([
+      trafficPromise,
+      new Promise<typeof timedOut>((resolve) => {
+        timer = setTimeout(() => resolve(timedOut), Math.max(0, AUTO_TRAFFIC_WAIT_MS));
+      }),
+    ]);
+    clearTimeout(timer);
+    if (traffic === timedOut) pendingTraffic = trafficPromise;
+    else if (traffic) result.enrichments = { ...result.enrichments, traffic };
+  }
+
   sse.sendProgress('complete', 'Analysis complete!');
 
   const pool = getPool();
@@ -205,6 +236,12 @@ export async function analyzeUrl(
         result.id = id;
         // ObservePoint-Abgleich im Hintergrund (Batch macht das selbst und ohne Fresh-Scans).
         if (opts.autoObservePoint !== false) void autoObservePoint(pool, id, result.finalUrl ?? result.url);
+        if (opts.autoGeo !== false) startAutoGeo(pool, id);
+        if (opts.autoUseCases !== false) startAutoUseCases(pool, id, 'analysis');
+        if (pendingTraffic) {
+          void pendingTraffic.then((traffic) => (traffic ? saveEnrichment(pool, id, 'traffic', traffic) : false))
+            .catch((err: unknown) => console.warn(`Auto traffic save for analysis ${id} failed:`, err));
+        }
       }
     } catch (err) {
       console.error('Failed to save analysis to DB:', err);

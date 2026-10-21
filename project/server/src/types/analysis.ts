@@ -93,6 +93,9 @@ export interface UseCaseEvidence {
 export interface UseCaseDiscoveryResult {
   useCases: UseCaseItem[];
   summary: string;
+  /** Datenquellen, die in den Prompt eingeflossen sind (z. B. "Tech stack", "Pre-Briefing"). */
+  basedOn?: string[];
+  generatedAt?: string;
 }
 
 export interface ProgressEvent {

@@ -1,14 +1,82 @@
 import type { AnalysisResult } from '../types/analysis.js';
+import type { BriefingBlock, BriefingResult } from '../types/briefing.js';
 import { MAX_FINDINGS, formatFindingsForPrompt } from '../services/observepoint/findings.js';
+import { portfolioBlock, searchBlock } from '../services/briefing/context.js';
 
 /** OP-Findings der gespeicherten Analyse (falls angereichert), max. MAX_FINDINGS. */
 export function observePointFindings(analysis: AnalysisResult) {
   return analysis.enrichments?.observepoint?.insights?.findings?.slice(0, MAX_FINDINGS) ?? [];
 }
 
+function clip(text: string, max: number): string {
+  const t = text.replace(/\s+/g, ' ').trim();
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+}
+
+function blockText(b: BriefingBlock): string {
+  switch (b.type) {
+    case 'paragraph':
+    case 'note':
+      return b.text;
+    case 'feature-grid':
+      return b.cards.map((c) => `${c.label}: ${c.value}`).join('; ');
+    case 'steps':
+      return b.items.map((i) => `${i.title}: ${i.body}`).join('; ');
+    case 'table':
+      return b.rows.slice(0, 6).map((r) => r.join(' | ')).join('; ');
+    default:
+      return '';
+  }
+}
+
+/**
+ * Verdichtete Pre-Briefing-Erkenntnisse (Executive + Abschnitte). s14 (Adobe Opportunity)
+ * wird ausgelassen, weil er selbst aus den Use Cases gespeist wird.
+ */
+export function briefingInsightsBlock(briefing: BriefingResult | null | undefined): string {
+  if (!briefing) return '';
+  const ex = briefing.executive;
+  const out: string[] = [];
+  if (ex) {
+    out.push(`- **Overall Pre-Briefing Score:** ${ex.overallScore ?? 'n/a'}/100 (${ex.band}, confidence ${ex.confidence})`);
+    if (ex.verdict) out.push(`- **Verdict:** ${ex.verdict}`);
+    for (const b of ex.bullets ?? []) out.push(`- **${b.label}:** ${clip(b.text, 400)}`);
+    const subs = (ex.subScores ?? []).filter((s) => s.value !== null);
+    if (subs.length) out.push(`- **Sub-scores:** ${subs.map((s) => `${s.label} ${s.value}`).join(', ')}`);
+    for (const p of (ex.topPlays ?? []).slice(0, 5)) out.push(`- **Adobe play – ${p.product}:** ${p.headline} (based on: ${clip(p.basedOn, 200)})`);
+  }
+  for (const s of briefing.sections ?? []) {
+    if (s.id === 's14' || s.status === 'skipped' || s.status === 'error') continue;
+    const text = clip(s.blocks.map(blockText).filter(Boolean).join(' '), 700);
+    if (text) out.push(`- **${s.title}:** ${text}`);
+  }
+  return out.length
+    ? `
+## Client Pre-Briefing Insights (company research: strategy, financials, markets, stakeholders)
+${out.join('\n')}
+
+Use these business insights: tie use cases to the company's stated strategy, priorities, markets and risks, and reflect the top Adobe plays where they fit. Reference concrete facts from the briefing in descriptions and business value.
+`
+    : '';
+}
+
+/** Lesbare Liste der Datenquellen, die in den Prompt einfließen (für die UI). */
+export function useCaseDataSources(analysis: AnalysisResult, briefing?: BriefingResult | null): string[] {
+  const e = analysis.enrichments;
+  const src = ['Tech stack'];
+  if (e?.traffic) src.push('Traffic (Semrush)');
+  if (e?.lighthouse) src.push('Lighthouse');
+  if (e?.geo) src.push('GEO score');
+  if (e?.mobileApps?.apps?.length) src.push('Mobile apps');
+  if (e?.observepoint) src.push('ObservePoint');
+  if (briefing) src.push('Client Pre-Briefing');
+  return src;
+}
+
 export function buildUseCaseDiscoveryPrompt(
   analysis: AnalysisResult,
   sitemapUrls: string[] = [],
+  briefing?: BriefingResult | null,
 ): string {
   const techStack = analysis.categories
     .map(
@@ -36,6 +104,17 @@ Use these measured findings: at least 2 use cases should address the most severe
     ? `\n## Page Content Excerpt\n${analysis.pageContentExcerpt}`
     : '';
 
+  const measurements = [searchBlock(analysis), portfolioBlock(analysis)].filter(Boolean).join('\n\n');
+  const measurementsBlock = measurements
+    ? `
+## Traffic, Search, AI Visibility & Digital Portfolio (measured)
+${measurements}
+
+Use these numbers to size the opportunity (reach, organic vs. paid mix, AI-answer visibility vs. competitors, app footprint) and to quantify business value where possible.
+`
+    : '';
+  const briefingBlock = briefingInsightsBlock(briefing);
+
   return `You are an enterprise marketing technology consultant. Based on the technology stack analysis and website context below, derive the TOP 10 most relevant use cases for this organization. Each use case should be actionable, specific to their industry/context, and show how Adobe technology can address it.
 
 CRITICAL – WRITE FOR NON-TECHNICAL READERS:
@@ -53,7 +132,7 @@ ${techStack}
 ## All Detected Technologies
 ${rawTechs}
 ${pageExcerpt}
-${findingsBlock}${sitemapUrls.length > 0 ? `
+${measurementsBlock}${briefingBlock}${findingsBlock}${sitemapUrls.length > 0 ? `
 ## Sitemap URLs (sample)
 The following URLs were found in the site's sitemap. Use them to identify interesting page types (product detail, company info, category pages, etc.) and make use cases more concrete.
 

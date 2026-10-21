@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endava — Client Report</title>
+<style>
+/* Adobe Client Report — Canonical Design System
+   Single source of truth. Inject this file verbatim into every report's <style> block.
+   Do not abbreviate, reorder, or recall from memory. */
+
+:root {
+  --red: #EB1000;
+  --black: #000000;
+  --white: #FFFFFF;
+  --gray-light: #F5F5F5;
+  --gray-mid: #E8E8E8;
+  --gray-text: #6E6E6E;
+  --font: Arial, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); color: var(--black); background: var(--white); font-size: 14px; line-height: 1.6; }
+@media print {
+  .no-print { display: none !important; }
+  header { background: var(--red) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .step-num { background: var(--red) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .section { page-break-inside: avoid; }
+  .step { page-break-inside: avoid; }
+  .feature-grid { page-break-inside: avoid; }
+  h2 { page-break-after: avoid; }
+  .note { page-break-inside: avoid; }
+}
+header { background: var(--red); color: var(--white); padding: 48px 56px 36px; }
+header .eyebrow { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; margin-bottom: 10px; color: var(--white); }
+header h1 { font-size: 34px; font-weight: 700; line-height: 1.1; margin-bottom: 6px; color: var(--white); }
+header .sub { font-size: 12px; opacity: 0.8; color: var(--white); }
+header * { caret-color: var(--white); }
+.container { max-width: 840px; margin: 0 auto; padding: 48px 56px 72px; }
+.toc { border-left: 3px solid var(--red); padding: 14px 18px; margin-bottom: 48px; background: var(--gray-light); }
+.toc-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--red); margin-bottom: 8px; }
+.toc ol { padding-left: 16px; }
+.toc li { margin-bottom: 3px; }
+.toc a { color: var(--black); text-decoration: none; font-size: 13px; }
+.toc a:hover { color: var(--red); }
+.section { margin-bottom: 52px; }
+.eyebrow { font-size: 10px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+.section h2 { font-size: 22px; font-weight: 700; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--gray-mid); }
+.section-bar { background: var(--black); margin: 0 calc(-50vw + 50%) 28px; padding: 12px calc(50vw - 50%) 16px; }
+.section-bar .s-label { font-size: 10px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 5px; display: block; }
+.section-bar h2 { font-size: 22px; font-weight: 700; color: var(--white); margin: 0; padding: 0; border: none; line-height: 1.1; }
+.step { display: flex; gap: 0; margin-top: 20px; margin-bottom: 22px; align-items: flex-start; border-left: 2px solid var(--red); padding-left: 14px; }
+.step-num { display: none; }
+.step-body { flex: 1; }
+.step-body strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.step-body p { color: #333; font-size: 13px; line-height: 1.65; margin-top: 6px; }
+.note { border-left: 3px solid var(--red); padding: 10px 14px; margin-top: 12px; font-size: 13px; color: #333; background: var(--gray-light); }
+.sources { margin-top: 22px; padding: 10px 14px; background: var(--gray-light); border-left: 2px solid var(--gray-mid); font-size: 11px; color: var(--gray-text); line-height: 1.7; }
+.sources .sources-label { display: block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gray-text); margin-bottom: 5px; }
+.sources a { color: var(--gray-text); text-decoration: none; display: block; margin-bottom: 2px; word-break: break-word; }
+.sources a:hover { color: var(--red); text-decoration: underline; }
+.sources a::before { content: "\2197\00a0"; color: var(--gray-mid); }
+.sources .no-link { display: block; margin-bottom: 2px; }
+.feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--gray-mid); margin-top: 16px; }
+.feature-card { background: var(--white); padding: 18px 20px; }
+.tag-label { font-size: 10px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 6px; }
+.feature-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.feature-card p { font-size: 12px; color: #444; line-height: 1.6; }
+.color-legend { display: flex; gap: 24px; margin: 14px 0; flex-wrap: wrap; }
+.color-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.color-box { width: 14px; height: 14px; flex-shrink: 0; }
+hr { border: none; border-top: 1px solid var(--gray-mid); margin: 40px 0; }
+.dl-link { display: inline-flex; align-items: center; gap: 6px; background: var(--red); color: var(--white); text-decoration: none; padding: 10px 18px; font-size: 13px; font-weight: 700; margin-top: 10px; }
+.img-slot { margin-top: 12px; min-height: 0; }
+.img-slot img { width: 100%; display: block; }
+footer { border-top: 1px solid var(--gray-mid); padding-top: 20px; margin-top: 60px; font-size: 11px; color: var(--gray-text); line-height: 1.5; }
+#navMenu { display:none; position:fixed; bottom:80px; left:28px; background:#fff; border:1px solid #ccc; border-radius:4px; box-shadow:0 4px 16px rgba(0,0,0,0.15); min-width:260px; z-index:99999; }
+#navMenu div.nh { padding:8px 16px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#6E6E6E; background:#F5F5F5; border-bottom:1px solid #E8E8E8; }
+#navMenu a { display:block; padding:10px 16px; font-size:13px; color:#000; text-decoration:none; border-bottom:1px solid #E8E8E8; }
+#navMenu a:last-child { border-bottom:none; }
+#navMenu a:hover { background:#F5F5F5; color:#EB1000; }
+#navBtn { display:block; position:fixed; bottom:28px; left:28px; width:44px; height:44px; border-radius:50%; background:#EB1000; color:#fff; border:none; font-size:18px; cursor:pointer; z-index:99999; box-shadow:0 2px 8px rgba(0,0,0,0.3); padding:0; display:flex; align-items:center; justify-content:center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Adobe &nbsp;|&nbsp; Client Intelligence</div>
+  <h1>Endava</h1>
+  <p class="sub">Account Overview &nbsp;|&nbsp; Updated: September 2026</p>
+</header>
+
+<div class="container">
+
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#s01">Company Overview</a></li>
+      <li><a href="#s02">Products &amp; Services</a></li>
+      <li><a href="#s03">Financial Performance</a></li>
+      <li><a href="#s04">Digital Transformation &amp; Technology</a></li>
+      <li><a href="#s05">Marketing &amp; Advertising Strategy</a></li>
+      <li><a href="#s06">Social Media &amp; Content Strategy</a></li>
+      <li><a href="#s07">SEO &amp; Search Visibility</a></li>
+      <li><a href="#s08">Brand &amp; Website Portfolio</a></li>
+      <li><a href="#s09">Competitive Landscape</a></li>
+      <li><a href="#s10">Customer &amp; Market Profile</a></li>
+      <li><a href="#s11">Regulatory &amp; Compliance</a></li>
+      <li><a href="#s12">Stakeholder Mapping</a></li>
+      <li><a href="#s13">Strategic Direction</a></li>
+      <li><a href="#s14">Adobe Opportunity</a></li>
+    </ol>
+  </div>
+
+  <!-- Section: Company Overview -->
+  <div class="section" id="s01">
+    <div class="section-bar">
+      <span class="s-label">Client Background</span>
+      <h2>Company Overview.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava plc is a London-headquartered technology services group founded in 2000 by its current CEO, John Cotterell, and listed on the New York Stock Exchange (NYSE: DAVA) since 2018. It combines software engineering, industry expertise and what it calls an "AI-native" delivery approach to modernise platforms and build digital products for clients in payments, banking and capital markets, insurance, technology/media/telecoms, mobility, healthcare, and retail and consumer goods. At 31 March 2026 it employed 11,225 people across locations in Europe, the Americas, Asia Pacific and the Middle East, working from more than 25 countries.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="tag-label">Headquarters</span>
+        <h4>London, United Kingdom</h4>
+        <p>Registered investor address: Endava plc, 125 Old Broad Street, London EC2N 1AR. The company describes itself as working from over 25 countries across six continents.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Ownership</span>
+        <h4>Public — NYSE: DAVA (ADSs)</h4>
+        <p>The ADR fell 24.4% to $2.11 on 22 September 2026 after the CFO leave announcement. The investor site showed $1.70 and a 52-week range of $1.68–$9.88 when checked on 29 September 2026.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Workforce</span>
+        <h4>11,225 employees</h4>
+        <p>Headcount at 31 March 2026, down from 11,479 at 30 June 2025 and 12,085 at 30 June 2024. Average operational employees were 10,166 in Q3 FY2026.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Leadership</span>
+        <h4>John Cotterell, Founder &amp; CEO</h4>
+        <p>Board Chair is Trevor Smith (former Goldman Sachs EMEA CIO). Conor McShane of AlixPartners became Interim CFO on 21 September 2026; CTO is Matt Cloke.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Strategic context:</strong> Endava is two things to Adobe at once — a prospective customer for its own marketing and web stack, and a services partner that already lists Adobe among its technology partners. Both conversations now sit against an active Audit Committee investigation into the accounting treatment of certain customer and supplier agreements, a CFO on administrative leave and FY2026 results delayed to "by 2 November 2026". No conclusion or finding has been announced.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://www.endava.com/who-we-are" target="_blank">Who We Are — Endava.com, page accessed (Sep 2026)</a>
+      <a href="https://investors.endava.com/" target="_blank">Investor Relations home, stock snapshot and IR contacts — Endava (Sep 2026)</a>
+      <a href="https://investors.endava.com/corporate-governance/board-of-directors" target="_blank">Board of Directors — Endava Investor Relations (Sep 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/122/endava-appoints-conor-mcshane-as-interim-chief-financial-officer" target="_blank">Endava Appoints Conor McShane as Interim Chief Financial Officer — Endava press release (Sep 2026)</a>
+      <a href="https://www.morningstar.com/news/pr-newswire/20260924dc56530/investor-alert-pomerantz-law-firm-investigates-claims-on-behalf-of-investors-of-endava-plc-dava" target="_blank">Pomerantz Law Firm Investigates Claims on Behalf of Investors of Endava — PR Newswire via Morningstar (Sep 2026)</a>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Products & Services -->
+  <div class="section" id="s02">
+    <div class="section-bar">
+      <span class="s-label">Portfolio</span>
+      <h2>Products &amp; Services.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava sells engineering and transformation services rather than products. Its portfolio is organised into core capabilities, a set of branded "Dava" frameworks and programmes, and industry accelerators — most visibly in payments. The company does not publish revenue by service line; it reports revenue by industry vertical and geography only.</p>
+    <div class="step">
+      <div class="step-body">
+        <strong>Core capabilities</strong>
+        <p>Seven published capability areas: AI; Data; Digital Engineering; Digital Product Acceleration; Advisory and Digital Strategy; Modern Managed Services (cloud applications, infrastructure and workplace operations); and Leading Delivery (agile programme leadership).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Dava.X — specialist focus areas</strong>
+        <p>Split into "Accelerate" (AI, core modernisation, cloud, cyber security, embedded systems) and "Invent" (sustainability, physical computing, quantum). Positioned by CTO Matt Cloke as the route to adopting emerging technologies "rapidly and at scale".</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Dava.Flow — AI-native engagement system</strong>
+        <p>Endava's delivery methodology built on a "Change Delivery Lifecycle" of four phases (Signal, Explore, Govern, Evolve), with policy-in-pipeline governance, telemetry and human review of key decisions. Endava claims it typically reduces time-to-market by up to 40%. It was used in the Tyl by NatWest payments engagement announced in May 2026.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Payments IP and operator roles</strong>
+        <p>Endava deploys a Payments Gateway Accelerator (used for Tyl by NatWest) and was appointed technical operator for Nexus Global Payments in February 2026. Payments was the single largest vertical at 23% of Q3 FY2026 revenue.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Ecosystem programmes — Dava.Rise and Dava.Alliance</strong>
+        <p>Dava.Rise (launched November 2025) matches scale-ups with enterprise buyers; the first cohort was UK-focused, with industry cohorts planned for 2026. Dava.Alliance is a partner ecosystem whose named founding members include Island Technologies and Access Holdings. Dava.Y and Dava.Studios also appear in site navigation; their scope was not detailed in the material reviewed.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Portfolio transition:</strong> Endava reports that AI-driven work rose from 5% of revenue in Q3 FY2025 to 15% in Q3 FY2026, while the revenue mix moved towards payments (19% to 23% year on year) and away from TMT (18% to 16%).</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://www.endava.com/capabilities" target="_blank">Capabilities — Endava.com, page accessed (Sep 2026)</a>
+      <a href="https://www.endava.com/dava-x" target="_blank">Dava.X — Endava.com, page accessed (Sep 2026)</a>
+      <a href="https://www.endava.com/dava-flow" target="_blank">Dava.Flow — Endava.com, page accessed (Sep 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/113/endava-launches-dava-rise-to-accelerate-enterprise-innovation" target="_blank">Endava Launches Dava.Rise to Accelerate Enterprise Innovation — Endava press release (Nov 2025)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/120/endava-announces-third-quarter-fiscal-year-2026-results/" target="_blank">Endava Announces Third Quarter Fiscal Year 2026 Results — Endava press release (May 2026)</a>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Financial Performance -->
+  <div class="section" id="s03">
+    <div class="section-bar">
+      <span class="s-label">Financial Snapshot</span>
+      <h2>Financial Performance.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava's fiscal year ends 30 June. FY2025 was a year of modest growth: revenue rose 4.3% to £772.3m (6.3% at constant currency), profit before tax was £24.1m and adjusted PBT £82.1m (10.6% margin). FY2026 has gone into reverse. Nine-month revenue fell 7.6% to £540.8m, and Q3 (to 31 March 2026) revenue fell 8.4% to £178.5m, with adjusted PBT down to £3.2m (1.8% margin) from £24.6m (12.6%). Q3 also carried a £364.6m non-cash goodwill impairment, following a reforecast of performance through FY2031, and a £23.2m charge to write off the entire UK deferred tax asset. At 31 March 2026 cash stood at £48.4m against £195.8m of borrowings. FY2026 full-year results and the 20-F are now due "by 2 November 2026", following the accounting investigation.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="tag-label">FY2025 revenue (to Jun 2025)</span>
+        <h4>£772.3m (+4.3%)</h4>
+        <p>Adjusted PBT £82.1m, or 10.6% of revenue. The CEO cited the highest-ever quarterly order book at year end, but a "cautious" outlook.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Q3 FY2026 revenue</span>
+        <h4>£178.5m (−8.4%)</h4>
+        <p>Down 6.4% at constant currency. Gross profit fell to £33.2m from £53.6m year on year.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Q3 FY2026 IFRS result</span>
+        <h4>£(394.4)m loss</h4>
+        <p>Includes £364.6m goodwill impairment and £23.2m UK deferred-tax-asset derecognition. Diluted EPS was £(7.55).</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">FY2026 guidance (May 2026)</span>
+        <h4>£721.8m–£725.8m</h4>
+        <p>This implies a 5%–6% constant-currency decline. Adjusted diluted EPS guidance was £0.45–£0.49, against £1.13 in FY2025.</p>
+      </div>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;margin-top:16px;"><strong>Q3 FY2026 revenue by geography</strong></p>
+    <div class="color-legend">
+      <div class="color-item"><div class="color-box" style="background:#2D9CDB;"></div><strong>Blue — North America:</strong>&nbsp; 38%</div>
+      <div class="color-item"><div class="color-box" style="background:#EB1000;"></div><strong>Red — United Kingdom:</strong>&nbsp; 33%</div>
+      <div class="color-item"><div class="color-box" style="background:#27AE60;"></div><strong>Green — Europe:</strong>&nbsp; 23%</div>
+      <div class="color-item"><div class="color-box" style="background:#6E6E6E;"></div><strong>Grey — Rest of World:</strong>&nbsp; 6%</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:16px;">
+      <thead>
+        <tr style="background:var(--gray-light);">
+          <th style="padding:8px 12px;text-align:left;border-bottom:2px solid var(--red);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;">Industry vertical</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:2px solid var(--red);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;">Q3 FY2026</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:2px solid var(--red);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;">Q3 FY2025</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--gray-mid);"><td style="padding:8px 12px;">Payments</td><td style="padding:8px 12px;">23%</td><td style="padding:8px 12px;">19%</td></tr>
+        <tr style="border-bottom:1px solid var(--gray-mid);"><td style="padding:8px 12px;">Banking &amp; Capital Markets</td><td style="padding:8px 12px;">22%</td><td style="padding:8px 12px;">21%</td></tr>
+        <tr style="border-bottom:1px solid var(--gray-mid);"><td style="padding:8px 12px;">TMT</td><td style="padding:8px 12px;">16%</td><td style="padding:8px 12px;">18%</td></tr>
+        <tr style="border-bottom:1px solid var(--gray-mid);"><td style="padding:8px 12px;">Healthcare</td><td style="padding:8px 12px;">11%</td><td style="padding:8px 12px;">12%</td></tr>
+        <tr style="border-bottom:1px solid var(--gray-mid);"><td style="padding:8px 12px;">Insurance</td><td style="padding:8px 12px;">9%</td><td style="padding:8px 12px;">9%</td></tr>
+        <tr style="border-bottom:1px solid var(--gray-mid);"><td style="padding:8px 12px;">Mobility</td><td style="padding:8px 12px;">8%</td><td style="padding:8px 12px;">8%</td></tr>
+        <tr style="border-bottom:1px solid var(--gray-mid);"><td style="padding:8px 12px;">Other</td><td style="padding:8px 12px;">11%</td><td style="padding:8px 12px;">13%</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><strong>Headwinds and tailwinds:</strong> CEO John Cotterell called Q3 "one of the more challenging periods Endava has faced in recent years", citing uneven demand, extended deal cycles and clients scrutinising technology spend. Since 21 September, the accounting investigation, delayed reporting and at least one US law-firm investigation on behalf of investors (Pomerantz, 24 September) have added market pressure. On the positive side, payments grew as a share of revenue and AI-driven work tripled as a share of revenue year on year. Endava is still buying back shares: $121.9m has been spent cumulatively, with $28.1m remaining at 31 March 2026.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/120/endava-announces-third-quarter-fiscal-year-2026-results/" target="_blank">Endava Announces Third Quarter Fiscal Year 2026 Results — Endava press release (May 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/107/endava-announces-fourth-quarter-fiscal-year-2025-fiscal-year-2025-results" target="_blank">Endava Announces Q4 FY2025 &amp; FY2025 Results — Endava press release (Sep 2025)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/122/endava-appoints-conor-mcshane-as-interim-chief-financial-officer" target="_blank">Interim CFO appointment and FY2026 results timing — Endava press release (Sep 2026)</a>
+      <a href="https://www.iteuropa.com/news/endava-puts-cfo-leave-pending-financial-investigation" target="_blank">Endava puts CFO 'on leave' pending financial investigation — IT Europa (Sep 2026)</a>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Digital Transformation & Technology -->
+  <div class="section" id="s04">
+    <div class="section-bar">
+      <span class="s-label">Digital &amp; Technology</span>
+      <h2>Digital Transformation &amp; Technology.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava's technology agenda has two layers. Its delivery business is being rebuilt around AI and agentic tooling through a steady run of partnerships. Its own go-to-market estate, by contrast, runs on marketing-led SaaS: live detection of endava.com in September 2026 showed HubSpot CMS rather than an enterprise DXP. Initiatives are listed below in order of strategic weight.</p>
+    <div class="step">
+      <div class="step-body">
+        <strong>1. AI-native delivery at scale</strong>
+        <p>Dava.Flow is now the default engagement model. Endava said in September 2025 that more than half of its people use AI in projects, and AI-driven work reached 15% of Q3 FY2026 revenue. The company has also partnered with OpenAI to embed generative models in client work.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>2. Agentic engineering and AI transformation partners</strong>
+        <p>Endava expanded its Cognition partnership to scale "governed agentic coding" in February 2026. The same month it partnered with Miro on a new AI-transformation engagement model.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>3. Cloud, data and security foundations</strong>
+        <p>Endava partnered with Wiz (now part of Google Cloud) for integrated cloud security for enterprise AI adoption in June 2026. Its standing cloud and data partners include AWS, Microsoft, Google Cloud (Premier Partner), Databricks and Snowflake.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>4. Agentic customer experience</strong>
+        <p>In July 2026 Endava became launch partner for the Upstream Works AI Experience Platform, an agentic, omnichannel contact-centre orchestration layer due to be available in Fall 2026. It targets travel, hospitality, financial services and retail.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>5. Endava's own marketing stack (detected)</strong>
+        <p>endava.com is served by HubSpot CMS (HubSpot portal 25897843, pre-rendered HubSpot pages and HubSpot-hosted CTAs) behind Cloudflare. It uses Google Analytics 4 and Google Tag Manager, and a HubSpot cookie banner. The CRM could not be confirmed from public signals; Salesforce appears as a delivery partner. No enterprise CDP or personalisation layer was detected.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Known domains &amp; tech partners:</strong> www.endava.com (HubSpot CMS); investors.endava.com (separate investor-relations platform); info.endava.com and careers.endava.com both redirect into www.endava.com. The published partner wall lists AWS, Microsoft, Google Cloud, Salesforce, ServiceNow, OpenAI, Snowflake, Databricks, Stripe, Guidewire, Backbase, Optimove, Verisk, Visa, AMD, <strong>Sitecore</strong> and <strong>Adobe</strong>. Adobe appears as a logo only: /who-we-are/partners/adobe returns a 404, whereas AWS, Microsoft, Google Cloud, Salesforce, OpenAI and others have dedicated partner pages.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/107/endava-announces-fourth-quarter-fiscal-year-2025-fiscal-year-2025-results" target="_blank">Endava Announces Q4 FY2025 &amp; FY2025 Results (AI adoption statement) — Endava press release (Sep 2025)</a>
+      <a href="https://investors.endava.com/news-events/press-releases" target="_blank">Press releases index: Cognition (Feb 2026), Wiz (Jun 2026) — Endava Investor Relations (Sep 2026)</a>
+      <a href="https://www.endava.com/who-we-are/newsroom/endava-and-upstream-transform-cx-with-agentic-ai" target="_blank">Upstream Works and Endava Partner to Transform Enterprise CX With New Agentic AI Experience Platform — Endava (Jul 2026)</a>
+      <a href="https://www.endava.com/who-we-are/partners" target="_blank">Partners — Endava.com, page accessed (Sep 2026)</a>
+      <span class="no-link">Tech-stack detection of www.endava.com via HTTP response headers and page source (x-hs-portal-id, GTM, GA4); /who-we-are/partners/adobe returned HTTP 404 (checked Sep 2026)</span>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Marketing & Advertising Strategy -->
+  <div class="section" id="s05">
+    <div class="section-bar">
+      <span class="s-label">Marketing &amp; Communications</span>
+      <h2>Marketing &amp; Advertising Strategy.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava markets like a B2B professional-services firm. It relies on owned content, research reports, partner announcements and case studies rather than paid brand advertising. The brand line is "Technology is our how. And people are our why.", and the core message is an "AI-native approach to digital transformation" that helps clients "shape the future with intelligence". Partnership news has run at roughly one to three announcements a month through 2026: Cognition, Miro and Nexus Global Payments in February; NatWest and Mastercard in May; Wiz in June; and Upstream Works in July.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="tag-label">Positioning</span>
+        <h4>AI-native transformation partner</h4>
+        <p>This combines "engineering and industry expertise", "AI-native delivery" and "core modernisation capabilities", backed by 25 years of transformation experience.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Proof engine</span>
+        <h4>Research and case studies</h4>
+        <p>Flagship reports include "AI Everywhere" and "Agile Meets Agentic", alongside 157 case-study pages. The newsroom highlights client outcomes such as Accor Plus's reported 39% conversion growth within 30 days of a payments platform redesign.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Channel mix</span>
+        <h4>Owned, earned and partner-led</h4>
+        <p>Owned channels are the website, HubSpot newsletter and CTAs, podcasts, video and events. Earned reach comes from Business Wire releases and trade press. Co-marketing runs with Mastercard, NatWest, Wiz and others. Paid media spend is not publicly disclosed.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Agency &amp; leadership</span>
+        <h4>Not publicly disclosed</h4>
+        <p>No creative or media agency of record was found. The published management team (Sep 2026) includes no CMO, and the marketing decision-maker is not publicly identified.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Signal for Adobe:</strong> No agency review or marketing-technology procurement was found. The priority for marketing has shifted, though. In the week after 21 September 2026, news results for "Endava" were dominated by US law-firm investor alerts rather than Endava's own announcements. Rebuilding share of voice and trust in the brand is now a practical marketing problem, not a hypothetical one.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://www.endava.com/" target="_blank">Endava homepage (brand line, highlights, client logos) — Endava.com, page accessed (Sep 2026)</a>
+      <a href="https://www.endava.com/who-we-are/newsroom" target="_blank">Newsroom (2026 announcements incl. Accor Plus, Apr 2026) — Endava.com (Sep 2026)</a>
+      <a href="https://www.endava.com/who-we-are/leadership" target="_blank">Leadership — Endava.com, page accessed (Sep 2026)</a>
+      <span class="no-link">Bing News results for "Endava", sorted by date — law-firm alerts and CFO coverage (checked Sep 2026)</span>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Social Media & Content Strategy -->
+  <div class="section" id="s06">
+    <div class="section-bar">
+      <span class="s-label">Social &amp; Content</span>
+      <h2>Social Media &amp; Content Strategy.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava's social presence supports its owned-content engine and employer brand. The homepage source links seven official profiles. Follower counts and engagement rates could not be captured: LinkedIn, Instagram and YouTube blocked automated access in September 2026, so these metrics are not reported here. The largest content formats measurable from the site's sitemap are articles (249 pages) and podcasts (178 pages).</p>
+    <div class="step">
+      <div class="step-body">
+        <strong>LinkedIn — linkedin.com/company/endava</strong>
+        <p>This is the primary B2B channel for thought leadership, partner news and recruitment. Follower count was not captured.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>YouTube — youtube.com/EndavaTV</strong>
+        <p>The video home, including the Dava.Flow fireside chat with CTO Matt Cloke that is linked from the Dava.Flow page. The site sitemap lists 28 video pages and 178 podcast pages.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Instagram — three accounts</strong>
+        <p>@endava, @endavaeurope and @endavanorthamerica are all linked from the corporate site, which suggests regional, employer-brand-led content run by separate teams.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>X and Facebook — x.com/endava, facebook.com/endava</strong>
+        <p>Both are linked from the site. Activity levels were not measured.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Content bottleneck signal:</strong> Endava produces a large volume of content (490 insights pages and 157 case studies) for a single English-language site and several regional social accounts. No localisation or content-variation capability is visible. No creator or influencer programme or social commerce was found, which is expected for a B2B services firm.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://www.endava.com/" target="_blank">Endava homepage (official social profile links in page source) — Endava.com (Sep 2026)</a>
+      <a href="https://www.endava.com/dava-flow" target="_blank">Dava.Flow (link to CTO fireside chat video) — Endava.com (Sep 2026)</a>
+      <span class="no-link">Sitemap analysis of www.endava.com/sitemap.xml — content counts by section (checked Sep 2026)</span>
+      <span class="no-link">LinkedIn, Instagram and YouTube profile pages — automated access blocked; follower data not available (checked Sep 2026)</span>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: SEO & Search Visibility -->
+  <div class="section" id="s07">
+    <div class="section-bar">
+      <span class="s-label">Search &amp; Discovery</span>
+      <h2>SEO &amp; Search Visibility.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava's search strategy is content-led, with a deep library of articles, podcasts, case studies and glossary pages. Estimated organic traffic, domain authority and paid-search activity are not publicly available: no SEMrush or Similarweb access was used. Core Web Vitals could not be captured because the PageSpeed Insights API quota was exhausted at the time of checking. What could be measured directly is listed below.</p>
+    <div class="step">
+      <div class="step-body">
+        <strong>Indexable content footprint</strong>
+        <p>The sitemap lists 1,127 URLs. These include 490 insights pages (249 articles, 178 podcasts, 28 videos, 9 reports), 157 case studies, 44 glossary pages, 32 capability pages and 25 industry pages. The glossary is a deliberate informational-search play.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Topic clusters</strong>
+        <p>The content concentrates on AI-native and agentic delivery, core modernisation, payments and banking, and industry-specific transformation. This matches the revenue weighting towards payments and banking and capital markets (45% of Q3 FY2026).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>International search</strong>
+        <p>The site is English-only, and the homepage source carries no hreflang tags. Test locale paths (/de, /ro) return 404, even though Europe provides 23% of revenue and Endava operates from more than 25 countries.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>AI-search readiness</strong>
+        <p>There is no /llms.txt (HTTP 404). robots.txt blocks several SEO crawlers (e.g. BLEXBot, MJ12bot) but contains no directives for AI crawlers such as GPTBot, ClaudeBot, PerplexityBot or Google-Extended, so they are allowed by default rather than managed. No evidence of AI-answer visibility monitoring was found.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Branded search reputation</strong>
+        <p>Since 21 September 2026, news results for the brand term have been led by investor-alert press releases from US law firms and coverage of the CFO leave. This is likely to spill into AI-generated answers about the company.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Opportunity gap:</strong> Endava sells "AI-native" transformation but does not visibly manage how AI assistants find, read or describe it. It has a large, citation-worthy content library, yet no llms.txt, no AI-crawler policy and no localisation. Meanwhile, third-party negative content is shaping its brand queries right now.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <span class="no-link">www.endava.com/robots.txt, /llms.txt and /sitemap.xml — direct retrieval and analysis (checked Sep 2026)</span>
+      <span class="no-link">www.endava.com homepage source — hreflang and locale path checks (checked Sep 2026)</span>
+      <a href="https://www.endava.com/insights" target="_blank">Insights hub — Endava.com, page accessed (Sep 2026)</a>
+      <span class="no-link">Bing News results for "Endava", sorted by date (checked Sep 2026)</span>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Brand & Website Portfolio -->
+  <div class="section" id="s08">
+    <div class="section-bar">
+      <span class="s-label">Brand &amp; Web Presence</span>
+      <h2>Brand &amp; Website Portfolio.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava's web estate is compact and consolidated. One corporate site holds almost everything, legacy hostnames redirect into it, and investor relations sits on a separate third-party platform. The site is written in British English ("modernisation", "organisations"), although North America is the largest revenue region at 38%.</p>
+    <div class="step">
+      <div class="step-body">
+        <strong>www.endava.com — corporate, capability, industry, insights and careers</strong>
+        <p>HubSpot CMS behind Cloudflare, English-only. Brand, capability, industry, case-study, newsroom and careers content all live here, and careers.endava.com redirects to /careers.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>investors.endava.com — investor relations</strong>
+        <p>A separate IR platform with its own cookie consent, email alerts and published accessibility statement. It hosts results, SEC filings and governance documents.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>info.endava.com — legacy HubSpot host</strong>
+        <p>Now redirects to www.endava.com, although some images are still served from info.endava.com paths. This is evidence of past consolidation onto a single domain.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>"Dava" sub-brand architecture</strong>
+        <p>The sub-brands Dava.Flow, Dava.X, Dava.Y, Dava.Rise, Dava.Studios and Dava.Alliance all live as sections of the main site rather than as separate microsites. This keeps the sub-brands under one governed domain.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Pain point:</strong> Endava has no site-sprawl problem. The gaps are localisation and relevance. A single British-English experience serves buyers in North America (38% of revenue), the UK (33%) and Europe (23%), across seven-plus industries. No detected personalisation or account-based web experience supports its 129 clients billing more than £1m a year.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <span class="no-link">Redirect and response checks for info.endava.com, careers.endava.com, /de and /ro (checked Sep 2026)</span>
+      <a href="https://investors.endava.com/" target="_blank">Investor Relations home (accessibility statement link) — Endava (Sep 2026)</a>
+      <a href="https://www.endava.com/" target="_blank">Endava homepage and navigation — Endava.com, page accessed (Sep 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/120/endava-announces-third-quarter-fiscal-year-2026-results/" target="_blank">Q3 FY2026 Results (geographic split, £1m+ clients) — Endava press release (May 2026)</a>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Competitive Landscape -->
+  <div class="section" id="s09">
+    <div class="section-bar">
+      <span class="s-label">Competitive Intelligence</span>
+      <h2>Competitive Landscape.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava's own FY2025 20-F names four groups of competitors. The first is next-generation digital IT service providers (Globant, EPAM Systems, Grid Dynamics, Thoughtworks). The second is digital agencies and consultancies (McKinsey &amp; Company, IDEO, Publicis Sapient). The third is global consulting and IT services firms (Accenture, Capgemini, Cognizant, TCS). The fourth is clients' own in-house development teams, a threat the company says AI is sharpening.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="tag-label">Client</span>
+        <h4>Endava — contracting</h4>
+        <p>Q3 FY2026 revenue fell 8.4% to £178.5m, with an adjusted PBT margin of 1.8% and 11,225 staff. Its differentiators are UK and payments depth, Dava.Flow, and nearshore delivery.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Closest peer</span>
+        <h4>EPAM Systems — growing</h4>
+        <p>Q2 2026 revenue was $1.415bn (+4.5%), with the full-year growth guide raised to 3.2%–4.2%. It has about 62,850 staff and a non-GAAP operating margin of 16.4%. It also positions itself as an "AI-native" transformation partner.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Peer under pressure</span>
+        <h4>Globant</h4>
+        <p>According to news headlines, Q2 2026 revenue was about $614.4m, followed by a sharp share fall and a law-firm securities investigation notice. Pressure from AI on project-based services is industry-wide.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Scale competitors</span>
+        <h4>Global SIs, agencies &amp; in-house teams</h4>
+        <p>The 20-F notes that Accenture, Capgemini, Cognizant and TCS have "substantially greater financial, technical and marketing resources". Publicis Sapient competes in experience-led work.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Competitive pressure:</strong> EPAM grew while Endava contracted, using the same "AI-native" message, so Endava needs to show differentiated, outcome-based offers quickly. Inside its own partner ecosystem, Endava lists <strong>Sitecore</strong> alongside Adobe. For experience-platform work, the question is which DXP Endava's teams recommend by default, and today Adobe has no dedicated Endava partner page.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://www.sec.gov/Archives/edgar/data/1656081/000165608125000039/dava-20250630.htm" target="_blank">Endava FY2025 Annual Report, Form 20-F (Competition section) — SEC EDGAR (Sep 2025)</a>
+      <a href="https://www.finanznachrichten.de/nachrichten-2026-08/69236373-epam-systems-inc-epam-reports-results-for-second-quarter-2026-008.htm" target="_blank">EPAM Reports Results for Second Quarter 2026 — PR Newswire via FinanzNachrichten (Aug 2026)</a>
+      <span class="no-link">Bing News results for Globant Q2 2026 (headline: Levi &amp; Korsinsky investigation notice, revenue ~$614.4m) (checked Sep 2026)</span>
+      <a href="https://www.endava.com/who-we-are/partners" target="_blank">Partners (Sitecore and Adobe logos) — Endava.com, page accessed (Sep 2026)</a>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Customer & Market Profile -->
+  <div class="section" id="s10">
+    <div class="section-bar">
+      <span class="s-label">Audience &amp; Markets</span>
+      <h2>Customer &amp; Market Profile.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava's buyers are enterprise technology, product and transformation leaders in regulated, data-heavy industries. Revenue is increasingly concentrated. The top 10 clients provided 40% of Q3 FY2026 revenue (39% a year earlier; 32% for FY2024 as a whole). Clients billing more than £1m on a rolling 12-month basis fell from 136 to 129 year on year.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="tag-label">Primary buyer</span>
+        <h4>Financial services — 45%</h4>
+        <p>Payments (23%) plus banking and capital markets (22%) of Q3 FY2026 revenue. Named 2026 clients include Tyl by NatWest and Nexus Global Payments; homepage logos include moneycorp, FNZ, Navy Federal and BRD.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Secondary buyers</span>
+        <h4>TMT, healthcare, insurance, mobility</h4>
+        <p>TMT 16%, healthcare 11%, insurance 9% and mobility 8%. Logos include esure, Convex, De Goudse, Inmarsat, Plantronics and boohoo; Accor Plus is a 2026 payments case study.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Key markets</span>
+        <h4>North America, UK, Europe</h4>
+        <p>North America 38%, UK 33%, Europe 23%, Rest of World 6% (Q3 FY2026). The UK share slipped from 35% as North America grew.</p>
+      </div>
+      <div class="feature-card">
+        <span class="tag-label">Go-to-market</span>
+        <h4>Programme-led, split by sector</h4>
+        <p>Growth leadership is split between Financial Services (Melba Montague) and Commercial Services (Keith O'Neill). The CEO has owned sales and go-to-market strategy since July 2025.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Audience transition:</strong> The mix is moving towards payments and financial services and away from TMT, while the base of £1m+ clients shrinks. Endava is increasingly dependent on fewer, larger financial-services programmes. That raises the value of every account-expansion motion and every co-sell partner that can help it win new logos.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/120/endava-announces-third-quarter-fiscal-year-2026-results/" target="_blank">Q3 FY2026 Results (verticals, geography, concentration) — Endava press release (May 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/119/natwest-and-endava-form-partnership-to-drive-merchant-payments-business-forward" target="_blank">NatWest and Endava Form Partnership to Drive Merchant Payments Business Forward — Endava press release (May 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/105/endava-strengthens-executive-team" target="_blank">Endava Strengthens Executive Team — Endava press release (Jul 2025)</a>
+      <a href="https://www.endava.com/" target="_blank">Endava homepage (client logo wall) — Endava.com, page accessed (Sep 2026)</a>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Regulatory & Compliance -->
+  <div class="section" id="s11">
+    <div class="section-bar">
+      <span class="s-label">Regulatory Environment</span>
+      <h2>Regulatory &amp; Compliance.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava faces regulation on two fronts. As a UK-incorporated, NYSE-listed foreign private issuer it is subject to US securities disclosure rules. As a supplier to regulated financial-services, insurance and healthcare clients in the UK and EU, it inherits their operational-resilience, data-protection and AI obligations through contracts.</p>
+    <div class="step">
+      <div class="step-body">
+        <strong>Securities disclosure and governance</strong>
+        <p>Independent outside counsel for the Audit Committee is investigating concerns about the accounting treatment of certain customer and supplier agreements. The CFO is on administrative leave, and the FY2026 20-F is due by 2 November 2026. US law firms, including Pomerantz (24 September 2026), have announced investigations on behalf of investors. No lawsuit outcome or regulatory finding has been reported.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Digital Operational Resilience Act (DORA)</strong>
+        <p>DORA has applied since 17 January 2025 to EU financial entities and their ICT third-party service providers. It covers ICT third-party risk management, key contractual provisions and incident reporting. With 45% of revenue from payments and banking, Endava is exposed as an ICT supplier within clients' third-party frameworks.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>EU AI Act</strong>
+        <p>Most remaining provisions have applied since 2 August 2026. Providers of generative systems already on the market must meet Article 50(2) transparency obligations by 2 December 2026, and Annex III high-risk obligations apply from 2 December 2027. This is relevant to the AI and agentic systems Endava builds for credit, insurance and customer-service use cases.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Data protection and consent (UK GDPR / EU GDPR)</strong>
+        <p>endava.com runs a HubSpot cookie banner with accept and reject options, and publishes a privacy notice and cookie policy. Client work in banking and healthcare carries personal-data processing obligations. The CMP vendor beyond HubSpot's native banner was not identified.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Assurance posture and accessibility</strong>
+        <p>Endava holds its fifth consecutive SOC 2 Type II attestation (January 2026) plus ISO 27001, 9001, 14001, 37001, 20000-1 and 22301, Cyber Essentials and TISAX. The European Accessibility Act covers banking services and e-commerce, both core Endava build areas, and the EN 301 549 standard was updated in September 2026.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Regulatory driver:</strong> DORA, the AI Act transparency deadlines and accessibility law all push Endava's financial-services clients towards governed data, auditable content and accessible digital experiences. Endava already sells "built-in governance" through Dava.Flow. Platforms with native data-usage labelling, consent enforcement and accessible delivery make that promise easier to keep for regulated clients.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/122/endava-appoints-conor-mcshane-as-interim-chief-financial-officer" target="_blank">Interim CFO appointment and investigation disclosure — Endava press release (Sep 2026)</a>
+      <a href="https://www.eiopa.europa.eu/digital-operational-resilience-act-dora_en" target="_blank">Digital Operational Resilience Act (DORA) — EIOPA (Sep 2026)</a>
+      <a href="https://artificialintelligenceact.eu/implementation-timeline/" target="_blank">EU AI Act Implementation Timeline — Future of Life Institute (Aug 2026)</a>
+      <a href="https://www.endava.com/who-we-are/certifications" target="_blank">Certifications — Endava.com, page accessed (Sep 2026)</a>
+      <a href="https://commission.europa.eu/strategy-and-policy/policies/justice-and-fundamental-rights/disability/union-equality-strategy-rights-persons-disabilities-2021-2030/european-accessibility-act_en" target="_blank">European Accessibility Act — European Commission (Sep 2026)</a>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Stakeholder Mapping -->
+  <div class="section" id="s12">
+    <div class="section-bar">
+      <span class="s-label">Key Stakeholders</span>
+      <h2>Stakeholder Mapping.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Decision-making at Endava is centralised in the founder-CEO, who took direct control of sales and go-to-market in July 2025 after COO Julian Bull retired. Finance is under interim leadership. No CMO or CDO appears on the September 2026 management team page, so marketing and web decisions are likely owned below executive level. The individual owner is not publicly identified.</p>
+    <div class="step">
+      <div class="step-body">
+        <strong>John Cotterell — Founder &amp; Chief Executive Officer</strong>
+        <p>He founded Endava in 2000 and has owned sales and go-to-market strategy since July 2025. He is the public voice of the AI-native pivot and of the Mastercard and Dava.Rise initiatives, and the economic sponsor for any strategic partnership.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Matt Cloke — Chief Technology Officer</strong>
+        <p>He is the face of Dava.X and Dava.Flow and would evaluate any platform practice or delivery accelerator. His messaging centres on governed, measurable AI-enabled change.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Conor McShane — Interim Chief Financial Officer</strong>
+        <p>Appointed from AlixPartners on 21 September 2026 while CFO Mark Thurston is on administrative leave pending the Audit Committee investigation. Expect heightened scrutiny of new commitments, supplier agreements and contract accounting.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Melba Montague and Keith O'Neill — Chief Growth Officers</strong>
+        <p>Montague leads Financial Services growth (she was quoted on Tyl by NatWest) and O'Neill leads Commercial Services. With Lawrence Power (Growth Managing Director, Sales), they are the natural co-sell counterparts for client pursuits.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Ceri McCall — Group Head of Partnerships</strong>
+        <p>Owns the partner ecosystem and its public positioning, including which partners get dedicated pages. This is the entry point for elevating Adobe from a logo to a named practice.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>Board and governance</strong>
+        <p>Chair Trevor Smith (former Goldman Sachs EMEA CIO) and the Audit Committee are directing the investigation. General Counsel Rohit Bhoothalingam will be involved in contract review.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Champion vs blocker:</strong> For a partner-led motion, the most likely champions are Ceri McCall and the two Chief Growth Officers, because co-sell creates pipeline without new cost. For any Endava-funded purchase, the likely blocker is the interim CFO and the ongoing audit process. No public evidence of tension between marketing and IT was found.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://www.endava.com/who-we-are/leadership" target="_blank">Leadership (management team) — Endava.com, page accessed (Sep 2026)</a>
+      <a href="https://investors.endava.com/corporate-governance/board-of-directors" target="_blank">Board of Directors — Endava Investor Relations (Sep 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/105/endava-strengthens-executive-team" target="_blank">Endava Strengthens Executive Team — Endava press release (Jul 2025)</a>
+      <a href="https://www.endava.com/who-we-are/partners" target="_blank">Partners (quote from Ceri McCall, Group Head of Partnerships) — Endava.com (Sep 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/122/endava-appoints-conor-mcshane-as-interim-chief-financial-officer" target="_blank">Endava Appoints Conor McShane as Interim CFO — Endava press release (Sep 2026)</a>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Strategic Direction -->
+  <div class="section" id="s13">
+    <div class="section-bar">
+      <span class="s-label">Strategic Direction</span>
+      <h2>Strategic Direction.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">Endava describes its strategy as "advancing the Company's AI-native strategy" while management "remains focused on disciplined execution". No multi-year targets or investor day were found in the last 12 months. The pillars below are drawn from company disclosures; the time horizons are an Adobe assessment.</p>
+    <div class="color-legend">
+      <div class="color-item"><div class="color-box" style="background:#EB1000;"></div><strong>Red — Short term:</strong>&nbsp; next 0–6 months</div>
+      <div class="color-item"><div class="color-box" style="background:#2D9CDB;"></div><strong>Blue — Medium term:</strong>&nbsp; 6–18 months</div>
+      <div class="color-item"><div class="color-box" style="background:#27AE60;"></div><strong>Green — Long term:</strong>&nbsp; 18 months+</div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>1. Governance reset and FY2026 reporting (short term)</strong>
+        <p>Complete the Audit Committee investigation and publish FY2026 results and the 20-F by 2 November 2026, under interim finance leadership from AlixPartners.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>2. Cost and capital discipline (short to medium term)</strong>
+        <p>Restructuring costs reached £9.1m in the nine months to March 2026, and headcount fell from 12,085 (June 2024) to 11,225. The goodwill impairment reflects a lower reforecast through FY2031. Share buybacks continue, with $28.1m of authorisation remaining.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>3. AI-native delivery (medium term)</strong>
+        <p>Scale Dava.Flow and agentic engineering (Cognition, OpenAI) so that AI-driven work, 15% of revenue in Q3 FY2026, becomes the core of the business rather than an add-on.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>4. Payments and financial-services depth (medium term)</strong>
+        <p>Initiatives include the Tyl by NatWest platform modernisation, the Mastercard collaboration (prioritising insurance and healthcare, then telco, mobility and travel), the Nexus Global Payments technical-operator role and the Paysafe partnership (November 2025).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>5. Ecosystem-led innovation (long term)</strong>
+        <p>Dava.Rise industry cohorts (finance, insurance, automotive, travel, healthcare, government and media planned for 2026), Dava.Alliance, and a Global Advisory Board co-chaired by Dame Alison Rose. Together they make partner reach part of the growth model.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Strategic implication:</strong> The AI pivot is real but has not yet offset the decline in revenue and margin. In the short term, leadership attention will go to governance and cash. Partner propositions that bring pipeline without adding cost fit the current moment better than large internal platform purchases.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/122/endava-appoints-conor-mcshane-as-interim-chief-financial-officer" target="_blank">Interim CFO appointment ("AI-native strategy" statement) — Endava press release (Sep 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/120/endava-announces-third-quarter-fiscal-year-2026-results/" target="_blank">Q3 FY2026 Results (restructuring, buybacks, reforecast) — Endava press release (May 2026)</a>
+      <a href="https://www.endava.com/who-we-are/newsroom/endava-mastercard-accelerate-digital-commerce" target="_blank">Endava Teams Up With Mastercard to Accelerate Digital Commerce — Endava (May 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/113/endava-launches-dava-rise-to-accelerate-enterprise-innovation" target="_blank">Endava Launches Dava.Rise — Endava press release (Nov 2025)</a>
+      <a href="https://investors.endava.com/news-events/press-releases" target="_blank">Press releases index (Paysafe, Nexus, Cognition) — Endava Investor Relations (Sep 2026)</a>
+    </div>
+  </div>
+  <hr>
+
+  <!-- Section: Adobe Opportunity -->
+  <div class="section" id="s14">
+    <div class="section-bar">
+      <span class="s-label">Adobe Alignment</span>
+      <h2>Adobe Opportunity.</h2>
+    </div>
+    <p style="font-size:13px;color:#333;line-height:1.65;">The recommendations are ranked by deal-size potential and timing. The two largest are partner-led co-sell plays through Endava into its financial-services client base. The remaining three are for Endava's own marketing, where near-term budget will be tight under interim finance leadership.</p>
+    <div class="step">
+      <div class="step-body">
+        <strong>1. Adobe Real-Time CDP (Adobe Experience Platform) — co-sell into payments and banking</strong>
+        <p>Payments and banking and capital markets now make up 45% of Endava's revenue, and its flagship 2026 wins are payments platforms. For Tyl by NatWest, Endava is building a "fully integrated" merchant experience with "data-led insights"; with Mastercard it is co-developing embedded commerce, starting with insurance and healthcare. Its own newsroom credits a payments redesign with 39% conversion growth for Accor Plus, so Endava already sells customer-experience outcomes, not just back-end rebuilds. Real-Time CDP adds a governed customer-profile and activation layer on top of those modernised platforms. Its data-usage labelling and consent enforcement support the DORA and GDPR obligations these clients carry. A joint Endava–Adobe offer turns Endava's "built-in governance" message into something clients can deploy, at no platform cost to Endava.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>2. Adobe Experience Manager Sites (Cloud Service with Edge Delivery Services) — win the default DXP slot in Endava's practice</strong>
+        <p>Core modernisation is a headline Dava.X pillar, and Endava's partner wall lists both Sitecore and Adobe. Adobe has no dedicated partner page, while AWS, Microsoft, Google Cloud, Salesforce and OpenAI all do. Packaging AEM Sites modernisation as a Dava.Flow-governed accelerator would give Endava a repeatable offer for its banking, insurance and retail clients. The European Accessibility Act covers banking and e-commerce, so accessible, performant customer-facing sites are now a compliance need as well as a user-experience improvement. A scoped pilot on one Endava client journey, with measurable conversion and speed outcomes, fits the proof-led buying Endava says its clients now demand.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>3. Adobe LLM Optimizer — protect how AI assistants describe Endava</strong>
+        <p>Endava's brand queries are currently dominated by law-firm investor alerts, and its site has no llms.txt and no AI-crawler policy. Yet the company sells itself as "AI-native" and publishes 490 insights pages and 157 case studies that could serve as authoritative citations. LLM Optimizer would let the marketing team see how ChatGPT, Gemini, Perplexity and other assistants answer questions about Endava's services and stability, find the gaps, and push its own case studies and partnership facts into those answers. It is a low-cost, fast-to-deploy entry point that does not require replacing HubSpot. It matters most in the run-up to the FY2026 results due by 2 November 2026.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>4. Adobe Journey Optimizer B2B Edition — account expansion across a concentrated client base</strong>
+        <p>Endava's top 10 clients generate 40% of revenue, its £1m-plus client count fell from 136 to 129, and growth leadership is split between Financial Services and Commercial Services. HubSpot currently runs web and CTA marketing, and no account-based orchestration was detected. Journey Optimizer B2B Edition is built around buying groups: it could coordinate Endava's research reports, case studies and partner news towards the specific CTO, CIO and product sponsors inside its largest accounts, making account growth a managed process. Position this as a phase-two conversation once FY2026 reporting has stabilised and a permanent CFO is in place.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <strong>5. Adobe GenStudio for Performance Marketing — scale content variants without scaling headcount</strong>
+        <p>Endava publishes a high volume of content: 249 articles, 178 podcasts, 157 case studies and partner announcements roughly every month through 2026. It runs regional Instagram accounts for Europe and North America, yet serves everything from a single British-English site while North America provides 38% of revenue. Restructuring and a shrinking headcount mean output has to rise without adding people. GenStudio for Performance Marketing would let a small team turn each report, case study or partner announcement into on-brand regional and channel variants, with brand governance applied before publication. It also gives Endava a working example of its own "AI-native" message.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Timing &amp; urgency:</strong> The best entry point is partner-led. Engage Ceri McCall (Group Head of Partnerships) and the two Chief Growth Officers on a joint Real-Time CDP and AEM Sites offer for named financial-services pursuits such as the Tyl by NatWest and Mastercard programmes. Pair it with a low-cost LLM Optimizer engagement for Endava's own brand. The key timing signal is the FY2026 results and 20-F due by 2 November 2026. Once they are out, spending decisions will reopen under clearer governance, and the EU AI Act Article 50 transparency deadline of 2 December 2026 raises demand for governed AI experiences among Endava's clients. There is competitive urgency too: Sitecore sits on the same partner wall, and EPAM is growing on an identical "AI-native" message. Adobe should secure preferred-DXP status in Endava's practice before the next wave of modernisation pursuits. Expect close procurement scrutiny under the interim CFO. Do not use the accounting investigation as a pressure tactic, and do not treat it as a finding.</div>
+    <div class="sources">
+      <span class="sources-label">Sources</span>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/119/natwest-and-endava-form-partnership-to-drive-merchant-payments-business-forward" target="_blank">NatWest and Endava Form Partnership to Drive Merchant Payments Business Forward — Endava press release (May 2026)</a>
+      <a href="https://www.endava.com/who-we-are/newsroom" target="_blank">Newsroom (Accor Plus, Mastercard, Upstream Works announcements) — Endava.com (Sep 2026)</a>
+      <a href="https://www.endava.com/who-we-are/partners" target="_blank">Partners (Adobe and Sitecore listed; no Adobe partner page) — Endava.com (Sep 2026)</a>
+      <a href="https://investors.endava.com/news-events/press-releases/detail/120/endava-announces-third-quarter-fiscal-year-2026-results/" target="_blank">Q3 FY2026 Results (verticals, concentration, geography) — Endava press release (May 2026)</a>
+      <a href="https://artificialintelligenceact.eu/implementation-timeline/" target="_blank">EU AI Act Implementation Timeline — Future of Life Institute (Aug 2026)</a>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 Adobe. Adobe Internal Only. &nbsp;|&nbsp; Prepared by Adobe Account Intelligence</p>
+  </footer>
+
+</div>
+
+<div id="navMenu" style="display:none;">
+  <div class="nh">Jump to section</div>
+  <a href="#s01" onclick="document.getElementById('navMenu').style.display='none'">Company Overview</a>
+  <a href="#s02" onclick="document.getElementById('navMenu').style.display='none'">Products &amp; Services</a>
+  <a href="#s03" onclick="document.getElementById('navMenu').style.display='none'">Financial Performance</a>
+  <a href="#s04" onclick="document.getElementById('navMenu').style.display='none'">Digital Transformation</a>
+  <a href="#s05" onclick="document.getElementById('navMenu').style.display='none'">Marketing Strategy</a>
+  <a href="#s06" onclick="document.getElementById('navMenu').style.display='none'">Social Media &amp; Content</a>
+  <a href="#s07" onclick="document.getElementById('navMenu').style.display='none'">SEO &amp; Search</a>
+  <a href="#s08" onclick="document.getElementById('navMenu').style.display='none'">Brand &amp; Website Portfolio</a>
+  <a href="#s09" onclick="document.getElementById('navMenu').style.display='none'">Competitive Landscape</a>
+  <a href="#s10" onclick="document.getElementById('navMenu').style.display='none'">Customer &amp; Market Profile</a>
+  <a href="#s11" onclick="document.getElementById('navMenu').style.display='none'">Regulatory &amp; Compliance</a>
+  <a href="#s12" onclick="document.getElementById('navMenu').style.display='none'">Stakeholder Mapping</a>
+  <a href="#s13" onclick="document.getElementById('navMenu').style.display='none'">Strategic Direction</a>
+  <a href="#s14" onclick="document.getElementById('navMenu').style.display='none'">Adobe Opportunity</a>
+</div>
+<button id="navBtn" onclick="var m=document.getElementById('navMenu');m.style.display=m.style.display==='block'?'none':'block';">☰</button>
+
+</body>
+</html>

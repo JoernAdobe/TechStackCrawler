@@ -176,3 +176,64 @@ export async function apiErrorFromResponse(res: Response): Promise<ApiError> {
   }
   return new ApiError(res.status, nonJsonErrorMessage(res.status, text), res.status >= 500 ? 'server_unreachable' : undefined);
 }
+
+/**
+ * True bei Verbindungsproblemen (offline, Server-Neustart, Proxy/Gateway-Fehler) –
+ * in diesen Fällen läuft die Arbeit serverseitig weiter und der Client sollte neu verbinden.
+ */
+export function isConnectionError(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  if (error.status === 0) return true;
+  if (error.code === 'network_error' || error.code === 'offline' || error.code === 'server_unreachable') return true;
+  // 502–504 mit eigenem Fehlercode (z. B. db_unavailable) stammen aus unserem errorHandler.
+  return !error.code && (error.status === 502 || error.status === 503 || error.status === 504);
+}
+
+/** Wartet `ms` Millisekunden; bricht bei Abort mit AbortError ab. */
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+    const t = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+/** Neue zufällige Request-ID (für Wiederaufnahme nach Verbindungsabbruch). */
+export function newRequestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/**
+ * Führt `fn` aus und wiederholt bei Verbindungsfehlern mit Backoff (max. `maxMs`).
+ * Nur für idempotente Requests verwenden.
+ */
+export async function withReconnect<T>(
+  fn: () => Promise<T>,
+  { signal, maxMs = 5 * 60_000, onRetry }: { signal?: AbortSignal; maxMs?: number; onRetry?: (err: unknown) => void } = {},
+): Promise<T> {
+  const started = Date.now();
+  let delay = 1500;
+  for (;;) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!isConnectionError(err) || Date.now() - started > maxMs) throw err;
+      onRetry?.(err);
+      await sleep(delay, signal);
+      delay = Math.min(delay * 1.6, 15_000);
+    }
+  }
+}
+
+export const RECONNECTING_MESSAGE = 'Connection lost – work continues on the server, reconnecting…';

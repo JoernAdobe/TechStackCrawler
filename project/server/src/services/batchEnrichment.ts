@@ -11,6 +11,7 @@ import { discoverUseCases as realDiscoverUseCases } from './useCaseDiscovery.js'
 import { getObservePoint, isObservePointConfigured, ObservePointError } from './observepoint/index.js';
 import { getTagLibrary } from './observepoint/client.js';
 import { buildEvidenceMatrix, observePointCoverage } from './evidenceMatrix.js';
+import { normalizeBriefingSections } from './batchBriefing.js';
 import {
   compactGeo,
   compactLighthouse,
@@ -39,7 +40,7 @@ import type {
 export const COSTLY_SOURCES: BatchEnrichmentSource[] = ['lighthouse', 'semrush', 'geo', 'useCases'];
 export const MAX_COSTLY_ITEMS_LIMIT = 50;
 
-/** Sinnvolle Defaults: günstige Quellen an, teure/quotierte aus. */
+/** Sinnvolle Defaults: günstige Quellen an, teure/quotierte aus – außer Semrush, sobald ein Key gesetzt ist. */
 export function resolveEnrichmentOptions(
   kind: BatchKind,
   aiAnalysis: boolean,
@@ -47,7 +48,7 @@ export function resolveEnrichmentOptions(
 ): BatchEnrichmentOptions {
   const defaults: BatchEnrichmentOptions = {
     traffic: true,
-    semrush: false,
+    semrush: Boolean(process.env.SEMRUSH_API_KEY?.trim()),
     observepoint: true,
     mobileApps: kind === 'account',
     lighthouse: false,
@@ -55,11 +56,16 @@ export function resolveEnrichmentOptions(
     useCases: false,
     multiPage: false,
     maxCostlyItems: kind === 'account' ? 10 : 5,
+    briefing: false,
   };
   const merged = { ...defaults, ...Object.fromEntries(Object.entries(partial).filter(([, v]) => v !== undefined)) };
   const max = Math.floor(Number(merged.maxCostlyItems));
+  const { briefingSections, ...rest } = merged as BatchEnrichmentOptions;
+  const briefing = rest.briefing === true;
   return {
-    ...merged,
+    ...rest,
+    briefing,
+    ...(briefing ? { briefingSections: normalizeBriefingSections(briefingSections) } : {}),
     // Use Cases brauchen eine volle KI-Analyse als Basis.
     useCases: merged.useCases && aiAnalysis,
     maxCostlyItems: Number.isFinite(max) ? Math.min(Math.max(max, 1), MAX_COSTLY_ITEMS_LIMIT) : defaults.maxCostlyItems,
@@ -119,6 +125,7 @@ const THROTTLE_MS: Record<BatchEnrichmentSource, number> = {
   geo: 0,
   useCases: 0,
   multiPage: 0,
+  briefing: 0,
 };
 const TIMEOUT_MS: Record<BatchEnrichmentSource, number> = {
   traffic: 45_000,
@@ -129,6 +136,7 @@ const TIMEOUT_MS: Record<BatchEnrichmentSource, number> = {
   geo: 360_000,
   useCases: 240_000,
   multiPage: 0,
+  briefing: 30_000,
 };
 const throttles = new Map<BatchEnrichmentSource, () => Promise<void>>();
 

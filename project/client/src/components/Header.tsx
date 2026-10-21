@@ -37,7 +37,7 @@ export default function Header() {
               TechStack Analyzer
             </h1>
             <p className="hidden sm:block text-xs text-ts-text-secondary">
-              AI-Powered Technology Detection
+              AI-Powered Account Intelligence
             </p>
           </div>
         </div>
