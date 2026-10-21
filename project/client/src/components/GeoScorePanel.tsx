@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { BriefingMergedSection } from './briefing/BriefingOpportunityInsights';
 import { Radar, Loader2 } from 'lucide-react';
 import type { AnalysisResult } from '../types/analysis';
 import type { GeoScoreResult } from '../types/parity';
@@ -243,6 +244,7 @@ export default function GeoScorePanel({ analysis, onUpdate }: GeoScorePanelProps
           {existing && !loading && <GeoScoreDetails result={existing} />}
         </div>
       </div>
+      <BriefingMergedSection analysisId={analysisId} sectionId="s07" />
     </section>
   );
 }

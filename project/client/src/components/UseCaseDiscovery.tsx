@@ -321,6 +321,27 @@ function UseCaseCard({ useCase }: { useCase: UseCaseItem }) {
         </div>
       </div>
 
+      {/* Business Value — hero directly under the title */}
+      <div className="px-5 pt-4">
+        <div className="rounded-xl border border-ts-success/25 bg-gradient-to-br from-ts-success/[0.12] to-ts-success/[0.03] px-4 py-3.5">
+          <p className="text-[11px] uppercase tracking-wider text-ts-success font-semibold">Business Value</p>
+          {useCase.quantifiedRoi && (
+            <p className="mt-1.5 flex items-start gap-2 text-lg font-bold leading-snug text-ts-success">
+              <TrendingUp className="mt-1 h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden="true" />
+              <span>{useCase.quantifiedRoi}</span>
+            </p>
+          )}
+          <p className={`${useCase.quantifiedRoi ? 'mt-1.5' : 'mt-1'} text-sm font-medium leading-relaxed text-ts-text-primary`}>
+            {useCase.businessValue}
+          </p>
+          {useCase.industryBenchmark && (
+            <p className="mt-2 border-t border-ts-success/15 pt-2 text-[11px] italic leading-relaxed text-ts-text-secondary">
+              {useCase.industryBenchmark}
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Description */}
       <div className="px-5 pt-3 pb-4">
         <p className="text-sm text-ts-text-secondary leading-relaxed">
@@ -359,29 +380,6 @@ function UseCaseCard({ useCase }: { useCase: UseCaseItem }) {
           ))}
         </div>
       )}
-
-      {/* Business Value — separated section */}
-      <div className="border-t border-ts-border/40 px-5 py-3.5 bg-ts-surface-light/30">
-        <p className="text-[11px] uppercase tracking-wider text-ts-text-secondary font-semibold mb-1">
-          Business Value
-        </p>
-        <p className="text-xs text-ts-text-primary leading-relaxed">
-          {useCase.businessValue}
-        </p>
-        {useCase.quantifiedRoi && (
-          <div className="mt-2.5 flex items-center gap-1.5">
-            <TrendingUp className="w-3.5 h-3.5 text-ts-success shrink-0" strokeWidth={2} />
-            <span className="text-xs font-semibold text-ts-success">
-              {useCase.quantifiedRoi}
-            </span>
-          </div>
-        )}
-        {useCase.industryBenchmark && (
-          <p className="mt-1 text-[11px] text-ts-text-secondary italic leading-relaxed">
-            {useCase.industryBenchmark}
-          </p>
-        )}
-      </div>
 
       {/* Prioritization metrics — effort / time-to-value / impact */}
       {(useCase.effort || useCase.timeToValue || useCase.impact) && (

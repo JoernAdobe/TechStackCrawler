@@ -1,32 +1,33 @@
 import { FileSearch } from 'lucide-react';
 import BriefingBlocks from './BriefingBlocks';
 import { SourceList } from './BriefingSources';
-import { ADOBE_OPPORTUNITY_SECTION, MERGED_OPPORTUNITY_ANCHOR, useSharedBriefingResult } from './briefingStore';
+import type { BriefingSectionId } from '../../types/briefing';
+import { ADOBE_OPPORTUNITY_SECTION, MERGED_SECTIONS, useSharedBriefingResult } from './briefingStore';
 
 /**
- * Adobe-Opportunity-Abschnitt des Pre-Briefings, eingebettet in die Sektion
- * „Opportunities“ – damit Adobe-Chancen im Ergebnis nur einmal erscheinen.
+ * Pre-Briefing-Abschnitt, eingebettet in den passenden Analyzer-Tab (Tech Stack, GEO Score,
+ * Opportunities) – damit jeder Inhalt im Ergebnis nur einmal erscheint.
  */
-export default function BriefingOpportunityInsights({ analysisId }: { analysisId?: number }) {
+export function BriefingMergedSection({ analysisId, sectionId }: { analysisId?: number; sectionId: BriefingSectionId }) {
   const result = useSharedBriefingResult(analysisId);
-  const section = result?.sections.find((s) => s.id === ADOBE_OPPORTUNITY_SECTION);
-  if (!section || section.status === 'skipped' || (section.blocks.length === 0 && section.gaps.length === 0)) return null;
+  const target = MERGED_SECTIONS[sectionId];
+  const section = result?.sections.find((s) => s.id === sectionId);
+  if (!target || !section || section.status === 'skipped' || (section.blocks.length === 0 && section.gaps.length === 0)) return null;
+  const anchor = target.anchor;
 
   return (
     <section
-      id={MERGED_OPPORTUNITY_ANCHOR}
-      aria-labelledby={`${MERGED_OPPORTUNITY_ANCHOR}-title`}
+      id={anchor}
+      aria-labelledby={`${anchor}-title`}
       tabIndex={-1}
       className="mt-8 scroll-mt-40 rounded-2xl border border-ts-border bg-ts-surface-card p-4 focus:outline-none sm:p-6"
     >
       <p className="text-xs font-semibold uppercase tracking-wider text-adobe-red">{section.eyebrow}</p>
-      <h3 id={`${MERGED_OPPORTUNITY_ANCHOR}-title`} className="mt-1 flex items-center gap-2 text-lg font-semibold text-ts-text-primary">
+      <h3 id={`${anchor}-title`} className="mt-1 flex items-center gap-2 text-lg font-semibold text-ts-text-primary">
         <FileSearch className="h-5 w-5 text-adobe-red" strokeWidth={1.5} aria-hidden="true" />
-        Adobe plays from the Client Pre-Briefing
+        {target.heading}
       </h3>
-      <p className="mt-1 text-xs text-ts-text-secondary">
-        Researched from public sources and combined with the tech-stack opportunities above.
-      </p>
+      <p className="mt-1 text-xs text-ts-text-secondary">{target.subtitle}</p>
       {section.blocks.length > 0 && (
         <div className="mt-4">
           <BriefingBlocks blocks={section.blocks} />
@@ -45,4 +46,8 @@ export default function BriefingOpportunityInsights({ analysisId }: { analysisId
       )}
     </section>
   );
+}
+
+export default function BriefingOpportunityInsights({ analysisId }: { analysisId?: number }) {
+  return <BriefingMergedSection analysisId={analysisId} sectionId={ADOBE_OPPORTUNITY_SECTION} />;
 }

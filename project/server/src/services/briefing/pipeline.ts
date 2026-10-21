@@ -17,7 +17,7 @@ import {
 } from '../../types/briefing.js';
 import type { LlmCallOptions } from '../llmCall.js';
 import { loadBriefingAssets, type BriefingAssets } from './assets.js';
-import { SCAN_SECTIONS, scanSource, techFactsFor } from './context.js';
+import { SCAN_SECTIONS, scanSource, techFactsFor, withMeasuredBlock } from './context.js';
 import { buildExecutiveSummary } from './executiveLlm.js';
 import { bedrockCreate, throwIfAborted, type LlmCreate, type ModelContext } from './llm.js';
 import { identifyCompany } from './research/company.js';
@@ -133,6 +133,7 @@ export async function runBriefingPipelineWith(
       return;
     }
     let section: BriefingSection;
+    const techFacts = techFactsFor(id, analysis);
     try {
       section = await writeSection(
         {
@@ -141,7 +142,7 @@ export async function runBriefingPipelineWith(
           domain: profile.domain,
           clientDomains: profile.clientDomains,
           dossier,
-          techFacts: techFactsFor(id, analysis),
+          techFacts,
           otherSections,
           today,
         },
@@ -151,7 +152,7 @@ export async function runBriefingPipelineWith(
           ledger,
           assets: deps.assets,
           clientKey: key,
-          scanSource: SCAN_SECTIONS.includes(id) ? scan : undefined,
+          scanSource: SCAN_SECTIONS.includes(id) && techFacts ? scan : undefined,
           onState: (state, message) => onProgress({ step: id, state, ...(message ? { message } : {}) }),
           now: today,
         },
@@ -161,6 +162,7 @@ export async function runBriefingPipelineWith(
       console.error(`Briefing job ${input.jobId}: section ${id} failed:`, err instanceof Error ? err.message : err);
       section = errorSection(id, err);
     }
+    if (section.status !== 'error') section = withMeasuredBlock(section, analysis, scan);
     results.set(id, section);
     if (section.status !== 'error' && input.onSectionDone) {
       try {

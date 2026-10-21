@@ -5,6 +5,7 @@
  *
  * VERTRAG (Signaturen nicht ändern): genutzt von Routes, Batch-Runner und MCP.
  */
+import { awaitPendingTraffic } from '../pendingTraffic.js';
 import { getPool } from '../../db/index.js';
 import { getAnalysisById } from '../../db/analyses.js';
 import { awaitAutoGeo } from '../geoAuto.js';
@@ -193,7 +194,8 @@ async function processJob(db: DbHandle, job: BriefingJob, controller: AbortContr
   };
   try {
     // Läuft der automatische GEO Score noch, kurz warten, damit er in Briefing und Overall Score einfließt.
-    await awaitAutoGeo(job.analysisId, GEO_WAIT_MS);
+    // Ebenso Semrush/Tranco, damit SEO- und Markt-Abschnitte dieselben Zahlen nutzen wie der Analyzer.
+    await Promise.all([awaitAutoGeo(job.analysisId, GEO_WAIT_MS), awaitPendingTraffic(job.analysisId, GEO_WAIT_MS)]);
     throwIfAborted();
     const analysis = await getAnalysisById(db, job.analysisId);
     if (!analysis) throw new Error('Analysis not found');

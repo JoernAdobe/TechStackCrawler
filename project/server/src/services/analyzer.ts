@@ -1,4 +1,5 @@
 import { scrapePage } from './scraper.js';
+import { trackPendingTraffic } from './pendingTraffic.js';
 import { detectTechnologies } from './detector.js';
 import { enrichWithAdditionalPages } from './multiPageCrawl.js';
 import { analyzeWithAI, type AIAnalysisResult } from './ai.js';
@@ -239,8 +240,8 @@ export async function analyzeUrl(
         if (opts.autoGeo !== false) startAutoGeo(pool, id);
         if (opts.autoUseCases !== false) startAutoUseCases(pool, id, 'analysis');
         if (pendingTraffic) {
-          void pendingTraffic.then((traffic) => (traffic ? saveEnrichment(pool, id, 'traffic', traffic) : false))
-            .catch((err: unknown) => console.warn(`Auto traffic save for analysis ${id} failed:`, err));
+          trackPendingTraffic(id, pendingTraffic.then((traffic) => (traffic ? saveEnrichment(pool, id, 'traffic', traffic) : false))
+            .catch((err: unknown) => console.warn(`Auto traffic save for analysis ${id} failed:`, err)));
         }
       }
     } catch (err) {

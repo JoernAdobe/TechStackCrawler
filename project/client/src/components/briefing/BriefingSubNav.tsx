@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BriefingResult, BriefingSectionId } from '../../types/briefing';
 import {
-  ADOBE_OPPORTUNITY_SECTION,
   BRIEFING_SUBNAV_LABEL,
   BRIEFING_SUMMARY_ANCHOR,
-  MERGED_OPPORTUNITY_ANCHOR,
+  MERGED_SECTIONS,
   stickyChromeBottom,
 } from './briefingStore';
 import { prefersReducedMotion, sectionAnchor } from './meta';
@@ -81,7 +80,7 @@ export default function BriefingSubNav({ result, onSummary, onSection }: Briefin
           </button>
         </li>
         {sections.map((s) => {
-          const merged = s.id === ADOBE_OPPORTUNITY_SECTION;
+          const merged = MERGED_SECTIONS[s.id];
           const isActive = active === sectionAnchor(s.id);
           return (
             <li key={s.id} className="shrink-0">
@@ -89,9 +88,9 @@ export default function BriefingSubNav({ result, onSummary, onSection }: Briefin
                 type="button"
                 className={chip(isActive)}
                 aria-current={isActive ? 'true' : undefined}
-                title={merged ? 'Shown in the Opportunities section' : undefined}
+                title={merged ? `Shown in the ${merged.tab} tab` : undefined}
                 onClick={() => {
-                  const target = merged ? document.getElementById(MERGED_OPPORTUNITY_ANCHOR) : null;
+                  const target = merged ? document.getElementById(merged.anchor) : null;
                   if (target) {
                     window.scrollTo({
                       top: target.getBoundingClientRect().top + window.scrollY - stickyChromeBottom() - 16,

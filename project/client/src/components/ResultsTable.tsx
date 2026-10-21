@@ -5,7 +5,7 @@ import { ClipboardList, Search } from 'lucide-react';
 import type { AnalysisResult } from '../types/analysis';
 import ResultCard from './ResultCard';
 import AdobeOpportunityCharts from './AdobeOpportunityCharts';
-import BriefingOpportunityInsights from './briefing/BriefingOpportunityInsights';
+import BriefingOpportunityInsights, { BriefingMergedSection } from './briefing/BriefingOpportunityInsights';
 import AnimatedCounter from './AnimatedCounter';
 import { Badge } from './ui/badge';
 import {
@@ -223,6 +223,8 @@ export default function ResultsTable({ results }: ResultsTableProps) {
           </div>
         </div>
       )}
+
+      <BriefingMergedSection analysisId={results.id} sectionId="s04" />
 
       {/* Adobe Opportunity Insights — separate section */}
       <div id="section-insights">

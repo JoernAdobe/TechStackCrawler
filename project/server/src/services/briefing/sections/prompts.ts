@@ -30,6 +30,16 @@ function qualityBar(assets: BriefingAssets): string {
     .join('\n');
 }
 
+const MEASURED_RULES: Partial<Record<BriefingSectionId, string>> = {
+  s04: `The client's technology stack is measured by the TechStack Analyzer and shown in detail in the Tech Stack, Deep Dive and ObservePoint tabs. A KPI strip with the measured numbers is added to this section automatically.
+- Technologies, vendors and counts come ONLY from the analyzer facts. Do not research which tools the website uses, do not list the full stack again and do not repeat the KPI numbers.
+- Use the analyzer facts for one short interpretation (e.g. which building blocks are Adobe vs. other vendors and what that means).
+- Spend web research on what the scan cannot see: digital transformation programmes, IT/cloud partners and platform decisions, digital organisation and leadership, investment figures, AI initiatives, back-end systems (core, CRM, ERP) named in public sources.`,
+  s07: `Search, traffic, performance and AI-visibility metrics are measured by the TechStack Analyzer (Semrush, Tranco, Lighthouse, GEO Score) and shown in the GEO Score tab. A KPI strip with those numbers is added to this section automatically.
+- Every metric must come ONLY from the analyzer facts. Never quote Semrush, Similarweb, Sistrix, Ahrefs or other traffic/ranking numbers found via web research, and do not repeat the KPI numbers.
+- Interpret the measured numbers in one or two sentences (strengths, gaps, AI-answer competitors).
+- Spend web research on what the scan cannot see: SEO/content strategy, search-related initiatives, comparison and marketplace presence, ranking topics named in public sources.`,
+};
 export interface SectionPromptInput {
   sectionId: BriefingSectionId;
   companyName: string;
@@ -47,6 +57,7 @@ export function buildSystemPrompt(assets: BriefingAssets, id: BriefingSectionId)
   const numbered = NUMBERED_STEP_SECTIONS.includes(id)
     ? `\nNumber step titles: "1. Title.", "2. Title." …${id === 's14' ? ' For this section the format is "1. Adobe Product (detail) — headline benefit".' : ''}`
     : '';
+  const measured = MEASURED_RULES[id] ? `\n\n# Single source of truth (TechStack Analyzer)\n${MEASURED_RULES[id]}` : '';
   const products = id === 's14' ? `\n\n# Current Adobe product names (use only these)\n${assets.adobeProducts}` : '';
   return `You are a senior research analyst at Adobe preparing one section ("${meta.title}") of a client pre-briefing for an Adobe account team (methodology by Chris Whitehead). Write in English, for a sales audience, concise and factual.
 
@@ -71,7 +82,8 @@ ${qualityBar(assets)}
 - Write "not publicly available" only after at least two different search routes failed, and record each such gap (with the routes tried) in "gaps". If the section stays thin, say so in the opening paragraph.
 - Never name people from people-data aggregators (ZoomInfo, RocketReach, Apollo, Lusha, SignalHire, ContactOut, LeadIQ, The Org, LinkedIn). If role holders conflict, leave the role unnamed.
 - Never refer to other sections by code (s01…s14); use the section's name instead.
-- Plain text only.${numbered}
+- Where TechStack Analyzer facts cover a point (detected tools, traffic, AI-answer competitors, apps, consent), use them exactly as given – never replace or contradict them with figures from web research or third-party estimates.
+- Plain text only.${numbered}${measured}
 
 # Components
 ${componentMapping(assets)}

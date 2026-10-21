@@ -1,15 +1,21 @@
 /**
  * TechStack-Fakten aus der bestehenden Analyse als autoritative Evidenz für einzelne Abschnitte
- * (s04, s07, s08, s11, s14) plus Footprint-Auswertung (Adobe vs. Wettbewerb je Building Block).
+ * (s04–s11, s14) plus Footprint-Auswertung (Adobe vs. Wettbewerb je Building Block).
  */
 import { buildingBlocksFor, isAdobeSolution } from '../../data/buildingBlocks.js';
 import type { AnalysisResult } from '../../types/analysis.js';
-import type { BriefingSectionId, BriefingSource } from '../../types/briefing.js';
+import type { BriefingBlock, BriefingSection, BriefingSectionId, BriefingSource } from '../../types/briefing.js';
 import { formatMonYear, hostOf } from './research/text.js';
 
 export const SCAN_SOURCE_TITLE = 'TechStack Analyzer scan';
 export const SCAN_SOURCE_PUBLISHER = 'Adobe TechStack Analyzer';
-export const SCAN_SECTIONS: readonly BriefingSectionId[] = ['s04', 's07', 's08', 's11', 's14'];
+export const SCAN_SECTIONS: readonly BriefingSectionId[] = ['s04', 's05', 's06', 's07', 's08', 's09', 's10', 's11', 's14'];
+
+/**
+ * Abschnitte, deren Kern der Analyzer misst. Ihre Kennzahlen kommen ausschließlich aus dem Scan
+ * (feste Messwerte-Leiste), das Modell ergänzt nur Kontext, den der Scan nicht liefern kann.
+ */
+export const MEASURED_SECTIONS: readonly BriefingSectionId[] = ['s04', 's07'];
 
 export function scanSource(analysis: AnalysisResult): BriefingSource {
   return {
@@ -177,6 +183,94 @@ function adobeBlock(analysis: AnalysisResult): string {
   return out.join('\n');
 }
 
+const MARKETING_RE = /advertis|marketing automation|esp|personali|optimi|a\/b|tag manag|analytics|crm|affiliate|retarget|customer data|cdp/i;
+const SOCIAL_RE = /facebook|meta pixel|instagram|linkedin|tiktok|pinterest|twitter|x\.com|snapchat|reddit|youtube|xing|social/i;
+
+function detectionsMatching(analysis: AnalysisResult, test: (name: string, categories: string[]) => boolean): string[] {
+  return (analysis.rawDetections ?? [])
+    .filter((d) => !d.weak && test(d.name, d.categories))
+    .map((d) => `${d.name} [${d.categories.join(', ')}]${isAdobeSolution(d.name) ? ' (Adobe)' : ''}`);
+}
+
+function marketingBlock(analysis: AnalysisResult): string {
+  const tools = detectionsMatching(analysis, (n, c) => c.some((x) => MARKETING_RE.test(x)) && !SOCIAL_RE.test(n));
+  const s = analysis.enrichments?.traffic?.semrush;
+  const out: string[] = [];
+  if (tools.length) out.push('Marketing, advertising & analytics technology detected on the site:', ...tools.slice(0, 30).map((t) => `- ${t}`));
+  if (s?.paidTraffic !== undefined) out.push(`Semrush paid search traffic/month: ${fmtNum(s.paidTraffic)}${s.organicTraffic ? ` vs. organic ${fmtNum(s.organicTraffic)}` : ''}.`);
+  return out.join('\n');
+}
+
+function socialBlock(analysis: AnalysisResult): string {
+  const tags = detectionsMatching(analysis, (n) => SOCIAL_RE.test(n));
+  return tags.length ? ['Social platform pixels/widgets detected on the site:', ...tags.slice(0, 20).map((t) => `- ${t}`)].join('\n') : '';
+}
+
+function competitiveBlock(analysis: AnalysisResult): string {
+  const g = analysis.enrichments?.geo;
+  if (!g?.competitors?.length) return '';
+  return [
+    `Competitors in AI answers (GEO Score, ${g.model}, ${g.country}) – ${analysis.url} itself: ${g.aiVisibility}% visibility, position "${g.marketPosition}":`,
+    ...g.competitors.slice(0, 8).map((c) => `- ${c.name}: ${c.visibilityPct}% AI visibility`),
+  ].join('\n');
+}
+
+function marketBlock(analysis: AnalysisResult): string {
+  const s = analysis.enrichments?.traffic?.semrush;
+  const out: string[] = [];
+  if (s?.visits) out.push(`Semrush monthly visits: ${fmtNum(s.visits)}${s.displayDate ? ` (${s.displayDate})` : ''}.`);
+  if (s?.topCountries?.length) out.push(`Traffic by country: ${s.topCountries.slice(0, 8).map((c) => `${c.country} ${c.sharePct}%`).join(', ')}.`);
+  const apps = analysis.enrichments?.mobileApps?.apps ?? [];
+  if (apps.length) out.push(`Mobile apps: ${apps.slice(0, 6).map((a) => `${a.name}${a.ratingCount ? ` (${fmtNum(a.ratingCount)} ratings)` : ''}`).join(', ')}.`);
+  return out.length ? ['Audience signals (from scan):', ...out].join('\n') : '';
+}
+
+/** Feste Kennzahlen aus dem Scan; identisch zu den Analyzer-Tabs (eine Datenbasis). */
+export function measuredBlock(id: BriefingSectionId, analysis: AnalysisResult): BriefingBlock | null {
+  const cards: Array<{ label: string; value: string; detail?: string }> = [];
+  if (id === 's04') {
+    const strong = (analysis.rawDetections ?? []).filter((d) => !d.weak);
+    const adobe = strong.filter((d) => isAdobeSolution(d.name));
+    if (strong.length) cards.push({ label: 'Verified technologies', value: String(strong.length), detail: `${adobe.length} Adobe, ${strong.length - adobe.length} other vendors (Tech Stack tab).` });
+    const fp = [...techFootprint(analysis).values()];
+    if (fp.length) {
+      const withAdobe = fp.filter((b) => b.adobe.length);
+      cards.push({ label: 'Adobe footprint', value: `${withAdobe.length} of ${fp.length} blocks`, detail: withAdobe.length ? `Adobe in ${withAdobe.map((b) => b.block).slice(0, 4).join(', ')}.` : 'No Adobe solution detected on the site.' });
+      const open = fp.filter((b) => !b.adobe.length && b.competitors.length);
+      cards.push({ label: 'Other-vendor blocks', value: String(open.length), detail: open.length ? open.slice(0, 3).map((b) => `${b.block}: ${b.competitors.slice(0, 2).join(', ')}`).join('; ') + '.' : 'Every detected block already runs Adobe.' });
+    }
+    const em = analysis.enrichments?.evidenceMatrix;
+    const op = analysis.enrichments?.observepoint;
+    if (em?.stats.confirmed) cards.push({ label: 'Confirmed by 2 scanners', value: String(em.stats.confirmed), detail: 'Evidence matrix (Deep Dive tab).' });
+    else if (op?.tags?.length) cards.push({ label: 'ObservePoint tags', value: String(op.tags.length), detail: `${op.pagesScanned ?? '?'} pages audited (ObservePoint tab).` });
+    else if (analysis.categories?.length) cards.push({ label: 'Categories with pain points', value: String(analysis.categories.length), detail: 'Opportunities tab.' });
+  }
+  if (id === 's07') {
+    const e = analysis.enrichments;
+    if (e?.geo) cards.push({ label: 'GEO score', value: `${e.geo.geoScore}/100`, detail: `${e.geo.aiVisibility}% AI visibility, ${e.geo.shareOfVoicePct}% share of voice (GEO Score tab).` });
+    const s = e?.traffic?.semrush;
+    if (s?.visits) cards.push({ label: 'Monthly visits', value: fmtNum(s.visits), detail: `Semrush${s.displayDate ? `, ${s.displayDate}` : ''}${s.organicTraffic ? `; organic ${fmtNum(s.organicTraffic)}/month` : ''}.` });
+    else if (s?.organicTraffic) cards.push({ label: 'Organic traffic', value: `${fmtNum(s.organicTraffic)}/month`, detail: `Semrush; ${fmtNum(s.organicKeywords ?? 0)} organic keywords.` });
+    else if (e?.traffic?.trancoRank) cards.push({ label: 'Tranco rank', value: `#${e.traffic.trancoRank}`, detail: 'Global popularity rank.' });
+    const lh = e?.lighthouse?.mobile ?? e?.lighthouse?.desktop;
+    if (lh?.scores.seo !== undefined && lh.scores.seo !== null) cards.push({ label: 'Lighthouse SEO', value: `${lh.scores.seo}/100`, detail: `${e?.lighthouse?.mobile ? 'Mobile' : 'Desktop'} audit of the home page.` });
+    if (lh?.scores.performance !== undefined && lh.scores.performance !== null) cards.push({ label: 'Page performance', value: `${lh.scores.performance}/100`, detail: lh.vitals.lcpMs ? `LCP ${(lh.vitals.lcpMs / 1000).toFixed(1)} s.` : 'Lighthouse performance score.' });
+  }
+  const n = cards.length >= 4 ? 4 : cards.length >= 2 ? 2 : 0;
+  return n ? { type: 'feature-grid', cards: cards.slice(0, n) } : null;
+}
+
+/** Setzt die Messwerte-Leiste hinter den Einleitungsabsatz und zitiert den Scan als Quelle. */
+export function withMeasuredBlock(section: BriefingSection, analysis: AnalysisResult, scan: BriefingSource): BriefingSection {
+  if (!MEASURED_SECTIONS.includes(section.id)) return section;
+  const block = measuredBlock(section.id, analysis);
+  if (!block) return section;
+  const at = section.blocks[0]?.type === 'paragraph' ? 1 : 0;
+  const blocks = [...section.blocks.slice(0, at), block, ...section.blocks.slice(at)];
+  const sources = section.sources.some((s) => s.title === scan.title) ? section.sources : [...section.sources, scan];
+  return { ...section, blocks, sources };
+}
+
 /** Faktenblock für einen Abschnitt; leer, wenn die Analyse dafür nichts beiträgt. */
 export function techFactsFor(id: BriefingSectionId, analysis: AnalysisResult): string {
   const parts: string[] = [];
@@ -184,8 +278,20 @@ export function techFactsFor(id: BriefingSectionId, analysis: AnalysisResult): s
     case 's04':
       parts.push(detectionsBlock(analysis), footprintBlock(analysis), observePointBlock(analysis), evidenceBlock(analysis));
       break;
+    case 's05':
+      parts.push(marketingBlock(analysis));
+      break;
+    case 's06':
+      parts.push(socialBlock(analysis));
+      break;
     case 's07':
       parts.push(searchBlock(analysis));
+      break;
+    case 's09':
+      parts.push(competitiveBlock(analysis));
+      break;
+    case 's10':
+      parts.push(marketBlock(analysis));
       break;
     case 's08':
       parts.push(portfolioBlock(analysis));

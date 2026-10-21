@@ -30,6 +30,40 @@ export function useSharedBriefingResult(analysisId: number | undefined): Briefin
 export const ADOBE_OPPORTUNITY_SECTION: BriefingSectionId = 's14';
 export const MERGED_OPPORTUNITY_ANCHOR = 'section-insights-briefing';
 
+export interface MergedSectionTarget {
+  /** Anker des eingebetteten Blocks im Analyzer-Tab. */
+  anchor: string;
+  /** Name des Analyzer-Tabs. */
+  tab: string;
+  heading: string;
+  subtitle: string;
+}
+
+/**
+ * Abschnitte, die der Analyzer selbst misst bzw. zeigt: Sie erscheinen einmal im passenden Tab
+ * (mit denselben Kennzahlen); im Pre-Briefing steht nur ein Verweis.
+ */
+export const MERGED_SECTIONS: Partial<Record<BriefingSectionId, MergedSectionTarget>> = {
+  s04: {
+    anchor: 'section-stack-briefing',
+    tab: 'Tech Stack',
+    heading: 'Digital strategy from the Client Pre-Briefing',
+    subtitle: 'Researched from public sources; the technology numbers are the measured ones from this tab.',
+  },
+  s07: {
+    anchor: 'section-geo-briefing',
+    tab: 'GEO Score',
+    heading: 'Search strategy from the Client Pre-Briefing',
+    subtitle: 'Researched from public sources; all metrics come from the GEO Score, Semrush and Lighthouse measurements.',
+  },
+  s14: {
+    anchor: MERGED_OPPORTUNITY_ANCHOR,
+    tab: 'Opportunities',
+    heading: 'Adobe plays from the Client Pre-Briefing',
+    subtitle: 'Researched from public sources and combined with the tech-stack opportunities above.',
+  },
+};
+
 export const BRIEFING_SUMMARY_ANCHOR = 'briefing-summary';
 export const BRIEFING_SUBNAV_LABEL = 'Pre-Briefing sections';
 

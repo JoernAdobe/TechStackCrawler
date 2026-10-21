@@ -2,7 +2,7 @@ import { AlertTriangle, ArrowDown } from 'lucide-react';
 import type { BriefingResult, BriefingSection, BriefingSectionStatus } from '../../types/briefing';
 import BriefingBlocks from './BriefingBlocks';
 import { SourceList } from './BriefingSources';
-import { ADOBE_OPPORTUNITY_SECTION, MERGED_OPPORTUNITY_ANCHOR, stickyChromeBottom } from './briefingStore';
+import { MERGED_SECTIONS, stickyChromeBottom } from './briefingStore';
 import { prefersReducedMotion, sectionAnchor, sectionMeta } from './meta';
 import SectionIcon from './SectionIcon';
 
@@ -75,10 +75,11 @@ function hasMergedContent(section: BriefingSection): boolean {
   return section.status !== 'skipped' && (section.blocks.length > 0 || section.gaps.length > 0);
 }
 
-/** Verweis statt Duplikat: Adobe Opportunity steht in der Sektion „Opportunities“. */
-function MergedOpportunityPointer({ section }: { section: BriefingSection }) {
+/** Verweis statt Duplikat: der Abschnitt steht einmal im passenden Analyzer-Tab. */
+function MergedSectionPointer({ section }: { section: BriefingSection }) {
+  const target = MERGED_SECTIONS[section.id]!;
   const jump = () => {
-    const el = document.getElementById(MERGED_OPPORTUNITY_ANCHOR);
+    const el = document.getElementById(target.anchor);
     if (!el) return;
     window.scrollTo({
       top: el.getBoundingClientRect().top + window.scrollY - stickyChromeBottom() - 16,
@@ -95,8 +96,8 @@ function MergedOpportunityPointer({ section }: { section: BriefingSection }) {
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-adobe-red">{section.eyebrow}</p>
         <p className="mt-1 text-sm text-ts-text-secondary">
-          <span className="font-semibold text-ts-text-primary">{section.title}</span> is shown once, together with the
-          tech-stack opportunities, so nothing is counted twice.
+          <span className="font-semibold text-ts-text-primary">{section.title}</span> is shown once, in the {target.tab}{' '}
+          tab, on the same data as the analyzer – so nothing appears twice.
         </p>
       </div>
       <button
@@ -104,7 +105,7 @@ function MergedOpportunityPointer({ section }: { section: BriefingSection }) {
         onClick={jump}
         className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-ts-border px-3 py-1.5 text-sm font-medium text-ts-text-primary hover:border-ts-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-adobe-red"
       >
-        Go to Opportunities <ArrowDown className="h-4 w-4" aria-hidden="true" />
+        Go to {target.tab} <ArrowDown className="h-4 w-4" aria-hidden="true" />
       </button>
     </section>
   );
@@ -115,8 +116,8 @@ export default function BriefingReport({ result, highlightId }: BriefingReportPr
   return (
     <div className="space-y-4">
       {result.sections.map((s) =>
-        s.id === ADOBE_OPPORTUNITY_SECTION && hasMergedContent(s)
-          ? <MergedOpportunityPointer key={s.id} section={s} />
+        MERGED_SECTIONS[s.id] && hasMergedContent(s)
+          ? <MergedSectionPointer key={s.id} section={s} />
           : <ReportSection key={s.id} section={s} highlighted={highlightId === sectionAnchor(s.id)} />,
       )}
     </div>
