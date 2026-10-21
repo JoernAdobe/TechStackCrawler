@@ -34,7 +34,20 @@ function blockText(b: BriefingBlock): string {
  * wird ausgelassen, weil er selbst aus den Use Cases gespeist wird.
  */
 export function briefingInsightsBlock(briefing: BriefingResult | null | undefined): string {
-  if (!briefing) return '';
+  const out = briefingInsightLines(briefing);
+  return out.length
+    ? `
+## Client Pre-Briefing Insights (company research: strategy, financials, markets, stakeholders)
+${out.join('\n')}
+
+Use these business insights: tie use cases to the company's stated strategy, priorities, markets and risks, and reflect the top Adobe plays where they fit. Reference concrete facts from the briefing in descriptions and business value.
+`
+    : '';
+}
+
+/** Markdown-Bullets der Pre-Briefing-Erkenntnisse (ohne Überschrift/Anweisung). */
+export function briefingInsightLines(briefing: BriefingResult | null | undefined): string[] {
+  if (!briefing) return [];
   const ex = briefing.executive;
   const out: string[] = [];
   if (ex) {
@@ -50,14 +63,7 @@ export function briefingInsightsBlock(briefing: BriefingResult | null | undefine
     const text = clip(s.blocks.map(blockText).filter(Boolean).join(' '), 700);
     if (text) out.push(`- **${s.title}:** ${text}`);
   }
-  return out.length
-    ? `
-## Client Pre-Briefing Insights (company research: strategy, financials, markets, stakeholders)
-${out.join('\n')}
-
-Use these business insights: tie use cases to the company's stated strategy, priorities, markets and risks, and reflect the top Adobe plays where they fit. Reference concrete facts from the briefing in descriptions and business value.
-`
-    : '';
+  return out;
 }
 
 /** Lesbare Liste der Datenquellen, die in den Prompt einfließen (für die UI). */

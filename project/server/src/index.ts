@@ -45,6 +45,7 @@ import { createBatchRoutes } from './routes/batches.js';
 import { createBriefingRoutes } from './routes/briefing.js';
 import { createDeckRoutes } from './routes/deck.js';
 import { createFeedbackRoutes } from './routes/feedback.js';
+import { createIntegrationRoutes } from './routes/integration.js';
 import { startBatchWorker } from './services/batchRunner.js';
 import { startBriefingWorker } from './services/briefing/queue.js';
 
@@ -232,6 +233,7 @@ app.use(createBatchRoutes({ limiter: batchCreateLimiter }));
 app.use(createBriefingRoutes({ startLimiter: briefingStartLimiter, readLimiter: briefingReadLimiter }));
 app.use(createDeckRoutes({ limiter: lightLimiter }));
 app.use(createFeedbackRoutes({ limiter: lightLimiter }));
+app.use(createIntegrationRoutes({ limiter: lightLimiter }));
 
 // MCP endpoint (bearer-token protected)
 app.use('/mcp', mcpAuthLimiter, asyncHandler(requireMcpAuth), createMcpRoutes());
