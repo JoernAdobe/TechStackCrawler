@@ -16,7 +16,7 @@ help:
 	@echo "  make build      - Projekt bauen (Client + Server)"
 	@echo "  make docker-up   - Mit Docker starten"
 	@echo "  make docker-down - Docker-Container stoppen"
-	@echo "  make deploy     - Auf Server deployen (Docker)"
+	@echo "  make deploy     - Auf Server deployen (Docker) – danach IMMER auch: make ethos-image && make ethos-deploy"
 	@echo "  make deploy-hub - Hub-Seite deployen (Adobe AI Tools)"
 	@echo "  make server-prune - Dangling Docker-Images auf dem Server entfernen (läuft auch nach deploy)"
 	@echo "  make ethos-image | ethos-secrets | ethos-deploy | ethos-status - Ethos (Coworker-Gateway), siehe docs/ethos-deployment.md"
