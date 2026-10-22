@@ -10,6 +10,13 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./index.html:/srv/index.html:ro
       - ./adobe-hero.png:/srv/adobe-hero.png:ro
+      - ./hero-bg.webp:/srv/hero-bg.webp:ro
+      - ./hero-bg.jpg:/srv/hero-bg.jpg:ro
+      - ./adobe-a.png:/srv/adobe-a.png:ro
+      - ./shot-techstack.webp:/srv/shot-techstack.webp:ro
+      - ./shot-rfp.webp:/srv/shot-rfp.webp:ro
+      - ./shot-battlemind.webp:/srv/shot-battlemind.webp:ro
+      - ./shot-digest.webp:/srv/shot-digest.webp:ro
       - ./banner-inject.js:/srv/banner-inject.js:ro
       - ./banner.html:/srv/banner.html:ro
       - /opt/ssl/saleshub.crt:/etc/ssl/saleshub.crt:ro
