@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertCircle, ChevronDown, Download, ExternalLink, FileDown, FileSearch, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { BRIEFING_CREDIT, type BriefingSectionId } from '../../types/briefing';
-import { briefingPdfUrl, briefingReportUrl, useBriefing } from '../../hooks/useBriefing';
+import { briefingPdfUrl, briefingReportUrl, isBriefingActive, useBriefing } from '../../hooks/useBriefing';
 import { BriefingSectionPicker } from './BriefingSectionPicker';
 import BriefingProgress from './BriefingProgress';
 import ExecutiveSummary from './ExecutiveSummary';
@@ -9,7 +9,7 @@ import BriefingReport from './BriefingReport';
 import ReviewSourcesNote from './ReviewSourcesNote';
 import { loadBriefingSections } from './prefs';
 import { normalizeSections, prefersReducedMotion, sectionAnchor } from './meta';
-import { BRIEFING_SUBNAV_LABEL, BRIEFING_SUMMARY_ANCHOR, publishBriefingResult } from './briefingStore';
+import { BRIEFING_SUBNAV_LABEL, BRIEFING_SUMMARY_ANCHOR, publishBriefingPending, publishBriefingResult } from './briefingStore';
 import BriefingSubNav from './BriefingSubNav';
 
 interface BriefingPanelProps {
@@ -62,8 +62,15 @@ export default function BriefingPanel({ analysisId, autoStartSections, onAutoSta
     publishBriefingResult(analysisId, job?.status === 'done' ? result : null);
   }, [analysisId, job?.status, result]);
 
+  const pending = loading || isBriefingActive(job);
+  useEffect(() => {
+    if (analysisId != null) publishBriefingPending(analysisId, pending);
+  }, [analysisId, pending]);
+
   useEffect(() => () => {
-    if (analysisId != null) publishBriefingResult(analysisId, null);
+    if (analysisId == null) return;
+    publishBriefingResult(analysisId, null);
+    publishBriefingPending(analysisId, null);
   }, [analysisId]);
 
   const scrollToEl = useCallback((el: HTMLElement) => {

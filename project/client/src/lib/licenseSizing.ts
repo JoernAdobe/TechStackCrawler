@@ -317,3 +317,24 @@ function round1(v: number): number {
 function roundTo(v: number, step: number): number {
   return Math.round(v / step) * step;
 }
+
+export function storageKey(analysis: AnalysisResult): string {
+  return `ts_license_sizing_${analysis.id ?? analysis.url}`;
+}
+
+/** Im Panel geänderte Annahmen (localStorage), damit Exporte dieselben Zahlen zeigen. */
+export function loadOverrides(key: string): Partial<SizingAssumptions> {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Partial<SizingAssumptions>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Sizing so, wie es das Panel aktuell zeigt (Defaults + gespeicherte Overrides). */
+export function currentLicenseEstimates(analysis: AnalysisResult): { estimates: SizingEstimate[]; edited: boolean } {
+  const overrides = loadOverrides(storageKey(analysis));
+  const assumptions = { ...defaultAssumptions(sizingBasis(analysis)), ...overrides };
+  return { estimates: estimateLicenses(analysis, assumptions), edited: Object.keys(overrides).length > 0 };
+}

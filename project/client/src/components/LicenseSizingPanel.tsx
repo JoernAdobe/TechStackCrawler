@@ -6,8 +6,10 @@ import {
   compact,
   defaultAssumptions,
   estimateLicenses,
+  loadOverrides,
   pageViewsPerMonth,
   sizingBasis,
+  storageKey,
   type Confidence,
   type SizingAssumptions,
   type SizingEstimate,
@@ -24,18 +26,6 @@ const CONFIDENCE_STYLE: Record<Confidence, { label: string; className: string }>
   low: { label: 'Rough estimate', className: 'bg-ts-surface text-ts-text-secondary border-ts-border' },
 };
 
-function storageKey(analysis: AnalysisResult): string {
-  return `ts_license_sizing_${analysis.id ?? analysis.url}`;
-}
-
-function loadOverrides(key: string): Partial<SizingAssumptions> {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as Partial<SizingAssumptions>) : {};
-  } catch {
-    return {};
-  }
-}
 
 function AssumptionInput({
   name,

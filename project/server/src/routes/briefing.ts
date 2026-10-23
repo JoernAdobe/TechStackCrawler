@@ -15,7 +15,7 @@ import {
 } from '../services/briefing/queue.js';
 import { htmlToPdf, PdfUnavailableError } from '../services/briefing/pdf.js';
 import { renderBriefingHtml } from '../services/briefing/render.js';
-import { analysisHost, buildAnalysisReportHtml } from '../services/analysisReport.js';
+import { analysisHost, buildAnalysisReportHtml, type LicenseSizingRow } from '../services/analysisReport.js';
 import { getAnalysisById } from '../db/analyses.js';
 import { getLatestDoneBriefingResult } from '../db/briefingJobs.js';
 import type { BriefingJob, BriefingStateResponse } from '../types/briefing.js';
@@ -32,6 +32,24 @@ import {
 const SESSION_COOKIE = 'ts_session';
 
 const analysisIdSchema = z.object({ id: z.coerce.number().int().positive() });
+
+const str = (max: number) => z.string().max(max);
+const num = z.number().finite().min(0).max(1e15);
+const sizingRowsSchema = z.array(z.object({
+  product: str(120), metric: str(200), unit: str(80), low: num, mid: num, high: num,
+  licenseUnit: str(200), licenseUnits: num.optional(), confidence: str(20), detected: z.array(str(120)).max(10).optional(),
+})).max(20);
+
+/** License-Sizing-Zeilen aus ?sizing= (vom Client berechnet); ungültige Eingaben werden ignoriert. */
+function parseSizing(raw: unknown): LicenseSizingRow[] {
+  if (typeof raw !== 'string' || !raw || raw.length > 20_000) return [];
+  try {
+    const parsed = sizingRowsSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : [];
+  } catch {
+    return [];
+  }
+}
 const jobIdSchema = z.object({ jobId: z.coerce.number().int().positive() });
 /** Bekannte IDs prüft normalizeBriefingSections (→ 400 mit Liste der erlaubten IDs). */
 const startSchema = z.object({
@@ -189,7 +207,7 @@ export function createBriefingRoutes(opts: { startLimiter?: RequestHandler; read
     }),
   );
 
-  // Komplettreport der Analyse (Pre-Briefing, falls vorhanden, + Tech Stack, Opportunities, Use Cases).
+  // Komplettreport der Analyse (Pre-Briefing, falls vorhanden, + alle Tabs; ?sizing= = License Sizing aus dem Client).
   router.get(
     '/api/analyses/:id(\\d+)/report.pdf',
     ...read,
@@ -200,7 +218,8 @@ export function createBriefingRoutes(opts: { startLimiter?: RequestHandler; read
       const analysis = await getAnalysisById(pool, id);
       if (!analysis) throw new NotFoundError('Analysis not found');
       const briefing = await getLatestDoneBriefingResult(pool, id);
-      const pdf = await renderPdf(buildAnalysisReportHtml(analysis, briefing ? renderBriefingHtml(briefing) : null));
+      const sizing = parseSizing(req.query.sizing);
+      const pdf = await renderPdf(buildAnalysisReportHtml(analysis, briefing ? renderBriefingHtml(briefing) : null, sizing));
       const host = analysisHost(analysis).toLowerCase().replace(/[^a-z0-9.-]+/g, '-').slice(0, 60) || `analysis-${id}`;
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('X-Content-Type-Options', 'nosniff');

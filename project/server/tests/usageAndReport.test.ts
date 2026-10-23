@@ -78,3 +78,14 @@ test('buildAnalysisReportHtml appends to a briefing before the footer or stands 
   assert.ok(alone.startsWith('<!DOCTYPE html>'));
   assert.ok(alone.includes('example.com'));
 });
+
+test('renderAnalysisSections includes deep-dive, GEO and client license sizing', () => {
+  const html = renderAnalysisSections(
+    { ...analysis, enrichments: { geo: { brand: 'B', domain: 'x', country: 'DE', industry: 'I', fetchedAt: '', model: 'm', geoScore: 42, aiVisibility: 10, components: { mentionFrequency: 1, prominence: 1, queryCoverage: 1, sentiment: 1, competitorGap: 1 }, shareOfVoicePct: 5, marketPosition: 'Competitive', funnel: [], competitors: [], queries: [], recommendations: ['<do>'], methodologyNote: '' } } },
+    [{ product: 'Adobe Analytics', metric: 'Server calls', unit: 'per year', low: 1000, mid: 2_000_000, high: 3e9, licenseUnit: 'per 1M', confidence: 'medium' }],
+  );
+  assert.match(html, /GEO score 42\/100/);
+  assert.match(html, /&lt;do&gt;/);
+  assert.match(html, /Adobe Analytics/);
+  assert.match(html, /2\.0M/);
+});

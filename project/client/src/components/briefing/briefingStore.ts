@@ -26,6 +26,31 @@ export function useSharedBriefingResult(analysisId: number | undefined): Briefin
   return snapshot && snapshot.analysisId === analysisId ? snapshot.result : null;
 }
 
+/** Läuft bzw. lädt das Pre-Briefing der Analyse noch? (für die Export-Leiste) */
+let pending: { analysisId: number; pending: boolean } | null = null;
+const pendingListeners = new Set<() => void>();
+
+export function publishBriefingPending(analysisId: number, value: boolean | null): void {
+  if (value === null) {
+    if (pending?.analysisId !== analysisId) return;
+    pending = null;
+  } else {
+    if (pending?.analysisId === analysisId && pending.pending === value) return;
+    pending = { analysisId, pending: value };
+  }
+  pendingListeners.forEach((l) => l());
+}
+
+function subscribePending(listener: () => void): () => void {
+  pendingListeners.add(listener);
+  return () => pendingListeners.delete(listener);
+}
+
+export function useBriefingPending(analysisId: number | undefined): boolean {
+  const snapshot = useSyncExternalStore(subscribePending, () => pending, () => null);
+  return analysisId != null && snapshot?.analysisId === analysisId && snapshot.pending;
+}
+
 /** Adobe-Opportunity-Abschnitt: im UI nur einmal, in der Sektion „Opportunities“. */
 export const ADOBE_OPPORTUNITY_SECTION: BriefingSectionId = 's14';
 export const MERGED_OPPORTUNITY_ANCHOR = 'section-insights-briefing';

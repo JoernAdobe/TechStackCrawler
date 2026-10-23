@@ -22,7 +22,7 @@ import BriefingPanel from './components/briefing/BriefingPanel';
 import { TooltipProvider } from './components/ui/tooltip';
 import { useAnalysis, type AnalysisErrorInfo } from './hooks/useAnalysis';
 import AnalysisError from './components/AnalysisError';
-import { useUseCaseDiscovery } from './hooks/useUseCaseDiscovery';
+import { includesBriefing, useUseCaseDiscovery } from './hooks/useUseCaseDiscovery';
 import { useStaticAudio } from './hooks/useStaticAudio';
 import { Search, BookOpen, Layers } from 'lucide-react';
 import { apiRequest, isAbortError } from './lib/apiClient';
@@ -407,7 +407,12 @@ function Analyzer() {
             <ParityExtras analysis={results} />
           </ErrorBoundary>
           <ErrorBoundary label="Download" resetKey={results}>
-            <DownloadButton results={results} onReset={handleReset} />
+            <DownloadButton
+              results={results}
+              onReset={handleReset}
+              useCases={useCaseResult}
+              useCasesPending={useCaseLoading || useCaseAutoRunning || (useCaseBriefingPending && !includesBriefing(useCaseResult))}
+            />
           </ErrorBoundary>
           <div className="h-20" />
         </AnimatedView>

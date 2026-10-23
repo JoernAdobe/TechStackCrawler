@@ -11,7 +11,7 @@ import TechCaseInsights from '../TechCaseInsights';
 import ResultsSectionNav from '../ResultsSectionNav';
 import BriefingPanel from '../briefing/BriefingPanel';
 import ErrorBoundary from '../ErrorBoundary';
-import { useUseCaseDiscovery } from '../../hooks/useUseCaseDiscovery';
+import { includesBriefing, useUseCaseDiscovery } from '../../hooks/useUseCaseDiscovery';
 import { STALE_AFTER_DAYS, accountKeyForUrl, ageInDays, formatDate, relativeAge } from '../../lib/library';
 import { BriefingScoreBadge, Favicon } from './AccountBits';
 import ReanalyzePanel from './ReanalyzePanel';
@@ -149,7 +149,13 @@ export default function LibraryDetail({
       <ErrorBoundary label="Deep dive" resetKey={analysis}>
         <ParityExtras analysis={analysis} />
       </ErrorBoundary>
-      <DownloadButton results={analysis} onReset={onBack} resetLabel="Back to library" />
+      <DownloadButton
+        results={analysis}
+        onReset={onBack}
+        resetLabel="Back to library"
+        useCases={useCaseResult}
+        useCasesPending={useCaseLoading || useCaseAutoRunning || (useCaseBriefingPending && !includesBriefing(useCaseResult))}
+      />
       <div className="h-20" />
     </div>
   );
