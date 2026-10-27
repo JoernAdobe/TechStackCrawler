@@ -80,12 +80,17 @@ const sectionsSchema = z
   .describe('Section IDs s01–s14 (default: all). s14 "Adobe Opportunity" is always included.');
 
 export function registerBriefingTools(server: McpServer): void {
-  server.tool(
+  server.registerTool(
     'start-client-briefing',
-    `Start a Client Pre-Briefing (${BRIEFING_CREDIT}) for a saved analysis: researched, source-backed account briefing ` +
-      `(up to 14 sections) plus an Overall Pre-Briefing Score (0–100). ${ASYNC_HINT} ` +
-      'If a briefing for the analysis is already queued/running, that job is returned.',
-    { analysisId: z.number().int().positive().describe('The analysis ID'), sections: sectionsSchema },
+    {
+      title: 'Start Client Pre-Briefing',
+      description:
+        `Start a Client Pre-Briefing (${BRIEFING_CREDIT}) for a saved analysis: researched, source-backed account briefing ` +
+        `(up to 14 sections) plus an Overall Pre-Briefing Score (0–100). ${ASYNC_HINT} ` +
+        'If a briefing for the analysis is already queued/running, that job is returned.',
+      inputSchema: { analysisId: z.number().int().positive().describe('Numeric id of the saved analysis'), sections: sectionsSchema },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    },
     async ({ analysisId, sections }) => {
       const db = getPool();
       if (!db) return fail('Database not available');
@@ -104,15 +109,21 @@ export function registerBriefingTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-client-briefing',
-    `Get status, Overall Pre-Briefing Score, band, confidence, verdict, C-level bullets, sub-scores, top Adobe plays and ` +
-      `the report URL of a Client Pre-Briefing (${BRIEFING_CREDIT}). Pass jobId or analysisId (latest job). ` +
-      'Briefings take ~5–10 minutes – poll until job.status is "done". Full sections only with includeSections.',
     {
-      analysisId: z.number().int().positive().optional().describe('Latest briefing of this analysis'),
-      jobId: z.number().int().positive().optional().describe('A specific briefing job'),
-      includeSections: z.boolean().default(false).describe('Include the full report sections (large)'),
+      title: 'Get Client Pre-Briefing',
+      description:
+        `Get status, Overall Pre-Briefing Score, band, confidence, verdict, C-level bullets, sub-scores, top Adobe plays and ` +
+        `the report URL of a Client Pre-Briefing (${BRIEFING_CREDIT}). Pass jobId or analysisId (latest job). ` +
+        'Briefings take ~5–10 minutes – poll until job.status is "done". Full sections only with includeSections. ' +
+        'Read-only; use start-client-briefing instead to begin a new briefing.',
+      inputSchema: {
+        analysisId: z.number().int().positive().optional().describe('Numeric id of a saved analysis – returns its latest briefing'),
+        jobId: z.number().int().positive().optional().describe('Numeric id of a specific briefing job'),
+        includeSections: z.boolean().default(false).describe('Include the full report sections (large)'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async ({ analysisId, jobId, includeSections }) => {
       if (!jobId && !analysisId) return fail('Provide jobId or analysisId');

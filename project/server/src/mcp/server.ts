@@ -80,16 +80,26 @@ const pruneTimer = setInterval(pruneSessions, SESSION_PRUNE_INTERVAL_MS);
 // Der Timer darf den Prozess nicht am Beenden hindern.
 pruneTimer.unref?.();
 
-function createMcpServer(): McpServer {
+export function createMcpServer(): McpServer {
   const server = new McpServer(
     { name: 'techstack-analyzer', version: '1.0.0' },
     { capabilities: { logging: {} } },
   );
 
-  server.tool(
+  server.registerTool(
     'analyze-url',
-    'Analyze a website\'s technology stack using Scrapling browser scraping and Claude AI. Returns detected technologies, Adobe opportunities, and a summary.',
-    { url: z.string().describe('The URL of the website to analyze') },
+    {
+      title: 'Analyze website tech stack',
+      description:
+        'Run a new live tech stack analysis of one public website: renders the page in a headless browser, detects ' +
+        'technologies (analytics, CMS, CDP, tag management, personalization, commerce, …) and lets Claude map Adobe ' +
+        'opportunities and a summary. Takes ~30–90 s and saves the result as a new analysis (returns its id). ' +
+        'For an analysis that already exists use get-analysis instead; for 2–30 URLs of one account use create-assessment.',
+      inputSchema: {
+        url: z.string().describe('Public website URL or domain to analyze, e.g. "https://www.example.com" or "example.com"'),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    },
     async ({ url }) => {
       const input = validateUrlInput(url);
       if (!input.ok) {
@@ -134,10 +144,17 @@ function createMcpServer(): McpServer {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list-analyses',
-    'List previously saved technology stack analyses from the database.',
-    { limit: z.number().min(1).max(100).default(20).describe('Maximum number of results (1-100)') },
+    {
+      title: 'List saved analyses',
+      description:
+        'List previously saved single-URL tech stack analyses, newest first, with id, URL and analysis date. ' +
+        'Read-only; only lists. Use get-analysis instead for the full result of one analysis, ' +
+        'and list-assessments for account/bulk assessments.',
+      inputSchema: { limit: z.number().int().min(1).max(100).default(20).describe('Maximum number of results (1-100, default 20)') },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
     async ({ limit }) => {
       const pool = getPool();
       if (!pool) {
@@ -157,10 +174,17 @@ function createMcpServer(): McpServer {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'get-analysis',
-    'Get the full details of a specific technology stack analysis by its ID.',
-    { id: z.number().int().positive().describe('The analysis ID') },
+    {
+      title: 'Get saved analysis',
+      description:
+        'Get the full stored result of one saved tech stack analysis by its numeric id: detected technologies, ' +
+        'categories, Adobe opportunities, summary and stored enrichments. Read-only; does not re-crawl the website ' +
+        '(use analyze-url instead for a fresh scan).',
+      inputSchema: { id: z.number().int().positive().describe('Numeric id of the saved analysis (from analyze-url or list-analyses)') },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
     async ({ id }) => {
       const pool = getPool();
       if (!pool) {
@@ -178,10 +202,18 @@ function createMcpServer(): McpServer {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'use-case-discovery',
-    'Generate Adobe use case recommendations based on an existing analysis. Requires a valid analysis ID from the database.',
-    { analysisId: z.number().int().positive().describe('The analysis ID to generate use cases for') },
+    {
+      title: 'Discover Adobe use cases',
+      description:
+        'Generate prioritized Adobe use case recommendations (AEP/RTCDP, AJO, CJA, Target, AEM, …) for a saved analysis, ' +
+        'based on its detected stack, the site map and, if available, the latest Client Pre-Briefing. Calls Claude and stores the ' +
+        'result on the analysis, replacing an earlier use case discovery. Requires an existing analysis id; ' +
+        'run analyze-url first if there is none.',
+      inputSchema: { analysisId: z.number().int().positive().describe('Numeric id of the saved analysis to generate use cases for') },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    },
     async ({ analysisId }) => {
       const pool = getPool();
       if (!pool) {

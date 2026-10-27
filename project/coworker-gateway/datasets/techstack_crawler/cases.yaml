@@ -1,0 +1,78 @@
+# TechStack Crawler MCP server tool-selection golden set.
+#
+# Scope: https://cx-coworker-gateway-stage.adobe.io/mcp/server/techstack_crawler?manifest_id=techstack_crawler
+# Source: JoernAdobe/TechStackCrawler (project/server/src/mcp/). The gateway card exposes
+# only the four include_tools below; every one has at least two positive cases.
+# analyze-url crawls the open web and use-case-discovery calls Claude and stores its
+# result, so run selection-only (--target claude or --target copilot), not --target ao.
+# Analysis ids are synthetic; selection scoring does not depend on them existing.
+#
+cases:
+  # --- analyze-url --------------------------------------------------------
+  - id: sel-analyze-url-full-url
+    prompt: "Analyze the technology stack of https://www.zalando.de and tell me which Adobe products would fit."
+    expected_tool: analyze-url
+    expected_args:
+      url: ["https://www.zalando.de", "https://www.zalando.de/", "www.zalando.de", "zalando.de"]
+
+  - id: sel-analyze-url-bare-domain
+    prompt: "Which analytics, tag management and CMS tools does lufthansa.com use? Please crawl the site."
+    expected_tool: analyze-url
+    expected_args:
+      url: ["lufthansa.com", "www.lufthansa.com", "https://lufthansa.com", "https://www.lufthansa.com", "https://lufthansa.com/", "https://www.lufthansa.com/"]
+
+  - id: sel-analyze-url-competitor-check
+    prompt: "Check whether https://www.otto.de runs Salesforce Marketing Cloud or Adobe Target today."
+    expected_tool: analyze-url
+    expected_args:
+      url: ["https://www.otto.de", "https://www.otto.de/", "www.otto.de", "otto.de"]
+
+  # --- list-analyses ------------------------------------------------------
+  - id: sel-list-analyses-recent
+    prompt: "Show me the last 10 tech stack analyses that were run."
+    expected_tool: list-analyses
+    expected_args:
+      limit: 10
+
+  - id: sel-list-analyses-overview
+    prompt: "Which websites have we already scanned with the TechStack Crawler?"
+    expected_tool: list-analyses
+
+  # --- get-analysis -------------------------------------------------------
+  - id: sel-get-analysis-by-id
+    prompt: "Open the saved tech stack analysis with ID 412 and summarize the detected technologies."
+    expected_tool: get-analysis
+    expected_args:
+      id: 412
+
+  - id: dis-get-analysis-no-recrawl
+    prompt: "Don't crawl again – just pull up the stored results of analysis 87 and list the Adobe opportunities."
+    expected_tool: get-analysis
+    expected_args:
+      id: 87
+
+  # --- use-case-discovery -------------------------------------------------
+  - id: sel-use-case-discovery-by-id
+    prompt: "Generate Adobe use case recommendations for analysis 412."
+    expected_tool: use-case-discovery
+    expected_args:
+      analysisId: 412
+
+  - id: dis-use-case-discovery-prioritized
+    prompt: "Based on the tech stack we found in analysis 233, which AEP, AJO and CJA use cases should we pitch first?"
+    expected_tool: use-case-discovery
+    expected_args:
+      analysisId: 233
+
+  # --- negatives ----------------------------------------------------------
+  - id: neg-general-adobe-question
+    prompt: "What is the difference between Adobe Real-Time CDP and Customer Journey Analytics?"
+    expected_tool: null
+
+  - id: neg-delete-analysis
+    prompt: "Delete analysis 412 from the TechStack Crawler database."
+    expected_tool: null
+
+  - id: neg-chit-chat
+    prompt: "Thanks, that's all for today!"
+    expected_tool: null

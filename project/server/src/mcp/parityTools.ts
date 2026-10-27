@@ -53,14 +53,23 @@ async function withAnalysis(id: number, fn: (db: DbHandle, a: AnalysisResult) =>
   });
 }
 
-const analysisId = z.number().int().positive().describe('The analysis ID');
+const analysisId = z.number().int().positive().describe('Numeric id of the saved analysis');
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
+/** MCP-Tool-Annotations: nur lesend (DB) bzw. schreibend mit/ohne Zugriff auf externe Dienste. */
+const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
+const ENRICH_EXTERNAL = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
+
 export function registerParityTools(server: McpServer): void {
-  server.tool(
+  server.registerTool(
     'get-assessment-types',
-    'List the assessment types this server supports (EAA "get_eaa_types_supported").',
-    {},
+    {
+      title: 'List assessment types',
+      description:
+        'List the assessment types, enrichments and building blocks this server supports, with the tool to use for each ' +
+        '(EAA "get_eaa_types_supported"). Read-only; call it to decide which tool fits a request.',
+      annotations: READ_ONLY,
+    },
     async () =>
       json({
         types: [
@@ -76,23 +85,36 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'create-assessment',
-    'Create an account assessment (≤30 URLs) or bulk assessment (≤1000 URLs). Runs asynchronously – poll with get-assessment. ' +
-      `Optional briefing: Client Pre-Briefing (${BRIEFING_CREDIT}) for the first ${MAX_BRIEFING_ITEMS} successful URLs ` +
-      '(forces a full AI analysis for those; ~5–10 min and ~$1–3 per account after the scan; poll get-client-briefing).',
     {
-      kind: z.enum(['account', 'bulk']).default('account'),
-      title: z.string().min(1).max(255).regex(/^[\p{L}\p{N}_]/u, 'Title must start with a letter, digit or underscore'),
-      urls: z.array(z.object({ url: z.string().max(2048), label: z.string().max(255).optional() })).min(1).max(MAX_BULK_URLS),
-      lens: z.enum(['Brand', 'Geo', 'Journey Stage', 'Competitors', 'Other']).optional(),
-      accountName: z.string().max(255).optional(),
-      industry: z.string().max(255).optional(),
-      opportunityId: z.string().max(64).optional(),
-      aiAnalysis: z.boolean().optional().describe('Full Claude analysis per URL (default: true for account, false for bulk)'),
-      briefing: z.boolean().optional().describe(`Client Pre-Briefing for the first ${MAX_BRIEFING_ITEMS} successful URLs`),
-      briefingSections: z.array(z.enum(BRIEFING_SECTION_IDS)).max(BRIEFING_SECTION_IDS.length).optional()
-        .describe('Briefing sections s01–s14 (default: all)'),
+      title: 'Create account or bulk assessment',
+      description:
+        `Create an account assessment (2–${MAX_ACCOUNT_URLS} URLs of one company) or a bulk assessment (≤${MAX_BULK_URLS} URLs). ` +
+        'Crawls every URL asynchronously and returns the assessment id at once – poll with get-assessment. ' +
+        `Optional briefing: Client Pre-Briefing (${BRIEFING_CREDIT}) for the first ${MAX_BRIEFING_ITEMS} successful URLs ` +
+        '(forces a full AI analysis for those; ~5–10 min and ~$1–3 per account after the scan; poll get-client-briefing). ' +
+        'For a single URL use analyze-url instead.',
+      inputSchema: {
+        kind: z.enum(['account', 'bulk']).default('account')
+          .describe(`"account" for up to ${MAX_ACCOUNT_URLS} URLs of one company with solution mapping, "bulk" for larger URL lists (default: account)`),
+        title: z.string().min(1).max(255).regex(/^[\p{L}\p{N}_]/u, 'Title must start with a letter, digit or underscore')
+          .describe('Display title of the assessment, e.g. "ACME Group – brand sites"; must start with a letter, digit or underscore'),
+        urls: z.array(z.object({
+          url: z.string().max(2048).describe('Website URL or domain to crawl'),
+          label: z.string().max(255).optional().describe('Optional label for this URL, e.g. brand, country or journey stage'),
+        })).min(1).max(MAX_BULK_URLS).describe('URLs to assess, each with an optional label'),
+        lens: z.enum(['Brand', 'Geo', 'Journey Stage', 'Competitors', 'Other']).optional()
+          .describe('How the URLs relate to each other; drives how labels are read in the solution mapping'),
+        accountName: z.string().max(255).optional().describe('Customer account name, e.g. "ACME Group"'),
+        industry: z.string().max(255).optional().describe('Industry of the account, e.g. "Retail" or "Financial Services"'),
+        opportunityId: z.string().max(64).optional().describe('Optional CRM opportunity id to link the assessment to'),
+        aiAnalysis: z.boolean().optional().describe('Full Claude analysis per URL (default: true for account, false for bulk)'),
+        briefing: z.boolean().optional().describe(`Client Pre-Briefing for the first ${MAX_BRIEFING_ITEMS} successful URLs`),
+        briefingSections: z.array(z.enum(BRIEFING_SECTION_IDS)).max(BRIEFING_SECTION_IDS.length).optional()
+          .describe('Briefing sections s01–s14 (default: all)'),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
     async (args) =>
       withDb(async (db) => {
@@ -129,10 +151,20 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'get-assessment',
-    'Get status, items, solution mapping matrix and key findings of an account/bulk assessment.',
-    { id: z.number().int().positive(), includeItems: z.boolean().default(false) },
+    {
+      title: 'Get assessment',
+      description:
+        'Get status, progress, solution mapping matrix and key findings of one account/bulk assessment by id; ' +
+        'poll it after create-assessment until status is "completed". Read-only. ' +
+        'For a single-URL analysis use get-analysis instead.',
+      inputSchema: {
+        id: z.number().int().positive().describe('Numeric id of the assessment (from create-assessment or list-assessments)'),
+        includeItems: z.boolean().default(false).describe('Also return every crawled URL item with its result (large; default false)'),
+      },
+      annotations: READ_ONLY,
+    },
     async ({ id, includeItems }) =>
       withDb(async (db) => {
         const batch = await getBatch(db, id);
@@ -142,17 +174,31 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'list-assessments',
-    'List recent account/bulk assessments.',
-    { limit: z.number().int().min(1).max(200).default(20) },
+    {
+      title: 'List assessments',
+      description:
+        'List recent account and bulk assessments, newest first, with id, title, kind and status. Read-only; only lists. ' +
+        'Use list-analyses instead for single-URL analyses.',
+      inputSchema: { limit: z.number().int().min(1).max(200).default(20).describe('Maximum number of results (1-200, default 20)') },
+      annotations: READ_ONLY,
+    },
     async ({ limit }) => withDb(async (db) => json(await listBatches(db, limit))),
   );
 
-  server.tool(
+  server.registerTool(
     'solution-mapping',
-    'Build an EAA-style building-block solution mapping + key findings across saved analyses (EAA "create_solution_category_mapping" / "generate_key_findings").',
-    { analysisIds: z.array(z.number().int().positive()).min(1).max(30) },
+    {
+      title: 'Build solution mapping',
+      description:
+        'Build an EAA-style building-block solution mapping and key findings across several saved analyses ' +
+        '(EAA "create_solution_category_mapping" / "generate_key_findings"). Read-only; computed from stored detections, does not re-crawl.',
+      inputSchema: {
+        analysisIds: z.array(z.number().int().positive()).min(1).max(30).describe('Numeric ids of 1–30 saved analyses to compare'),
+      },
+      annotations: READ_ONLY,
+    },
     async ({ analysisIds }) =>
       withDb(async (db) => {
         const inputs = [];
@@ -165,10 +211,16 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'lighthouse',
-    'Run Google PageSpeed Insights / Lighthouse (mobile + desktop) for a saved analysis and store the result.',
-    { analysisId },
+    {
+      title: 'Run Lighthouse',
+      description:
+        'Run Google PageSpeed Insights / Lighthouse (mobile + desktop performance, accessibility, SEO) for the website ' +
+        'of a saved analysis and store the result on that analysis.',
+      inputSchema: { analysisId },
+      annotations: ENRICH_EXTERNAL,
+    },
     async ({ analysisId: id }) =>
       withAnalysis(id, async (db, a) => {
         const result = await runLighthouse(a.finalUrl ?? a.url);
@@ -177,10 +229,16 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'traffic-insights',
-    'Get traffic insights (Semrush if configured, Tranco rank always) for a saved analysis and store the result.',
-    { analysisId },
+    {
+      title: 'Get traffic insights',
+      description:
+        'Get traffic insights for the website of a saved analysis (Semrush visits/keywords if configured, Tranco rank always) ' +
+        'and store the result on that analysis.',
+      inputSchema: { analysisId },
+      annotations: ENRICH_EXTERNAL,
+    },
     async ({ analysisId: id }) =>
       withAnalysis(id, async (db, a) => {
         const result = await getTraffic(a.finalUrl ?? a.url);
@@ -189,10 +247,20 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'mobile-apps',
-    'Find the brand\'s iOS/Android apps (website links, smart banners, App Store search) for a saved analysis.',
-    { analysisId, brand: z.string().max(200).optional(), country: z.string().length(2).optional() },
+    {
+      title: 'Find mobile apps',
+      description:
+        'Find the brand\'s iOS/Android apps (website links, smart banners, App Store search) for a saved analysis ' +
+        'and store the result on that analysis.',
+      inputSchema: {
+        analysisId,
+        brand: z.string().max(200).optional().describe('Brand name for the App Store search (default: derived from the domain)'),
+        country: z.string().length(2).optional().describe('Two-letter App Store country code, e.g. "de" or "us"'),
+      },
+      annotations: ENRICH_EXTERNAL,
+    },
     async ({ analysisId: id, brand, country }) =>
       withAnalysis(id, async (db, a) => {
         const result = await findMobileApps({ url: a.finalUrl ?? a.url, brand, country });
@@ -201,15 +269,21 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'geo-score',
-    'Compute the GEO / AI visibility score (brand mentions in Claude answers across funnel queries vs. competitors). Takes 1–3 minutes.',
     {
-      analysisId,
-      brand: z.string().max(200).optional(),
-      competitors: z.array(z.string().max(200)).max(5).optional(),
-      country: z.string().max(6).optional(),
-      queryCount: z.number().int().min(8).max(40).optional(),
+      title: 'Compute GEO / AI visibility score',
+      description:
+        'Compute the GEO / AI visibility score of a saved analysis: how often the brand is mentioned in Claude answers ' +
+        'across funnel queries vs. competitors. Takes 1–3 minutes and stores the result on that analysis.',
+      inputSchema: {
+        analysisId,
+        brand: z.string().max(200).optional().describe('Brand name to measure (default: derived from the analysis)'),
+        competitors: z.array(z.string().max(200)).max(5).optional().describe('Up to 5 competitor brand names to compare against'),
+        country: z.string().max(6).optional().describe('Market for the queries as country/locale code, e.g. "DE" or "en-US"'),
+        queryCount: z.number().int().min(8).max(40).optional().describe('Number of funnel queries to run (8-40)'),
+      },
+      annotations: ENRICH_EXTERNAL,
     },
     async ({ analysisId: id, ...opts }) =>
       withAnalysis(id, async (db, a) => {
@@ -219,10 +293,15 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'get_evidence_matrix',
-    'Read the stored multi-source Evidence Matrix (TechStack × ObservePoint consensus, agreement rate) and the ObservePoint summary (incl. insights: versions, Adobe footprint, quality, privacy, findings) of a saved analysis. Read-only: never triggers ObservePoint calls.',
-    { analysisId },
+    {
+      title: 'Get evidence matrix',
+      description:
+        'Read the stored multi-source Evidence Matrix (TechStack × ObservePoint consensus, agreement rate) and the ObservePoint summary (incl. insights: versions, Adobe footprint, quality, privacy, findings) of a saved analysis. Read-only: never triggers ObservePoint calls.',
+      inputSchema: { analysisId },
+      annotations: READ_ONLY,
+    },
     async ({ analysisId: id }) =>
       withAnalysis(id, async (_db, a) => {
         const { evidenceMatrix, observepoint } = a.enrichments ?? {};
@@ -242,17 +321,32 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'stack-history',
-    'Show how the tech stack of a domain changed across saved analyses (added/removed technologies).',
-    { url: z.string().min(1).max(2048) },
+    {
+      title: 'Show stack history',
+      description:
+        'Show how the tech stack of a domain changed across its saved analyses over time (added/removed technologies per run). ' +
+        'Read-only; uses stored analyses only and does not crawl.',
+      inputSchema: { url: z.string().min(1).max(2048).describe('Website URL or domain whose saved analyses to compare') },
+      annotations: READ_ONLY,
+    },
     async ({ url }) => withDb(async (db) => json(await getStackHistory(db, url))),
   );
 
-  server.tool(
+  server.registerTool(
     'generate-deck',
-    'Generate an Adobe-branded PowerPoint deck for a single analysis or an account/bulk assessment.',
-    { analysisId: z.number().int().positive().optional(), assessmentId: z.number().int().positive().optional() },
+    {
+      title: 'Generate PowerPoint deck',
+      description:
+        'Generate an Adobe-branded PowerPoint deck (.pptx) for a saved single analysis or an account/bulk assessment and ' +
+        'return it with a download link. Pass exactly one of analysisId or assessmentId. Read-only; does not modify stored data.',
+      inputSchema: {
+        analysisId: z.number().int().positive().optional().describe('Numeric id of a saved single-URL analysis'),
+        assessmentId: z.number().int().positive().optional().describe('Numeric id of an account/bulk assessment'),
+      },
+      annotations: READ_ONLY,
+    },
     async ({ analysisId: aId, assessmentId }) =>
       withDb(async (db) => {
         let buf: Buffer;
@@ -280,19 +374,30 @@ export function registerParityTools(server: McpServer): void {
       }),
   );
 
-  server.tool(
+  server.registerTool(
     'submit-feedback',
-    'Submit feedback, e.g. a missing or wrong detection, for an analysis or assessment.',
     {
-      type: z.enum(FEEDBACK_TYPES),
-      description: z.string().min(1).max(4000),
-      title: z.string().max(200).optional(),
-      analysisId: z.number().int().positive().optional(),
-      assessmentId: z.number().int().positive().optional(),
-      missingSolutions: z
-        .array(z.object({ url: z.string().max(2048).optional(), solution: z.string().min(1).max(200), category: z.string().max(100).optional() }))
-        .max(20)
-        .optional(),
+      title: 'Submit feedback',
+      description:
+        'Submit feedback to the TechStack Crawler team, e.g. a missing or wrong technology detection, ' +
+        'optionally linked to an analysis or assessment. Creates an open feedback ticket.',
+      inputSchema: {
+        type: z.enum(FEEDBACK_TYPES).describe('Feedback category'),
+        description: z.string().min(1).max(4000).describe('What is wrong or missing, in plain text'),
+        title: z.string().max(200).optional().describe('Short summary of the feedback'),
+        analysisId: z.number().int().positive().optional().describe('Numeric id of the analysis the feedback refers to'),
+        assessmentId: z.number().int().positive().optional().describe('Numeric id of the assessment the feedback refers to'),
+        missingSolutions: z
+          .array(z.object({
+            url: z.string().max(2048).optional().describe('URL on which the solution is used'),
+            solution: z.string().min(1).max(200).describe('Name of the missing or wrongly detected solution'),
+            category: z.string().max(100).optional().describe('Category of the solution, e.g. "Analytics"'),
+          }))
+          .max(20)
+          .optional()
+          .describe('Up to 20 solutions that were not detected correctly'),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
     async (args) =>
       withDb(async (db) => {

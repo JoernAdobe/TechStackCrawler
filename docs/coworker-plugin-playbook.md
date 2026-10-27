@@ -106,6 +106,15 @@ Ablauf: `make ethos-image` → `make ethos-secrets` → `IMAGE=… make ethos-de
 - Prod-Upstreams laufen auf `*.adobe.io`, `*.private.adobe.io` oder eigenen Prod-Hosts. Eine Ethos-**Stage**-Ingress-Adresse ist für Prod nicht vorgesehen. Dafür braucht es einen Prod-Cluster oder eine Adobe-I/O-Route.
 - Zur Checkliste gehören: Lint ohne Fehler (`readOnlyHint`/`destructiveHint`/`openWorldHint`), ein Golden-Eval-Datensatz, ein CODEOWNERS-Eintrag und gegebenenfalls ARB bzw. ein Security-Review.
 
+### 6.1 Lint und Golden-Eval (gegen Stage)
+
+- **Annotations:** Alle MCP-Tools werden mit `registerTool` angelegt und haben `title`, eine Beschreibung mit mindestens 40 Zeichen, eine Beschreibung je Parameter, `readOnlyHint` und `openWorldHint` sowie bei schreibenden Tools zusätzlich `destructiveHint` und `idempotentHint`. Der Test `project/server/tests/mcpCatalogLint.test.ts` bildet die error-Regeln von `gateway-quality lint` nach. `analyze-url` schreibt eine neue Analyse und ruft das freie Internet ab (`readOnlyHint: false`, `openWorldHint: true`). `use-case-discovery` ruft Claude auf und ersetzt das gespeicherte Ergebnis. Kein Tool ist destruktiv.
+- **Golden-Datensatz:** `project/coworker-gateway/datasets/techstack_crawler/cases.yaml` (12 Fälle: mindestens zwei pro `include_tools`-Tool mit Argumentprüfung sowie drei Negativfälle). Für den aif-PR wird die Datei unverändert nach `services/aep-ai-quality-eval/datasets/gateway/techstack_crawler/cases.yaml` kopiert und in der dortigen `README.md` eingetragen.
+- **Scope-URL (Stage):** `https://cx-coworker-gateway-stage.adobe.io/mcp/server/techstack_crawler?manifest_id=techstack_crawler`. Über die Server-Route liefert der Katalog die Tool-Namen ohne Präfix.
+- **Lint:** `gateway-quality lint` liest standardmäßig `/admin/tools` und braucht dafür einen allowlisteten Tech-Account. Ohne ihn: `gateway-quality catalog --mcp-url <Scope-URL> --mcp-token <Token> --json > tools.json` und danach `gateway-quality lint --catalog-json tools.json`.
+- **Eval ohne Bedrock-Key:** `--target copilot` (Installation mit Extra `mcp-evals[copilot]`, Copilot CLI im `PATH`). Vor dem vollen Lauf immer `--catalog-check`.
+- **Bekannte Lint-Warnungen (kein Blocker):** `name_not_snake_case` für die Tool-Namen mit Bindestrich. Eine Umbenennung würde Card, Plugin-Skills und bestehende Clients brechen.
+
 ## Arbeitsweise mit Jörn
 
 - Jörn ist kein Engineer: Er führt Terminal-Befehle selbst aus (docker, kubectl, kubelogin, brew und der Schlüsselbund sind in der Agent-Session blockiert). Immer **vollständige, einzeln kopierbare** Befehle geben, ohne „…“.
