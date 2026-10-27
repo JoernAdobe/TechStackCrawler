@@ -181,7 +181,8 @@ export function createMcpServer(): McpServer {
       description:
         'Get the full stored result of one saved tech stack analysis by its numeric id: detected technologies, ' +
         'categories, Adobe opportunities, summary and stored enrichments. Read-only; does not re-crawl the website ' +
-        '(use analyze-url instead for a fresh scan).',
+        '(use analyze-url instead for a fresh scan). To recommend or prioritize which Adobe use cases or products to ' +
+        'pitch for an analysis, call use-case-discovery directly instead; it loads the analysis itself.',
       inputSchema: { id: z.number().int().positive().describe('Numeric id of the saved analysis (from analyze-url or list-analyses)') },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -208,7 +209,9 @@ export function createMcpServer(): McpServer {
       title: 'Discover Adobe use cases',
       description:
         'Generate prioritized Adobe use case recommendations (AEP/RTCDP, AJO, CJA, Target, AEM, …) for a saved analysis, ' +
-        'based on its detected stack, the site map and, if available, the latest Client Pre-Briefing. Calls Claude and stores the ' +
+        'based on its detected stack, the site map and, if available, the latest Client Pre-Briefing. Use this whenever the user ' +
+        'asks which Adobe use cases or products to pitch, prioritize or recommend for an analyzed company; it loads the analysis ' +
+        'itself, so do not call get-analysis first. Calls Claude and stores the ' +
         'result on the analysis, replacing an earlier use case discovery. Requires an existing analysis id; ' +
         'run analyze-url first if there is none.',
       inputSchema: { analysisId: z.number().int().positive().describe('Numeric id of the saved analysis to generate use cases for') },
