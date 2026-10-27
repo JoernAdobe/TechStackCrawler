@@ -263,12 +263,16 @@ export function createMcpRoutes(): Router {
 
     if (sessionId) {
       const transport = touchSession(sessionId);
-      if (!transport) {
-        res.status(400).json({ error: 'Invalid session ID', code: 'invalid_session' });
+      if (transport) {
+        await transport.handleRequest(req, res, req.body);
         return;
       }
-      await transport.handleRequest(req, res, req.body);
-      return;
+      // MCP Streamable HTTP: unknown/expired session (e.g. after a pod restart) -> 404,
+      // so clients like the Coworker gateway re-initialize instead of dropping the server.
+      if (!isInitializeRequest(req.body)) {
+        res.status(404).json({ error: 'Session not found', code: 'session_not_found' });
+        return;
+      }
     }
 
     if (isInitializeRequest(req.body)) {
@@ -304,9 +308,13 @@ export function createMcpRoutes(): Router {
     '/',
     asyncHandler(async (req: Request, res: Response) => {
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
-      const transport = sessionId ? touchSession(sessionId) : null;
+      if (!sessionId) {
+        res.status(400).json({ error: 'Missing session ID', code: 'invalid_session' });
+        return;
+      }
+      const transport = touchSession(sessionId);
       if (!transport) {
-        res.status(400).json({ error: 'Invalid or missing session ID', code: 'invalid_session' });
+        res.status(404).json({ error: 'Session not found', code: 'session_not_found' });
         return;
       }
       await transport.handleRequest(req, res);
@@ -317,8 +325,12 @@ export function createMcpRoutes(): Router {
     '/',
     asyncHandler(async (req: Request, res: Response) => {
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
-      if (!sessionId || !sessions.has(sessionId)) {
-        res.status(400).json({ error: 'Invalid or missing session ID', code: 'invalid_session' });
+      if (!sessionId) {
+        res.status(400).json({ error: 'Missing session ID', code: 'invalid_session' });
+        return;
+      }
+      if (!sessions.has(sessionId)) {
+        res.status(404).json({ error: 'Session not found', code: 'session_not_found' });
         return;
       }
       await closeSession(sessionId);
