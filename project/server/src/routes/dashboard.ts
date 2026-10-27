@@ -8,7 +8,7 @@ import { config } from '../config.js';
 import { computeUsageStats, type FunnelInput, type UsageStats } from '../services/usageStats.js';
 import { ServiceUnavailableError, UnauthorizedError, ForbiddenError, DbUnavailableError, parseBody } from '../utils/http.js';
 
-const MANUAL_HOURS_PER_ANALYSIS = 3.5;
+const MANUAL_HOURS_PER_ANALYSIS = 5;
 const CONSULTANT_HOURLY_RATE = 150;
 
 /** Cookie-Name des Okta-/Session-Cookies (identisch in oktaAuth.ts). */

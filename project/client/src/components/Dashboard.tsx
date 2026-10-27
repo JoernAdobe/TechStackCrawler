@@ -328,7 +328,7 @@ export default function Dashboard({ token, onLogout }: Props) {
             <div className="space-y-4 text-sm">
               <div className="flex justify-between items-center py-2 border-b border-ts-border/50">
                 <span className="text-ts-text-secondary">Manual effort per analysis</span>
-                <span className="font-medium">~3.5 hours</span>
+                <span className="font-medium">~5 hours</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-ts-border/50">
                 <span className="text-ts-text-secondary">Tool duration per analysis</span>

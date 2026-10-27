@@ -81,6 +81,8 @@ services:
       - OBSERVEPOINT_MAX_PAGES=${OBSERVEPOINT_MAX_PAGES:-5}
       # RFP-Tool-Integration (/api/integration/*); leer = deaktiviert (503).
       - INTEGRATION_TOKEN=${INTEGRATION_TOKEN:-}
+      # Digest Studio (/api/internal/savings-events, Bearer); leer = deaktiviert (503).
+      - SAVINGS_EVENTS_TOKEN=${SAVINGS_EVENTS_TOKEN:-}
       - NODE_ENV=production
       - PORT=3001
       - DB_HOST=mariadb

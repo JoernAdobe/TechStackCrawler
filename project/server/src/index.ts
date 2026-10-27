@@ -47,6 +47,7 @@ import { createBriefingRoutes } from './routes/briefing.js';
 import { createDeckRoutes } from './routes/deck.js';
 import { createFeedbackRoutes } from './routes/feedback.js';
 import { createIntegrationRoutes } from './routes/integration.js';
+import { createSavingsEventsRoutes } from './routes/savingsEvents.js';
 import { startBatchWorker } from './services/batchRunner.js';
 import { startBriefingWorker } from './services/briefing/queue.js';
 
@@ -237,6 +238,10 @@ app.use(createBriefingRoutes({ startLimiter: briefingStartLimiter, readLimiter: 
 app.use(createDeckRoutes({ limiter: lightLimiter }));
 app.use(createFeedbackRoutes({ limiter: lightLimiter }));
 app.use(createIntegrationRoutes({ limiter: lightLimiter }));
+// Digest Studio (saved man-hours): GET /api/internal/savings-events, Bearer SAVINGS_EVENTS_TOKEN
+// Own limiter: bearer-protected server-to-server endpoint; backfills page through many windows.
+const savingsEventsLimiter = rateLimit({ windowMs: 60_000, max: 600, standardHeaders: true, legacyHeaders: false });
+app.use(createSavingsEventsRoutes({ limiter: savingsEventsLimiter }));
 
 // MCP endpoint (bearer-token protected)
 app.use('/mcp', mcpAuthLimiter, asyncHandler(requireMcpAuth), createMcpRoutes());
