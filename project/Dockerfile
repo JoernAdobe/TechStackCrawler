@@ -1,5 +1,5 @@
 # Stage 1: Build the frontend
-FROM node:20-alpine AS client-build
+FROM node:22-alpine AS client-build
 ARG GIT_COMMIT=unknown
 ENV VITE_GIT_COMMIT=$GIT_COMMIT
 WORKDIR /app
@@ -11,7 +11,7 @@ COPY client/ client/
 RUN npm run build --workspace=client
 
 # Stage 2: Build the server (ohne better-sqlite3 – Production nutzt MariaDB)
-FROM node:20-alpine AS server-build
+FROM node:22-alpine AS server-build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY tsconfig.base.json ./
@@ -22,7 +22,7 @@ COPY server/ server/
 RUN npm run build --workspace=server
 
 # Stage 3: Production runtime with Chromium and Scrapling
-FROM node:20-slim AS production
+FROM node:22-slim AS production
 # Verknüpft das ghcr-Package mit dem Repo (erscheint dort unter "Packages")
 LABEL org.opencontainers.image.source="https://github.com/JoernAdobe/TechStackCrawler"
 
@@ -49,7 +49,8 @@ WORKDIR /app
 
 COPY server/requirements.txt /app/server/requirements.txt
 RUN python3 -m venv /opt/scrapling-venv \
-    && /opt/scrapling-venv/bin/pip install --no-cache-dir -r /app/server/requirements.txt
+    && /opt/scrapling-venv/bin/pip install --no-cache-dir -r /app/server/requirements.txt \
+    && /opt/scrapling-venv/bin/pip install --no-cache-dir -U pip certifi
 
 # Copy server build and production dependencies
 COPY --from=server-build /app/package.json /app/package-lock.json ./
