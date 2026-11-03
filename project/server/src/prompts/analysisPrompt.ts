@@ -1,6 +1,7 @@
 import type { ScrapedData } from '../services/scraper.js';
 import type { DetectedTech } from '../services/customDetectors.js';
 import { findDisplacements } from '../data/displacementMap.js';
+import { ADOBE_PRODUCT_REFERENCE } from './adobeProductReference.js';
 
 export function buildSystemPrompt(): string {
   return `You are a senior technology analyst specializing in enterprise marketing technology. You work with Adobe sales teams to identify technology gaps and opportunities.
@@ -96,18 +97,7 @@ Based on the detected technologies and page content, produce a JSON analysis cov
 11. Other - Tag Management, CDN, Frameworks, Support Tools, etc.
 
 ## Adobe Product Reference
-- CMS: Adobe Experience Manager (AEM)
-- eCommerce: Adobe Commerce (Magento)
-- DMP: Adobe Audience Manager
-- CDP: Adobe Real-Time CDP
-- Analytics: Adobe Analytics, Adobe Customer Journey Analytics
-- Personalization: Adobe Target
-- DAM: AEM Assets
-- Marketing Automation: Adobe Marketo Engage, Adobe Campaign
-- Advertising: Adobe Advertising Cloud
-- Tag Management: Adobe Experience Platform Launch
-- Journey Orchestration: Adobe Journey Optimizer
-- Content Supply Chain: Adobe GenStudio, Adobe Workfront
+${ADOBE_PRODUCT_REFERENCE}
 
 ## Known Adobe Displacement Mapping (GROUND TRUTH — apply when the competitor is present)
 For any detected competitor listed below, base the category's "adobeOpportunity" on this mapping instead of improvising. Reword it into plain language, but keep the recommended Adobe product and the core rationale. Do NOT invent a different Adobe product for these competitors.
@@ -140,7 +130,7 @@ Rules:
 - Adobe opportunities should be genuinely relevant.
 - For "Other", combine miscellaneous detected technologies (CDN, tag management, frameworks, support tools, etc.).
 - If cookies suggest marketing tech (e.g. _ga, _fbp, _gcl_au), mention them in Analytics or Advertising.
-- IMPORTANT: When Adobe products are detected (AEM, Adobe Analytics, Adobe Target, Adobe Commerce/Magento, Marketo, Adobe Advertising Cloud, etc.), explicitly name them in the relevant category and note them in the summary. This is valuable for follow-up analyses.
+- IMPORTANT: When Adobe products are detected (AEM, Adobe Analytics, Adobe Target, Adobe Commerce/Magento, Marketo, Adobe Advertising, etc.), explicitly name them in the relevant category and note them in the summary. This is valuable for follow-up analyses.
 - "evidence" lines are deterministic proof observed in fired network requests, cookies or the page's JavaScript runtime (e.g. report suites, IMS org, datastream, container IDs). Prefer them over assumptions and cite the most useful ones (IDs, versions, warnings marked ⚠) in currentTechnology.
 - Adobe Experience Cloud ID Service (ECID) or the AEP Web SDK alone do NOT prove a Real-Time CDP, Customer Journey Analytics or Journey Optimizer license. Only state RTCDP / AJO as in use when they appear in the Detected Technologies list; otherwise frame them as opportunities.
 - Evidence "⚠ Active before consent" means the tool sent requests or set cookies before the visitor accepted the cookie banner. Mention this as a privacy/compliance risk (GDPR/ePrivacy) in the Consent Management or relevant category, and position governed, consent-aware data collection (e.g. Adobe Experience Platform consent enforcement) where relevant.

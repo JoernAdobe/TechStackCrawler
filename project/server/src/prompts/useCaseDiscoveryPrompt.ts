@@ -2,6 +2,7 @@ import type { AnalysisResult } from '../types/analysis.js';
 import type { BriefingBlock, BriefingResult } from '../types/briefing.js';
 import { MAX_FINDINGS, formatFindingsForPrompt } from '../services/observepoint/findings.js';
 import { portfolioBlock, searchBlock } from '../services/briefing/context.js';
+import { ADOBE_PRODUCT_REFERENCE } from './adobeProductReference.js';
 
 /** OP-Findings der gespeicherten Analyse (falls angereichert), max. MAX_FINDINGS. */
 export function observePointFindings(analysis: AnalysisResult) {
@@ -163,18 +164,7 @@ Generate exactly 10 use cases. For each use case provide:
 11. **evidenceFindingIds** (optional) – Array of finding IDs from "Measured Implementation Findings" this use case is based on (e.g. ["${findings[0]!.id}"]); omit or [] if none` : ''}
 
 ## Adobe Product Reference
-- CMS: Adobe Experience Manager (AEM)
-- eCommerce: Adobe Commerce (Magento)
-- DMP: Adobe Audience Manager
-- CDP: Adobe Real-Time CDP
-- Analytics: Adobe Analytics, Adobe Customer Journey Analytics
-- Personalization: Adobe Target
-- DAM: AEM Assets
-- Marketing Automation: Adobe Marketo Engage, Adobe Campaign
-- Advertising: Adobe Advertising Cloud
-- Tag Management: Adobe Experience Platform Launch
-- Journey Orchestration: Adobe Journey Optimizer
-- Content: Adobe GenStudio, Adobe Workfront
+${ADOBE_PRODUCT_REFERENCE}
 
 ## Response Format
 

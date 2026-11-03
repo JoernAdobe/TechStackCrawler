@@ -168,7 +168,7 @@ function getMockUseCases(analysis: AnalysisResult): UseCaseDiscoveryResult {
         title: 'Advertising Optimization',
         description:
           'Unify search, social, and display for better ROI.',
-        adobeProducts: ['Adobe Advertising Cloud'],
+        adobeProducts: ['Adobe Advertising'],
         businessValue: 'Lower CAC, higher ROAS.',
       },
       {
@@ -176,7 +176,7 @@ function getMockUseCases(analysis: AnalysisResult): UseCaseDiscoveryResult {
         title: 'Tag & Data Governance',
         description:
           'Centralize tag management and ensure data quality.',
-        adobeProducts: ['Adobe Experience Platform Launch'],
+        adobeProducts: ['Adobe Experience Platform Tags'],
         businessValue: 'Clean data, faster deployment.',
       },
       {
@@ -192,7 +192,7 @@ function getMockUseCases(analysis: AnalysisResult): UseCaseDiscoveryResult {
         title: 'Headless Commerce',
         description:
           'Modern storefront with API-driven commerce backend.',
-        adobeProducts: ['Adobe Commerce (Magento)'],
+        adobeProducts: ['Adobe Commerce'],
         businessValue: 'Flexible, scalable e-commerce.',
       },
     ],
