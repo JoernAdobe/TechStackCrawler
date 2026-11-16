@@ -36,7 +36,7 @@ function jwksUrl(): string {
   return `${oauthBase()}/v1/keys`;
 }
 
-function oidcConfigured(): boolean {
+export function oidcConfigured(): boolean {
   return Boolean(config.okta.clientId && config.okta.clientSecret && config.okta.redirectUri);
 }
 
@@ -266,7 +266,7 @@ export function createAuthRoutes(): Router {
     const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
     const session = getSession(cookies?.[SESSION_COOKIE]);
     if (!session) {
-      res.json({ authenticated: false });
+      res.json({ authenticated: false, loginRequired: oidcConfigured() });
       return;
     }
     res.json({ authenticated: true, email: session.email, isAdmin: session.isAdmin });

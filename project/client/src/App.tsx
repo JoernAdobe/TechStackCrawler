@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
+import { useState, useCallback, useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import UrlInput from './components/UrlInput';
@@ -25,7 +25,7 @@ import AnalysisError from './components/AnalysisError';
 import { includesBriefing, useUseCaseDiscovery } from './hooks/useUseCaseDiscovery';
 import { useStaticAudio } from './hooks/useStaticAudio';
 import { Search, BookOpen, Layers } from 'lucide-react';
-import { apiRequest, isAbortError } from './lib/apiClient';
+import { apiRequest, isAbortError, redirectToLogin } from './lib/apiClient';
 import type { AnalysisResult, ProgressEvent, AppState } from './types/analysis';
 import type { BriefingSectionId } from './types/briefing';
 
@@ -138,12 +138,44 @@ function App() {
   }
 
   return (
-    <TooltipProvider>
-      <ErrorBoundary label="TechStack Analyzer">
-        <Analyzer />
-      </ErrorBoundary>
-    </TooltipProvider>
+    <AuthGate>
+      <TooltipProvider>
+        <ErrorBoundary label="TechStack Analyzer">
+          <Analyzer />
+        </ErrorBoundary>
+      </TooltipProvider>
+    </AuthGate>
   );
+}
+
+/** App-weite Okta-Pflicht: ohne Session (und aktivem OIDC) direkt zum Login. */
+function AuthGate({ children }: { children: ReactNode }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    apiRequest<{ authenticated?: boolean; loginRequired?: boolean }>('/api/dashboard/session', {
+      signal: controller.signal,
+    })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        if (!data.authenticated && data.loginRequired) redirectToLogin();
+        else setReady(true);
+      })
+      .catch((err: unknown) => {
+        if (!isAbortError(err) && !controller.signal.aborted) setReady(true);
+      });
+    return () => controller.abort();
+  }, []);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-ts-surface flex items-center justify-center">
+        <div className="animate-pulse text-ts-text-secondary">Checking session…</div>
+      </div>
+    );
+  }
+  return <>{children}</>;
 }
 
 function Analyzer() {

@@ -28,6 +28,8 @@ export interface SavingsEvent {
   capability: string;
   occurred_at: string;
   user_hash: string;
+  /** Kleingeschriebene E-Mail derselben Person wie user_hash, sonst null (nur Admin-Ansicht in Digest). */
+  user_email: string | null;
   units: number;
   dedupe_key: string;
   meta: Record<string, string | number | boolean>;
@@ -52,6 +54,10 @@ function userHash(email: string | null | undefined, visitorId?: string | null): 
   if (isEmail(email)) return hashId(email);
   if (visitorId) return `v:${hashId(visitorId)}`;
   return '';
+}
+
+function userEmail(email: string | null | undefined): string | null {
+  return isEmail(email) ? email.trim().toLowerCase() : null;
 }
 
 function isoOf(v: unknown): string | null {
@@ -113,6 +119,7 @@ export async function collectSavingsEvents(db: DbHandle, opts: SavingsEventsOpti
       capability,
       occurred_at: new Date(Number(r.ts_ms)).toISOString(),
       user_hash: userHash(r.email, r.visitor_id),
+      user_email: userEmail(r.email),
       units: 1,
       dedupe_key: capability !== 'export' && analysisId != null ? `analysis:${analysisId}` : externalId,
       meta,
@@ -137,6 +144,7 @@ export async function collectSavingsEvents(db: DbHandle, opts: SavingsEventsOpti
       capability: 'account_briefing',
       occurred_at: occurredAt,
       user_hash: userHash(r.created_by),
+      user_email: userEmail(r.created_by),
       units: 1,
       dedupe_key: `analysis:${Number(r.analysis_id)}`,
       meta,
@@ -163,6 +171,7 @@ export async function collectSavingsEvents(db: DbHandle, opts: SavingsEventsOpti
       capability: 'batch_assessment',
       occurred_at: occurredAt,
       user_hash: userHash(r.created_by),
+      user_email: userEmail(r.created_by),
       units: 1,
       dedupe_key: r.analysis_id != null ? `analysis:${Number(r.analysis_id)}` : externalId,
       meta,

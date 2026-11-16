@@ -31,7 +31,8 @@ import { isTtsAvailable } from './services/tts.js';
 import { listAnalysesRoute, getAnalysisRoute } from './routes/analyses.js';
 import { libraryRoute } from './routes/library.js';
 import { dashboardLogin, dashboardStats, requireDashboardAuth } from './routes/dashboard.js';
-import { createAuthRoutes } from './routes/oktaAuth.js';
+import { createAuthRoutes, oidcConfigured } from './routes/oktaAuth.js';
+import { createSessionGate } from './routes/sessionGate.js';
 import { createTokenRoute, listTokensRoute, revokeTokenRoute } from './routes/apiTokens.js';
 import { createMcpRoutes } from './mcp/server.js';
 import { requireMcpAuth } from './mcp/auth.js';
@@ -206,6 +207,9 @@ const lightLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests – please try again later.', code: 'rate_limited' },
 });
+
+// Okta-Pflicht für die ganze App (aktiv, sobald OIDC konfiguriert ist).
+app.use(createSessionGate(oidcConfigured));
 
 // API routes
 app.post('/api/analyze-sync', analysisLimiter, asyncHandler(analyzeSyncRoute));

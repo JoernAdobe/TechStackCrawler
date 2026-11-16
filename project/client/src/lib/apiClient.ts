@@ -7,6 +7,12 @@
  */
 import { getVisitorId } from './visitor';
 
+/** Zum Okta-Login und danach zurück auf die aktuelle Ansicht. */
+export function redirectToLogin(): void {
+  const { pathname, search, hash } = window.location;
+  window.location.assign(`/auth/login?next=${encodeURIComponent(pathname + search + hash)}`);
+}
+
 /** Fehler einer API-Antwort inkl. HTTP-Status und Server-Fehlercode. */
 export class ApiError extends Error {
   readonly status: number;
@@ -116,6 +122,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (!res.ok) {
     if (json && typeof json === 'object') {
       const payload = json as { error?: unknown; code?: string; details?: unknown; hint?: unknown; suggestion?: unknown };
+      if (res.status === 401 && payload.code === 'auth_required') redirectToLogin();
       const message = typeof payload.error === 'string' && payload.error ? payload.error : `Request failed (HTTP ${res.status})`;
       throw new ApiError(res.status, message, payload.code, payload.details, {
         hint: typeof payload.hint === 'string' ? payload.hint : undefined,
