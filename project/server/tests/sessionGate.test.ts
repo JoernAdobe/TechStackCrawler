@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+process.env.SESSION_SECRET = 'test-secret';
 import type { AddressInfo } from 'node:net';
 import test, { after } from 'node:test';
 import express from 'express';
@@ -36,4 +37,21 @@ test('no-op when OIDC is not configured', async () => {
   enabled = false;
   assert.equal((await fetch(`${base}/api/analyses`)).status, 200);
   enabled = true;
+});
+
+test('session tokens survive a restart, expire, reject tampering and honour logout', async () => {
+  const { getSession, destroySession } = await import('../src/services/sessionStore.js');
+  const token = createSession('user@adobe.com', false);
+  // Neustart simulieren: frische Modulinstanz mit demselben Secret.
+  const fresh = await import(`../src/services/sessionStore.js?restart=${Date.now()}`);
+  assert.equal(fresh.getSession(token)?.email, 'user@adobe.com');
+
+  assert.equal(getSession(createSession('old@adobe.com', false, -1)), null);
+  const [payload, sig] = token.split('.');
+  const forged = Buffer.from(JSON.stringify({ e: 'boss@adobe.com', a: true, x: Date.now() + 1e6 })).toString('base64url');
+  assert.equal(getSession(`${forged}.${sig}`), null);
+  assert.equal(getSession(`${payload}.${sig[0] === "A" ? "B" : "A"}${sig.slice(1)}`), null);
+
+  destroySession(token);
+  assert.equal(getSession(token), null);
 });

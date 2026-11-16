@@ -15,7 +15,7 @@ import { Router, type Request, type Response } from 'express';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { randomBytes } from 'crypto';
 import { config } from '../config.js';
-import { createSession, getSession, destroySession } from '../services/sessionStore.js';
+import { createSession, getSession, destroySession, SESSION_TTL_MS } from '../services/sessionStore.js';
 import { asyncHandler } from '../utils/http.js';
 
 const SESSION_COOKIE = 'ts_session';
@@ -112,7 +112,7 @@ function setSessionCookie(res: Response, token: string): void {
     httpOnly: true,
     secure: isProduction(),
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge: SESSION_TTL_MS,
     path: '/',
   });
 }
