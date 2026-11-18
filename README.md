@@ -13,7 +13,6 @@ Enter any URL, and the tool renders the site with Scrapling, detects its tech st
 - **Usage dashboard** — Admin-only metrics for analyses, estimated time/cost savings, technology frequency, and adoption.
 - **Past analyses** — Browse and reopen persisted analyses.
 - **Export** — Download analysis output as Excel (`.xlsx`) or Markdown (`.md`).
-- **Text-to-speech** — Optional ElevenLabs integration for audio walkthroughs.
 - **MCP server** — Model Context Protocol endpoint for AI-agent integration using database-backed bearer tokens.
 - **API token management** — Create, list, and revoke MCP bearer tokens from the authenticated dashboard.
 - **Account & bulk assessments** — Analyze up to 30 URLs per account (with AI) or bulk lists (detection only, admin approval above `BATCH_APPROVAL_THRESHOLD`), with a solution matrix mapped to 44 Adobe building blocks, key findings, CSV/XLSX export, and stack history per domain.
@@ -28,7 +27,7 @@ Enter any URL, and the tool renders the site with Scrapling, detects its tech st
 | Layer | Technologies |
 |-------|--------------|
 | Frontend | React 19, Vite, TypeScript, Tailwind CSS, Recharts, GSAP, Radix UI |
-| Backend | Node.js 20, Express, Python Scrapling, Chromium, AWS Bedrock SDK, ElevenLabs SDK, MCP SDK |
+| Backend | Node.js 20, Express, Python Scrapling, Chromium, AWS Bedrock SDK, MCP SDK |
 | Database | SQLite for local development; MariaDB 11 for Docker/production |
 | Auth | Okta OIDC SSO, break-glass dashboard login, MCP bearer tokens |
 | Infrastructure | Docker, Docker Compose, Caddy reverse proxy, Makefile deployment scripts |
@@ -50,8 +49,7 @@ Enter any URL, and the tool renders the site with Scrapling, detects its tech st
                     │  ├─ /auth Okta OIDC routes        │
                     │  ├─ /mcp Streamable HTTP endpoint │
                     │  ├─ Scrapling worker + Chromium   │
-                    │  ├─ AWS Bedrock Claude analysis   │
-                    │  └─ ElevenLabs TTS (optional)     │
+                    │  └─ AWS Bedrock Claude analysis   │
                     └──────────────┬───────────────────┘
                                    │
                     ┌──────────────▼───────────────────┐
@@ -81,8 +79,7 @@ In development, the Vite dev server runs on port `5173` and proxies `/api` reque
     │   ├── export-local-analyses.ts
     │   ├── rotate-bedrock-key.ts
     │   ├── hash-dashboard-password.ts
-    │   ├── test-bedrock-key.ts
-    │   └── generate-static-audio.ts
+    │   └── test-bedrock-key.ts
     ├── client/                       # React/Vite application
     └── server/                       # Express API, DB, services, MCP, auth
 ```
@@ -235,9 +232,6 @@ The server loads the first available `.env` file from the compiled server-relati
 | `SCRAPE_DEFAULT_LOCALE` | server | Browser locale used during scraping | `en-US` |
 | `SCRAPE_DEFAULT_TIMEZONE` | server | Browser timezone used during scraping | `America/New_York` |
 | `MULTI_PAGE_CRAWL` | server | Enables sitemap/multi-page enrichment unless set to `0` | Enabled |
-| `ELEVENLABS_API_KEY` | server/scripts | ElevenLabs TTS API key | Empty; TTS endpoint reports unavailable |
-| `ELEVENLABS_VOICE_ID` | server/scripts | ElevenLabs voice ID | Empty; TTS endpoint reports unavailable |
-| `ELEVENLABS_MODEL` | server/scripts/Docker | ElevenLabs model | `eleven_v3` |
 | `DB_TYPE` | server | Set to `sqlite` to force SQLite | Auto; SQLite when `DB_TYPE=sqlite`, `DB_PATH` is set, or development has no `DB_PASSWORD` |
 | `DB_PATH` | server | SQLite database path | `data/techstack.db` relative to the server working directory |
 | `DB_HOST` | server/Docker | MariaDB host | `localhost`; Docker service uses `mariadb` |
@@ -312,8 +306,6 @@ The server loads the first available `.env` file from the compiled server-relati
 | `POST` | `/api/use-case-discovery` | Public | 5/minute | Generate use cases. With an `id`, the stored analysis is loaded from the DB (client payload ignored) and the result is persisted; without `id`, the payload is used and nothing is stored. |
 | `GET` | `/api/analyses?limit=50` | Public | None | List persisted analyses. `limit` defaults to `50`, max `100`. |
 | `GET` | `/api/analyses/:id` | Public | None | Return one persisted analysis by numeric ID. |
-| `GET` | `/api/tts/status` | Public | None | Return `{ available: boolean }` based on ElevenLabs config. |
-| `POST` | `/api/tts` | Public | 15/minute | Generate MP3 speech. Body: `{ "text": "..." }`, max 5,000 chars. |
 | `GET` | `/auth/login` | Public | 100/15 minutes on `/auth/*` | Start Okta login; optional same-site `next` path. |
 | `GET` | `/auth/callback` | Public | 100/15 minutes on `/auth/*` | Okta callback; sets `ts_session` cookie. |
 | `GET` | `/auth/logout` | Public | 100/15 minutes on `/auth/*` | Destroy current session cookie if present. |
@@ -436,7 +428,7 @@ To test the IMS passthrough path, use an IMS user access token instead of `tsa_�
 | `make tmp-clean` | Remove only known deploy artifacts from remote temporary storage. Requires `SSH_HOST`. |
 | `make tmp-resize SIZE=2G` | Resize remote temporary storage mount. Requires `SSH_HOST` and appropriate privileges. |
 
-Additional npm scripts are available under `project/package.json`, including `test:connections`, `test-bedrock-key`, `rotate-bedrock-key`, `export-for-deploy`, and `generate-static-audio`.
+Additional npm scripts are available under `project/package.json`, including `test:connections`, `test-bedrock-key`, `rotate-bedrock-key` and `export-for-deploy`.
 
 ## Security & Operations
 
@@ -463,7 +455,7 @@ Additional npm scripts are available under `project/package.json`, including `te
 
 ## Known Risks / Open Items
 
-- **Core API is not authenticated**: `/api/analyze-sync`, `/api/use-case-discovery`, `/api/analyses*` and `/api/tts` are reachable by anyone who can reach the service (Adobe corp network). Only the dashboard, token management and `/mcp` require auth. Decide whether to require Okta login for all users.
+- **Core API is not authenticated**: `/api/analyze-sync`, `/api/use-case-discovery`, and `/api/analyses*` are reachable by anyone who can reach the service (Adobe corp network). Only the dashboard, token management and `/mcp` require auth. Decide whether to require Okta login for all users.
 - **Chromium runs with `--no-sandbox`** in the container while rendering untrusted websites. A renderer exploit would run as the `node` user with access to the app's environment secrets. Mitigations: rebuild the image regularly (Chromium updates), enable the Chrome sandbox via a seccomp profile, or move the crawler into a separate container without secrets.
 - **Network egress (required before wider rollout)**: App-level SSRF checks block intercepted browser requests, but cannot prevent DNS rebinding between validation and connection or all browser networking channels. An egress firewall for the app container (block RFC1918, `100.64.0.0/10`, `169.254.0.0/16`, and the Docker host `172.17.0.1`) remains **mandatory** to fully mitigate SSRF.
 - **App port reachable over plain HTTP**: Port 8516 is bound on all interfaces by default. Set `HOST_BIND=172.17.0.1` and adjust the deploy health check (see `docs/deployment.md`).

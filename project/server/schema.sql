@@ -15,11 +15,3 @@ CREATE TABLE IF NOT EXISTS analyses (
   INDEX idx_url (url(255))
 );
 
--- Audio-Cache (TTS-Audio, gecacht um ElevenLabs-API zu schonen)
-CREATE TABLE IF NOT EXISTS audio_cache (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  text_hash CHAR(64) NOT NULL UNIQUE,
-  audio_data LONGBLOB NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_text_hash (text_hash)
-);

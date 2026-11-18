@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useSound } from '../contexts/sound-context';
 
-/** Spielt statische Audio-Dateien – kein ElevenLabs-Key nötig */
+/** Spielt statische Audio-Dateien aus /audio */
 export function useStaticAudio() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { soundEnabled } = useSound();

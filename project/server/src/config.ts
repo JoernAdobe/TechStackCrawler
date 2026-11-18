@@ -30,11 +30,6 @@ export const config = {
     chromiumPath: process.env.SCRAPLING_CHROMIUM_PATH || undefined,
     timeout: parseInt(process.env.SCRAPE_TIMEOUT || '60000', 10),
   },
-  elevenlabs: {
-    apiKey: process.env.ELEVENLABS_API_KEY || '',
-    voiceId: process.env.ELEVENLABS_VOICE_ID || '',
-    modelId: process.env.ELEVENLABS_MODEL || 'eleven_v3',
-  },
   observepoint: {
     apiKey: (process.env.OBSERVEPOINT_API_KEY || '').trim(),
     baseUrl: (process.env.OBSERVEPOINT_BASE_URL || 'https://api.observepoint.com').replace(/\/$/, ''),
