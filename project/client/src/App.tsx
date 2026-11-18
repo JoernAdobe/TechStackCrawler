@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, type KeyboardEvent, type ReactNode } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import UrlInput from './components/UrlInput';
@@ -23,7 +23,6 @@ import { TooltipProvider } from './components/ui/tooltip';
 import { useAnalysis, type AnalysisErrorInfo } from './hooks/useAnalysis';
 import AnalysisError from './components/AnalysisError';
 import { includesBriefing, useUseCaseDiscovery } from './hooks/useUseCaseDiscovery';
-import { useStaticAudio } from './hooks/useStaticAudio';
 import { Search, BookOpen, Layers } from 'lucide-react';
 import { apiRequest, isAbortError, redirectToLogin } from './lib/apiClient';
 import type { AnalysisResult, ProgressEvent, AppState } from './types/analysis';
@@ -188,11 +187,8 @@ function Analyzer() {
   const [draftUrl, setDraftUrl] = useState('');
   // Abschnitte für das Client Pre-Briefing, das nach Abschluss der Analyse automatisch startet.
   const [pendingBriefing, setPendingBriefing] = useState<BriefingSectionId[] | null>(null);
-  const welcomePlayedRef = useRef(false);
-  const [userInteracted, setUserInteracted] = useState(false);
   const [analysesRefreshTrigger, setAnalysesRefreshTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState<TabId>('analyzer');
-  const { playStatic } = useStaticAudio();
   const library = useLibrary(analysesRefreshTrigger);
 
   // WAI-ARIA Tabs: Pfeiltasten wechseln den Tab, Fokus wandert mit.
@@ -204,25 +200,6 @@ function Analyzer() {
     document.getElementById(`tab-${next.id}`)?.focus();
   };
 
-  useEffect(() => {
-    const handler = () => setUserInteracted(true);
-    document.addEventListener('click', handler, { once: true });
-    document.addEventListener('keydown', handler, { once: true });
-    document.addEventListener('touchstart', handler, { once: true });
-    return () => {
-      document.removeEventListener('click', handler);
-      document.removeEventListener('keydown', handler);
-      document.removeEventListener('touchstart', handler);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (userInteracted && state === 'idle' && !welcomePlayedRef.current) {
-      welcomePlayedRef.current = true;
-      playStatic('welcome');
-    }
-  }, [userInteracted, state, playStatic]);
-
   const handleProgress = useCallback((event: ProgressEvent) => {
     setProgress((prev) => [...prev, event]);
   }, []);
@@ -232,9 +209,8 @@ function Analyzer() {
       setResults(result);
       setState('results');
       setAnalysesRefreshTrigger((t) => t + 1);
-      playStatic('analysis-complete');
     },
-    [playStatic],
+    [],
   );
 
   const clearPendingBriefing = useCallback(() => setPendingBriefing(null), []);

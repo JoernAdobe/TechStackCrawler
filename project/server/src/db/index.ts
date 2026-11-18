@@ -66,16 +66,6 @@ export async function initDb(): Promise<void> {
       await p.execute(`CREATE INDEX IF NOT EXISTS idx_analyses_url ON analyses(url)`);
 
       await p.execute(`
-        CREATE TABLE IF NOT EXISTS audio_cache (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          text_hash TEXT NOT NULL UNIQUE,
-          audio_data BLOB NOT NULL,
-          created_at TEXT DEFAULT (datetime('now'))
-        )
-      `);
-      await p.execute(`CREATE INDEX IF NOT EXISTS idx_audio_cache_text_hash ON audio_cache(text_hash)`);
-
-      await p.execute(`
         CREATE TABLE IF NOT EXISTS api_tokens (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
@@ -106,16 +96,6 @@ export async function initDb(): Promise<void> {
       } catch {
         // MariaDB < 10.5 oder MySQL – Spalte existiert evtl. bereits
       }
-      await p.execute(`
-        CREATE TABLE IF NOT EXISTS audio_cache (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          text_hash CHAR(64) NOT NULL UNIQUE,
-          audio_data LONGBLOB NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          INDEX idx_text_hash (text_hash)
-        )
-      `);
-
       await p.execute(`
         CREATE TABLE IF NOT EXISTS api_tokens (
           id INT AUTO_INCREMENT PRIMARY KEY,

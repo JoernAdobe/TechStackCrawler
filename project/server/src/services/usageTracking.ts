@@ -34,7 +34,6 @@ const RULES: Rule[] = [
   ['GET', /^\/api\/library$/, 'library_view'],
   ['POST', /^\/api\/batches$/, 'batch'],
   ['POST', /^\/api\/feedback$/, 'feedback'],
-  ['POST', /^\/api\/tts$/, 'tts'],
   ['GET', /^\/api\/integration\/accounts\/[^/]+\/context$/, 'rfp_context'],
   ['POST', /^\/mcp/, 'mcp_call'],
 ];

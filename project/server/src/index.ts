@@ -26,8 +26,6 @@ import { analysisRunRoute, analyzeSyncRoute, resumeAnalysisRuns } from './routes
 import { resumeGeoJobs } from './services/geoAuto.js';
 import { resumeUseCaseJobs } from './services/useCaseAuto.js';
 import { useCaseDiscoveryRoute, useCaseStatusRoute } from './routes/useCaseDiscovery.js';
-import { ttsRoute } from './routes/tts.js';
-import { isTtsAvailable } from './services/tts.js';
 import { listAnalysesRoute, getAnalysisRoute } from './routes/analyses.js';
 import { libraryRoute } from './routes/library.js';
 import { dashboardLogin, dashboardStats, requireDashboardAuth } from './routes/dashboard.js';
@@ -100,14 +98,6 @@ const analysisLimiter = rateLimit({
   skipFailedRequests: true,
   requestWasSuccessful: (_req, res) => res.statusCode !== 400 && res.statusCode !== 422,
   message: { error: 'Too many requests – please try again later.', code: 'rate_limited' },
-});
-
-const ttsLimiter = rateLimit({
-  windowMs: 60_000,
-  max: 15,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many TTS requests – please try again later.', code: 'rate_limited' },
 });
 
 // Break-Glass-Login: eng limitiert, da hier ein Passwort geprüft wird.
@@ -216,8 +206,6 @@ app.post('/api/analyze-sync', analysisLimiter, asyncHandler(analyzeSyncRoute));
 app.get('/api/analysis-runs/:requestId', asyncHandler(analysisRunRoute));
 app.post('/api/use-case-discovery', analysisLimiter, asyncHandler(useCaseDiscoveryRoute));
 app.get('/api/analyses/:id/use-cases/status', asyncHandler(useCaseStatusRoute));
-app.get('/api/tts/status', (_req, res) => res.json({ available: isTtsAvailable() }));
-app.post('/api/tts', ttsLimiter, asyncHandler(ttsRoute));
 app.get('/api/analyses', asyncHandler(listAnalysesRoute));
 app.get('/api/library', asyncHandler(libraryRoute));
 app.get('/api/analyses/:id', asyncHandler(getAnalysisRoute));

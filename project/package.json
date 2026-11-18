@@ -18,7 +18,6 @@
     "rotate-bedrock-key": "npx dotenv -e .env -- tsx scripts/rotate-bedrock-key.ts",
     "test-bedrock-key": "npx dotenv -e .env -- tsx scripts/test-bedrock-key.ts",
     "export-for-deploy": "npx dotenv -e .env -- tsx scripts/export-local-analyses.ts",
-    "generate-static-audio": "npx dotenv -e .env -- tsx scripts/generate-static-audio.ts",
     "hash-dashboard-password": "tsx scripts/hash-dashboard-password.ts"
   },
   "devDependencies": {

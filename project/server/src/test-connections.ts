@@ -11,7 +11,6 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 import { config } from './config.js';
 import { closeDb, getPool, initDb } from './db/index.js';
-import { textToSpeech, isTtsAvailable } from './services/tts.js';
 import AnthropicBedrock from '@anthropic-ai/bedrock-sdk';
 import { scrapePage } from './services/scraper.js';
 
@@ -65,22 +64,6 @@ async function testBedrock(): Promise<TestResult> {
   }
 }
 
-async function testElevenLabs(): Promise<TestResult> {
-  if (!isTtsAvailable()) {
-    return { ok: false, message: 'Nicht konfiguriert', detail: 'ELEVENLABS_API_KEY und ELEVENLABS_VOICE_ID fehlen' };
-  }
-
-  try {
-    const audio = await textToSpeech('Test.');
-    if (audio && audio.length > 0) {
-      return { ok: true, message: `OK – Audio erzeugt (${audio.length} Bytes)` };
-    }
-    return { ok: false, message: 'Keine Audiodaten erhalten' };
-  } catch (e) {
-    return { ok: false, message: 'Verbindungsfehler', detail: (e as Error).message };
-  }
-}
-
 async function testDatabase(): Promise<TestResult> {
   try {
     await initDb();
@@ -127,17 +110,12 @@ async function main() {
   console.log(`   ${results.bedrock.ok ? '✓' : '✗'} ${results.bedrock.message}`);
   if (results.bedrock.detail) console.log(`   → ${results.bedrock.detail}`);
 
-  console.log('\n2. ElevenLabs (TTS)...');
-  results.elevenlabs = await testElevenLabs();
-  console.log(`   ${results.elevenlabs.ok ? '✓' : '✗'} ${results.elevenlabs.message}`);
-  if (results.elevenlabs.detail) console.log(`   → ${results.elevenlabs.detail}`);
-
-  console.log('\n3. Datenbank (SQLite/MariaDB)...');
+  console.log('\n2. Datenbank (SQLite/MariaDB)...');
   results.database = await testDatabase();
   console.log(`   ${results.database.ok ? '✓' : '✗'} ${results.database.message}`);
   if (results.database.detail) console.log(`   → ${results.database.detail}`);
 
-  console.log('\n4. Scrapling (Chromium)...');
+  console.log('\n3. Scrapling (Chromium)...');
   results.scrapling = await testScrapling();
   console.log(`   ${results.scrapling.ok ? '✓' : '✗'} ${results.scrapling.message}`);
   if (results.scrapling.detail) console.log(`   → ${results.scrapling.detail}`);

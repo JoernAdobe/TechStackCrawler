@@ -75,7 +75,6 @@ const FEATURE_LABELS: Record<string, string> = {
   library_view: 'Library opened',
   batch: 'Batch run',
   feedback: 'Feedback',
-  tts: 'Audio summary',
   rfp_context: 'RFP tool context',
   mcp_call: 'MCP / Coworker call',
 };
