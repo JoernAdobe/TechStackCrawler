@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Sales Hub (adobe-tools-hub, Caddy für saleshub/rfp/battlemind/techstack/salesperformance) – einzige Quelle: hub/.
 #
+#   scripts/hub-deploy.sh sync    neuesten Repo-Stand holen (git pull --ff-only) + Drift-Check – Pflicht zu Beginn jeder Server-Session
 #   scripts/hub-deploy.sh check   Drift-Check: weicht der Server vom zuletzt deployten Stand bzw. von hub/ ab?
 #   scripts/hub-deploy.sh pull    Server-Stand nach hub/ holen (danach committen) – nach Änderungen direkt auf dem Server
 #   scripts/hub-deploy.sh deploy  hub/ ausrollen: Drift-Guard → Backup → in-place schreiben → validieren → Health-Check
@@ -8,6 +9,7 @@
 #
 # Verwaltet werden alle Dateien in hub/ außer README*. Das Manifest (.hub-manifest, sha256) auf dem Server hält fest,
 # was zuletzt deployt wurde; jede Abweichung davon ist eine Handänderung auf dem Server und blockiert den Deploy.
+# .hub-commit hält den deployten Git-Commit fest: ein Deploy aus einem älteren/abweichenden Stand wird abgelehnt.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -70,6 +72,38 @@ cmd_pull() {
   echo ">>> Prüfen, committen, dann 'make deploy-hub'."
 }
 
+cmd_sync() {
+  local branch behind
+  branch=$(git branch --show-current)
+  git fetch -q origin "$branch" || { echo ">>> WARNUNG: git fetch fehlgeschlagen – Stand nicht aktualisiert." >&2; cmd_check; return; }
+  behind=$(git rev-list --count "HEAD..origin/$branch")
+  if [ "$behind" -gt 0 ]; then
+    git pull -q --ff-only origin "$branch" || { echo ">>> FEHLER: git pull --ff-only scheitert (lokale Änderungen/Divergenz). Bitte von Hand auflösen." >&2; return 1; }
+    echo ">>> Hub-Repo aktualisiert ($behind neue Commits)."
+  else
+    echo ">>> Hub-Repo ist aktuell (origin/$branch)."
+  fi
+  cmd_check
+}
+
+# Deploy nur vom neuesten, committeten Stand, der den zuletzt deployten Commit enthält.
+require_current() {
+  local branch deployed
+  branch=$(git branch --show-current)
+  git fetch -q origin "$branch"
+  if [ "$(git rev-list --count "HEAD..origin/$branch")" -gt 0 ]; then
+    echo "FEHLER: lokaler Stand ist hinter origin/$branch – erst 'make hub-sync'." >&2; exit 1
+  fi
+  if [ -n "$(git status --porcelain -- hub/)" ]; then
+    echo "FEHLER: nicht committete Änderungen in hub/ – erst committen (sonst fehlen sie anderen Sessions):" >&2
+    git status --short -- hub/ >&2; exit 1
+  fi
+  deployed=$(remote "cat '$HUB_REMOTE_DIR/.hub-commit' 2>/dev/null" || true)
+  if [ -n "$deployed" ] && ! git merge-base --is-ancestor "$deployed" HEAD 2>/dev/null; then
+    echo "FEHLER: auf dem Server läuft Commit $deployed, der im lokalen Stand fehlt – erst 'make hub-sync' bzw. pushen/mergen." >&2; exit 1
+  fi
+}
+
 health() {
   local bad=0 code u
   for u in "${HEALTH_URLS[@]}"; do
@@ -80,6 +114,7 @@ health() {
 }
 
 cmd_deploy() {
+  if [ "${FORCE:-}" != 1 ]; then require_current; fi
   check_compose_mounts
   if ! cmd_check; then
     [ "${FORCE:-}" = 1 ] || exit 1
@@ -107,8 +142,9 @@ cmd_deploy() {
   sleep 2
   echo ">>> Health-Check:"
   if ! health; then echo ">>> Health-Check fehlgeschlagen – Rollback"; rollback "$ts"; exit 1; fi
-  remote "cd '$HUB_REMOTE_DIR' && cat /tmp/hub-stage/.hub-manifest > .hub-manifest && rm -rf /tmp/hub-stage"
-  echo ">>> Hub deployt (Backup: $HUB_REMOTE_DIR/backup-hub-$ts.tgz, Manifest aktualisiert)."
+  remote "cd '$HUB_REMOTE_DIR' && cat /tmp/hub-stage/.hub-manifest > .hub-manifest && echo '$(git rev-parse HEAD)' > .hub-commit && rm -rf /tmp/hub-stage"
+  echo ">>> Hub deployt: $(git rev-parse --short HEAD) (Backup: $HUB_REMOTE_DIR/backup-hub-$ts.tgz, Manifest aktualisiert)."
+  [ -n "$(git branch -r --contains HEAD 2>/dev/null)" ] || echo ">>> WICHTIG: Commit ist noch nicht gepusht – jetzt pushen, damit andere Sessions ihn haben."
 }
 
 rollback() {
@@ -122,8 +158,9 @@ rollback() {
 }
 
 case "${1:-}" in
+  sync) cmd_sync ;;
   check) cmd_check ;;
   pull) cmd_pull ;;
   deploy) cmd_deploy ;;
-  *) echo "usage: $0 check|pull|deploy" >&2; exit 2 ;;
+  *) echo "usage: $0 sync|check|pull|deploy" >&2; exit 2 ;;
 esac

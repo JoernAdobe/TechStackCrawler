@@ -2,7 +2,7 @@
 # Verwendung: make start | stop | deploy | ...
 
 PROJECT_DIR := project
-.PHONY: start stop deploy deploy-hub hub-check hub-pull install build dev-start dev-stop docker-up docker-down docker-build logs status tmp-inspect tmp-clean restart server-mem tmp-resize server-prune
+.PHONY: start stop deploy deploy-hub hub-sync hub-check hub-pull install build dev-start dev-stop docker-up docker-down docker-build logs status tmp-inspect tmp-clean restart server-mem tmp-resize server-prune
 
 # Standard-Ziel
 .DEFAULT_GOAL := help
@@ -18,6 +18,7 @@ help:
 	@echo "  make docker-down - Docker-Container stoppen"
 	@echo "  make deploy     - Auf Server deployen (Docker) – danach IMMER auch: make ethos-image && make ethos-deploy"
 	@echo "  make deploy-hub - Hub deployen (Drift-Guard, Backup, Health-Check, Rollback)"
+	@echo "  make hub-sync   - Neuesten Hub-Stand holen + Drift-Check (Start jeder Server-Session)"
 	@echo "  make hub-check  - Prüfen, ob der Hub auf dem Server von Hand geändert wurde"
 	@echo "  make hub-pull   - Server-Stand des Hubs nach hub/ holen"
 	@echo "  make server-prune - Dangling Docker-Images auf dem Server entfernen (läuft auch nach deploy)"
@@ -66,6 +67,7 @@ docker-build:
 # Erfordert: .env.deploy mit SSH_HOST, REMOTE_DIR (optional: SSH_KEY)
 # Oder: make deploy SSH_HOST=user@server REMOTE_DIR=/opt/techstack
 deploy:
+	-@scripts/hub-deploy.sh sync
 	@[ -f .env.deploy ] && . .env.deploy 2>/dev/null; \
 	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
 	ROOT_DIR=$$(pwd); \
@@ -210,6 +212,9 @@ server-prune:
 # Runbook: hub/README.md
 deploy-hub:
 	@scripts/hub-deploy.sh deploy
+
+hub-sync:
+	@scripts/hub-deploy.sh sync
 
 hub-check:
 	@scripts/hub-deploy.sh check

@@ -41,6 +41,7 @@ Tools eingebunden wird); beide werden von `make deploy-hub` mit übertragen.
 cp .env.deploy.example .env.deploy   # SSH_HOST, REMOTE_DIR, HOST_PORT anpassen
 make deploy                          # App
 make deploy-hub                      # Hub (nur bei Änderungen in hub/; Drift-Guard + Rollback)
+make hub-sync                        # Start jeder Server-Session: git pull + Drift-Check
 make hub-check                       # Wurde der Hub auf dem Server von Hand geändert?
 make hub-pull                        # Server-Stand nach hub/ holen (nach Notfall-Hotfix)
 ```

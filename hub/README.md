@@ -13,14 +13,26 @@ Hintergrund: Am 20.11.2026 hat ein `deploy-hub` aus einem veralteten `hub/` die 
 überschrieben (TRA-/Story-Kacheln, `/digest/`, Log-Filter, salesperformance-Zertifikat). Mehrere Tools waren
 dadurch nicht erreichbar.
 
+## Jede Server-Session startet mit dem neuesten Stand
+
+Wer am V-Server arbeitet (egal aus welchem Repo), führt zuerst `make hub-sync` hier aus: `git pull --ff-only`
+plus Drift-Check. `make deploy` hier und die `deploy.sh` von TRA, Digest und Story Studio tun das automatisch
+(nur Warnung). `make deploy-hub` lehnt ab, wenn
+- der lokale Stand hinter `origin` liegt,
+- `hub/` uncommittete Änderungen hat,
+- auf dem Server ein Commit läuft (`.hub-commit`), der lokal fehlt.
+
+Nach jedem `deploy-hub` sofort pushen, sonst fehlt der Stand anderen Sessions (das Skript erinnert daran).
+
 ## Befehle
 
 | Befehl | Wirkung |
 |---|---|
+| `make hub-sync` | neuesten Repo-Stand holen + Drift-Check (Start jeder Server-Session) |
 | `make hub-check` | Drift-Check: Server gegen das Manifest des letzten Deploys (`.hub-manifest`, sha256), inkl. neuer Dateien |
 | `make deploy-hub` | Drift-Guard → Backup (`backup-hub-<ts>.tgz`, 14 bleiben) → in place schreiben → bei Compose-Änderung `up -d` → `caddy validate`/`reload` → Health-Check aller Hosts → bei Fehler Rollback → Manifest |
 | `make hub-pull` | Server-Stand (verwaltete Dateien + alle Compose-Mounts) nach `hub/` holen |
-| `FORCE=1 make deploy-hub` | Drift bewusst überschreiben (nur nach Prüfung; Backup wird trotzdem angelegt) |
+| `FORCE=1 make deploy-hub` | Drift- und Stand-Prüfungen bewusst übergehen (nur nach Prüfung; Backup wird trotzdem angelegt) |
 
 ## Notfall-Hotfix direkt auf dem Server
 
