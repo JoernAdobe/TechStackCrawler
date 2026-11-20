@@ -11,7 +11,6 @@ interface ApiToken {
 }
 
 interface Props {
-  token: string;
   onUnauthorized?: () => void;
 }
 
@@ -26,7 +25,7 @@ function formatDate(iso: string | null): string {
   });
 }
 
-export default function ApiTokenManager({ token, onUnauthorized }: Props) {
+export default function ApiTokenManager({ onUnauthorized }: Props) {
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -66,7 +65,7 @@ export default function ApiTokenManager({ token, onUnauthorized }: Props) {
     abortRef.current = controller;
 
     try {
-      setTokens(await apiRequest<ApiToken[]>('/api/tokens', { token, signal: controller.signal }));
+      setTokens(await apiRequest<ApiToken[]>('/api/tokens', { signal: controller.signal }));
     } catch (err) {
       if (isAbortError(err)) return;
       handleError(err, 'Failed to load tokens');
@@ -76,7 +75,7 @@ export default function ApiTokenManager({ token, onUnauthorized }: Props) {
         setLoading(false);
       }
     }
-  }, [token, handleError]);
+  }, [handleError]);
 
   useEffect(() => {
     void fetchTokens();
@@ -90,7 +89,6 @@ export default function ApiTokenManager({ token, onUnauthorized }: Props) {
     try {
       const data = await apiRequest<{ token: string }>('/api/tokens', {
         method: 'POST',
-        token,
         body: { name: newName.trim(), expiresAt: newExpiry || null },
       });
       setCreatedToken(data.token);
@@ -106,7 +104,7 @@ export default function ApiTokenManager({ token, onUnauthorized }: Props) {
 
   async function handleRevoke(id: number) {
     try {
-      await apiRequest(`/api/tokens/${id}`, { method: 'DELETE', token });
+      await apiRequest(`/api/tokens/${id}`, { method: 'DELETE' });
       await fetchTokens();
     } catch (err) {
       handleError(err, 'Failed to revoke token');

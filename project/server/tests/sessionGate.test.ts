@@ -17,14 +17,16 @@ const server = app.listen(0);
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 after(() => server.close());
 
-test('blocks /api without session, allows with cookie or bearer session', async () => {
+test('blocks /api without session, allows only the Okta cookie session', async () => {
   const anon = await fetch(`${base}/api/analyses`);
   assert.equal(anon.status, 401);
   assert.equal((await anon.json()).code, 'auth_required');
 
   const token = createSession('user@adobe.com', false);
   assert.equal((await fetch(`${base}/api/analyses`, { headers: { cookie: `ts_session=${token}` } })).status, 200);
-  assert.equal((await fetch(`${base}/api/analyses`, { headers: { authorization: `Bearer ${token}` } })).status, 200);
+  // Kein Bearer-/Passwort-Login mehr: Session-Token im Header zählt nicht.
+  assert.equal((await fetch(`${base}/api/analyses`, { headers: { authorization: `Bearer ${token}` } })).status, 401);
+  assert.equal((await fetch(`${base}/api/dashboard/login`, { method: 'POST' })).status, 401);
 });
 
 test('keeps login, health, token-protected and non-API paths open', async () => {

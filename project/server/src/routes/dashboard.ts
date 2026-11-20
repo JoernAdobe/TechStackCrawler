@@ -1,12 +1,11 @@
-import { z } from 'zod';
-import { passwordHashFormat, verifyPassword } from '../utils/passwordHash.js';
 import type { Request, Response, NextFunction } from 'express';
 import { getPool } from '../db/index.js';
 import type { AnalysisResult } from '../types/analysis.js';
-import { createSession, getSession } from '../services/sessionStore.js';
+import { getSession } from '../services/sessionStore.js';
+import { isAdminEmail } from '../services/admins.js';
 import { config } from '../config.js';
 import { computeUsageStats, type FunnelInput, type UsageStats } from '../services/usageStats.js';
-import { ServiceUnavailableError, UnauthorizedError, ForbiddenError, DbUnavailableError, parseBody } from '../utils/http.js';
+import { UnauthorizedError, ForbiddenError, DbUnavailableError } from '../utils/http.js';
 
 const MANUAL_HOURS_PER_ANALYSIS = 5;
 const CONSULTANT_HOURLY_RATE = 150;
@@ -14,74 +13,26 @@ const CONSULTANT_HOURLY_RATE = 150;
 /** Cookie-Name des Okta-/Session-Cookies (identisch in oktaAuth.ts). */
 const SESSION_COOKIE = 'ts_session';
 
-const loginSchema = z.object({
-  email: z.string().min(1).max(320),
-  password: z.string().min(1).max(1024),
-});
-
 /**
- * Break-Glass-Passwort-Login (Notfallzugang, falls Okta nicht verfügbar/konfiguriert).
- *
- * Credentials kommen ausschließlich aus der Umgebung (DASHBOARD_EMAIL +
- * DASHBOARD_PASSWORD_HASH). Ohne beide Werte ist der Endpunkt deaktiviert — es gibt
- * bewusst keinen Default, damit nie ein aus dem Quellcode ableitbares Passwort existiert.
- * Hash-Format: scrypt (empfohlen) oder Legacy-SHA-256, siehe utils/passwordHash.ts.
+ * Schützt Dashboard-Routen: nur Okta-Session (ts_session-Cookie), Admin-Status
+ * wird live gegen fixe + gepflegte Admins geprüft (Entfernen wirkt sofort).
+ * Setzt res.locals.adminEmail für nachgelagerte Handler.
  */
-export function dashboardLogin(req: Request, res: Response) {
-  const { breakGlassEmail, breakGlassPasswordHash } = config.dashboard;
-  if (!breakGlassEmail || !breakGlassPasswordHash) {
-    throw new ServiceUnavailableError(
-      'Break-glass login is disabled. Set DASHBOARD_EMAIL and DASHBOARD_PASSWORD_HASH to enable it.',
-    );
-  }
-  // Ein fehlerhaft formatierter Hash würde sonst still jeden Login mit 401 ablehnen.
-  if (passwordHashFormat(breakGlassPasswordHash) === 'invalid') {
-    throw new ServiceUnavailableError(
-      'Break-glass login is misconfigured: DASHBOARD_PASSWORD_HASH has an unknown format.',
-    );
-  }
-
-  const { email, password } = parseBody(loginSchema, req.body);
-
-  const emailMatches = email.trim().toLowerCase() === breakGlassEmail;
-  // Hash immer prüfen (auch bei falscher E-Mail), damit die Antwortzeit nichts verrät.
-  const hashMatches = verifyPassword(password, breakGlassPasswordHash);
-
-  if (!emailMatches || !hashMatches) {
-    throw new UnauthorizedError('Invalid credentials');
-  }
-
-  const token = createSession(breakGlassEmail, true);
-  res.json({ token });
-}
-
-/**
- * Schützt Dashboard-Routen. Akzeptiert entweder einen Bearer-Token (Break-Glass)
- * ODER das ts_session-Cookie (Okta-Login). Beide Kandidaten werden gegen den
- * gemeinsamen Session-Store geprüft — kein Early-Return, damit ein leerer/ungültiger
- * Bearer nicht ein gültiges Cookie blockiert. Erfordert isAdmin.
- */
-export function requireDashboardAuth(req: Request, _res: Response, next: NextFunction) {
-  const candidates: string[] = [];
-
-  const auth = req.headers.authorization;
-  if (auth?.startsWith('Bearer ')) {
-    const bearer = auth.slice(7).trim();
-    if (bearer) candidates.push(bearer);
-  }
-
+export function requireDashboardAuth(req: Request, res: Response, next: NextFunction) {
   const cookieToken = (req as Request & { cookies?: Record<string, string> }).cookies?.[SESSION_COOKIE];
-  if (cookieToken) candidates.push(cookieToken);
-
-  const session = candidates.map((t) => getSession(t)).find((s) => s !== null) ?? null;
-
+  const session = getSession(cookieToken);
   if (!session) {
-    throw new UnauthorizedError();
+    next(new UnauthorizedError());
+    return;
   }
-  if (!session.isAdmin) {
-    throw new ForbiddenError('Admin access required');
-  }
-  next();
+  isAdminEmail(session.email).then((ok) => {
+    if (!ok) {
+      next(new ForbiddenError('Admin access required'));
+      return;
+    }
+    res.locals.adminEmail = session.email.trim().toLowerCase();
+    next();
+  }, next);
 }
 
 interface TechCount {

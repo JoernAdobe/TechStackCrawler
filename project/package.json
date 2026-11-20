@@ -17,8 +17,7 @@
     "test:mcp": "cd server && tsx src/mcp-smoke.ts",
     "rotate-bedrock-key": "npx dotenv -e .env -- tsx scripts/rotate-bedrock-key.ts",
     "test-bedrock-key": "npx dotenv -e .env -- tsx scripts/test-bedrock-key.ts",
-    "export-for-deploy": "npx dotenv -e .env -- tsx scripts/export-local-analyses.ts",
-    "hash-dashboard-password": "tsx scripts/hash-dashboard-password.ts"
+    "export-for-deploy": "npx dotenv -e .env -- tsx scripts/export-local-analyses.ts"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

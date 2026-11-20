@@ -1,42 +1,5 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react';
-import { apiRequest, toErrorMessage } from '../lib/apiClient';
-
-interface Props {
-  onLogin: (token: string) => void;
-}
-
-export default function DashboardLogin({ onLogin }: Props) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  // onLogin unmountet diese Komponente – danach darf kein State mehr gesetzt werden.
-  const mountedRef = useRef(true);
-  useEffect(
-    () => () => {
-      mountedRef.current = false;
-    },
-    [],
-  );
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const data = await apiRequest<{ token: string }>('/api/dashboard/login', {
-        method: 'POST',
-        body: { email, password },
-      });
-      onLogin(data.token);
-    } catch (err) {
-      if (mountedRef.current) setError(toErrorMessage(err, 'Login failed'));
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }
-
+/** Login für den Admin-View: ausschließlich Okta (Sign in with Adobe). */
+export default function DashboardLogin() {
   return (
     <div className="min-h-screen bg-ts-surface flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -50,63 +13,12 @@ export default function DashboardLogin({ onLogin }: Props) {
           <p className="text-sm text-ts-text-secondary mt-1">Account Radar — Management View</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="dash-email" className="block text-xs font-medium text-ts-text-secondary mb-1.5">
-              Email
-            </label>
-            <input
-              id="dash-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-ts-border bg-ts-surface-light text-ts-text-primary placeholder-ts-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-adobe-red/40 focus:border-adobe-red transition-colors text-sm"
-              placeholder="you@adobe.com"
-              autoComplete="email"
-            />
-          </div>
-          <div>
-            <label htmlFor="dash-pw" className="block text-xs font-medium text-ts-text-secondary mb-1.5">
-              Password
-            </label>
-            <input
-              id="dash-pw"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-ts-border bg-ts-surface-light text-ts-text-primary placeholder-ts-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-adobe-red/40 focus:border-adobe-red transition-colors text-sm"
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-          </div>
-
-          {error && (
-            <p role="alert" className="text-adobe-red text-sm text-center">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-semibold text-sm hover:from-adobe-red-dark hover:to-[#B03522] transition-all disabled:opacity-50"
-          >
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-ts-border" />
-          <span className="text-xs text-ts-text-secondary">or</span>
-          <div className="flex-1 h-px bg-ts-border" />
-        </div>
-
-        {/* Okta SSO — full-page navigation (kein fetch), damit Okta redirecten kann */}
+        {/* Okta SSO (einziger Login-Weg) — Full-Page-Navigation, damit Okta redirecten kann */}
         <a
           href="/auth/login"
-          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-ts-border bg-ts-surface-light text-ts-text-primary font-semibold text-sm hover:bg-ts-surface-hover transition-colors"
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-gradient-to-r from-adobe-red to-adobe-red-dark text-white font-semibold text-sm hover:from-adobe-red-dark hover:to-[#B03522] transition-all"
         >
-          <svg className="w-4 h-4 text-adobe-red" viewBox="0 0 24 24" fill="currentColor">
+          <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
             <path d="M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm6.232 0L24 22.624V1.376z" />
           </svg>
           Sign in with Adobe

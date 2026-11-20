@@ -1,6 +1,6 @@
 /**
  * App-weite Okta-Pflicht: jeder /api-Aufruf braucht eine gültige Session
- * (Okta-Cookie oder Break-Glass-Bearer). Nur so lässt sich Nutzung einem
+ * (Okta-Cookie; Okta ist der einzige Login-Weg). Nur so lässt sich Nutzung einem
  * Adobe-User zuordnen (usage_events.email, briefing_jobs.created_by).
  *
  * Ausgenommen sind Pfade mit eigener Auth (Integration-/Savings-Tokens) und
@@ -15,7 +15,6 @@ const PUBLIC_EXACT = new Set([
   '/api/health',
   '/api/bedrock-status',
   '/api/dashboard/session',
-  '/api/dashboard/login',
 ]);
 const PUBLIC_PREFIXES = ['/api/internal/', '/api/integration/'];
 
@@ -26,8 +25,6 @@ export function isPublicApiPath(path: string): boolean {
 }
 
 export function hasValidSession(req: Request): boolean {
-  const auth = req.headers.authorization;
-  if (auth?.startsWith('Bearer ') && getSession(auth.slice(7).trim())) return true;
   const cookie = (req as Request & { cookies?: Record<string, string> }).cookies?.[SESSION_COOKIE];
   return Boolean(cookie && getSession(cookie));
 }

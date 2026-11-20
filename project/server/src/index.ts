@@ -28,7 +28,8 @@ import { resumeUseCaseJobs } from './services/useCaseAuto.js';
 import { useCaseDiscoveryRoute, useCaseStatusRoute } from './routes/useCaseDiscovery.js';
 import { listAnalysesRoute, getAnalysisRoute } from './routes/analyses.js';
 import { libraryRoute } from './routes/library.js';
-import { dashboardLogin, dashboardStats, requireDashboardAuth } from './routes/dashboard.js';
+import { dashboardStats, requireDashboardAuth } from './routes/dashboard.js';
+import { createAdminRoutes } from './routes/admins.js';
 import { createAuthRoutes, oidcConfigured } from './routes/oktaAuth.js';
 import { createSessionGate } from './routes/sessionGate.js';
 import { createTokenRoute, listTokensRoute, revokeTokenRoute } from './routes/apiTokens.js';
@@ -99,16 +100,6 @@ const analysisLimiter = rateLimit({
   skipFailedRequests: true,
   requestWasSuccessful: (_req, res) => res.statusCode !== 400 && res.statusCode !== 422,
   message: { error: 'Too many requests – please try again later.', code: 'rate_limited' },
-});
-
-// Break-Glass-Login: eng limitiert, da hier ein Passwort geprüft wird.
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60_000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true,
-  message: { error: 'Too many login attempts – please try again later.', code: 'rate_limited' },
 });
 
 // Okta-Flow: begrenzt das Anlegen von pendingAuth-Einträgen. Bewusst großzügig,
@@ -212,9 +203,9 @@ app.get('/api/analyses/:id/use-cases/status', asyncHandler(useCaseStatusRoute));
 app.get('/api/analyses', asyncHandler(listAnalysesRoute));
 app.get('/api/library', asyncHandler(libraryRoute));
 app.get('/api/analyses/:id', asyncHandler(getAnalysisRoute));
-app.post('/api/dashboard/login', loginLimiter, asyncHandler(dashboardLogin));
 app.post('/api/usage', lightLimiter, usageBeaconRoute);
 app.get('/api/dashboard/stats', requireDashboardAuth, asyncHandler(dashboardStats));
+app.use(createAdminRoutes({ limiter: lightLimiter }));
 
 // Okta OIDC + Session-Status (/auth/login, /auth/callback, /auth/logout, /api/dashboard/session)
 app.use('/auth', authLimiter);

@@ -7,9 +7,9 @@
  *   GET  /auth/logout           → Session zerstören + Cookie löschen
  *   GET  /api/dashboard/session → { authenticated, email, isAdmin } (Client-Gate)
  *
- * Admin-Regel: E-Mail-Whitelist (config.adminEmails). Wer sich per Okta einloggt,
- * aber nicht in der Whitelist steht, bekommt eine Session mit isAdmin=false
- * (→ 403 in requireDashboardAuth / "nicht freigeschaltet" im Client).
+ * Einziger Login-Weg (kein Passwort-/Break-Glass-Login). Admin-Regel: fixe Admins
+ * (config.adminEmails) + in der Admin-UI gepflegte Admins (services/admins.ts),
+ * live geprüft. Nicht-Admins → 403 in requireDashboardAuth / "Kein Zugriff" im Client.
  */
 import { Router, type Request, type Response } from 'express';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
@@ -17,6 +17,7 @@ import { randomBytes } from 'crypto';
 import { config } from '../config.js';
 import { createSession, getSession, destroySession, SESSION_TTL_MS } from '../services/sessionStore.js';
 import { asyncHandler } from '../utils/http.js';
+import { isAdminEmail } from '../services/admins.js';
 
 const SESSION_COOKIE = 'ts_session';
 const DEFAULT_NEXT = '/#/dashboard';
@@ -44,9 +45,6 @@ function isProduction(): boolean {
   return config.nodeEnv === 'production';
 }
 
-function isAdminEmail(email: string): boolean {
-  return config.adminEmails.includes(email.trim().toLowerCase());
-}
 
 // --- JWKS (lazy, gecacht durch jose's createRemoteJWKSet) -----------------------
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
@@ -242,7 +240,7 @@ export function createAuthRoutes(): Router {
         return;
       }
 
-      const isAdmin = isAdminEmail(email);
+      const isAdmin = await isAdminEmail(email);
       const token = createSession(email, isAdmin);
       setSessionCookie(res, token);
       console.log(`Okta login: ${email} (admin=${isAdmin})`);
@@ -262,15 +260,18 @@ export function createAuthRoutes(): Router {
   });
 
   // Client-Gate: sagt dem Frontend, ob eine gültige (Cookie-)Session besteht.
-  router.get('/api/dashboard/session', (req: Request, res: Response) => {
-    const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
-    const session = getSession(cookies?.[SESSION_COOKIE]);
-    if (!session) {
-      res.json({ authenticated: false, loginRequired: oidcConfigured() });
-      return;
-    }
-    res.json({ authenticated: true, email: session.email, isAdmin: session.isAdmin });
-  });
+  router.get(
+    '/api/dashboard/session',
+    asyncHandler(async (req: Request, res: Response) => {
+      const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
+      const session = getSession(cookies?.[SESSION_COOKIE]);
+      if (!session) {
+        res.json({ authenticated: false, loginRequired: oidcConfigured() });
+        return;
+      }
+      res.json({ authenticated: true, email: session.email, isAdmin: await isAdminEmail(session.email) });
+    }),
+  );
 
   return router;
 }

@@ -6,10 +6,6 @@ import type { FeedbackEntry } from '../types/parity';
 type Status = NonNullable<FeedbackEntry['status']>;
 const STATUSES: Status[] = ['open', 'triaged', 'done'];
 
-interface FeedbackListProps {
-  token: string;
-}
-
 function ratingIcon(r?: -1 | 0 | 1): string {
   if (r === 1) return '👍';
   if (r === -1) return '👎';
@@ -17,12 +13,12 @@ function ratingIcon(r?: -1 | 0 | 1): string {
 }
 
 /** PATCH ist im zentralen apiRequest nicht vorgesehen – daher hier ein schlanker fetch mit gleichem Fehlerformat. */
-async function patchStatus(id: number, status: Status, token: string): Promise<void> {
+async function patchStatus(id: number, status: Status): Promise<void> {
   let res: Response;
   try {
     res = await fetch(`/api/feedback/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
   } catch (err) {
@@ -31,7 +27,7 @@ async function patchStatus(id: number, status: Status, token: string): Promise<v
   if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
-export default function FeedbackList({ token }: FeedbackListProps) {
+export default function FeedbackList() {
   const [items, setItems] = useState<FeedbackEntry[]>([]);
   const [filter, setFilter] = useState<Status | ''>('open');
   const [loading, setLoading] = useState(true);
@@ -49,7 +45,7 @@ export default function FeedbackList({ token }: FeedbackListProps) {
     setError('');
     try {
       const qs = filter ? `?status=${filter}` : '';
-      setItems(await apiRequest<FeedbackEntry[]>(`/api/feedback${qs}`, { token, signal: controller.signal }));
+      setItems(await apiRequest<FeedbackEntry[]>(`/api/feedback${qs}`, { signal: controller.signal }));
     } catch (err) {
       if (isAbortError(err)) return;
       setError(toErrorMessage(err, 'Failed to load feedback'));
@@ -59,7 +55,7 @@ export default function FeedbackList({ token }: FeedbackListProps) {
         setLoading(false);
       }
     }
-  }, [token, filter]);
+  }, [filter]);
 
   useEffect(() => {
     load();
@@ -69,7 +65,7 @@ export default function FeedbackList({ token }: FeedbackListProps) {
     setUpdating(id);
     setError('');
     try {
-      await patchStatus(id, status, token);
+      await patchStatus(id, status);
       setItems((prev) =>
         prev
           .map((f) => (f.id === id ? { ...f, status } : f))

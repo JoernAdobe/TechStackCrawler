@@ -1,6 +1,5 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { passwordHashFormat } from './utils/passwordHash.js';
 
 /** Relative Pfade (z. B. `.venv/bin/python`) beziehen sich auf `project/`, nicht auf das cwd. */
 function resolvePythonPath(value: string): string {
@@ -8,6 +7,9 @@ function resolvePythonPath(value: string): string {
   const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
   return path.resolve(projectRoot, value);
 }
+
+/** Owner des Admin-Views: immer Admin, unabhängig von ENV und DB. */
+export const OWNER_ADMIN_EMAIL = 'daudert@adobe.com';
 
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
@@ -84,22 +86,14 @@ export const config = {
   },
   /** Aufbewahrung für Nutzungs-/Audit-/LLM-Logs in Tagen (OneTrust-PIA); täglicher Purge, min. 7 (Wochen-Aggregate). */
   retentionLogDays: Math.max(7, Number.parseInt(process.env.RETENTION_LOG_DAYS || '', 10) || 30),
-  /** E-Mail-Whitelist für Admin-/Dashboard-Zugriff (case-insensitive). */
-  adminEmails: (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || 'daudert@adobe.com')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean),
-  dashboard: {
-    /**
-     * Break-Glass-Notfallzugang, falls Okta nicht verfügbar/konfiguriert ist.
-     * Bewusst OHNE Default: Ist DASHBOARD_PASSWORD_HASH nicht gesetzt, bleibt der
-     * Login deaktiviert — so existiert nie ein aus dem Quellcode ableitbares Passwort.
-     * Hash erzeugen (scrypt, gesalzen):
-     *   npm run hash-dashboard-password -- '<pw>'   (im Ordner project/)
-     */
-    breakGlassEmail: (process.env.DASHBOARD_EMAIL || '').trim().toLowerCase(),
-    breakGlassPasswordHash: (process.env.DASHBOARD_PASSWORD_HASH || '').trim().toLowerCase(),
-  },
+  /** Fixe Admins (nicht in der UI entfernbar, case-insensitive); weitere Admins pflegt die Admin-UI in der DB. */
+  adminEmails: [
+    ...new Set(
+      [OWNER_ADMIN_EMAIL, ...(process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || '').split(',')]
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ],
 };
 
 /**
@@ -150,26 +144,6 @@ export function validateConfig(): void {
     if (config.ims.allowedEmailDomains.length === 0) {
       errors.push('MCP_IMS_ALLOWED_EMAIL_DOMAINS darf bei aktivem IMS-Passthrough nicht leer sein.');
     }
-  }
-
-  const { breakGlassEmail, breakGlassPasswordHash } = config.dashboard;
-  if (breakGlassEmail && !breakGlassPasswordHash) {
-    warnings.push('DASHBOARD_EMAIL gesetzt, aber DASHBOARD_PASSWORD_HASH fehlt – Break-Glass-Login bleibt deaktiviert.');
-  }
-  const hashFormat = breakGlassPasswordHash ? passwordHashFormat(breakGlassPasswordHash) : null;
-  if (hashFormat === 'invalid') {
-    // In Production ist eine fehlerhafte Auth-Konfiguration ein harter Fehler. Lokal
-    // soll ein vertippter optionaler Hash den Start nicht verhindern.
-    const msg = 'DASHBOARD_PASSWORD_HASH hat ein unbekanntes Format (erwartet: scrypt$<salt>$<hash> oder SHA-256-Hex).';
-    if (config.nodeEnv === 'production') {
-      errors.push(msg);
-    } else {
-      warnings.push(`${msg} Break-Glass-Login bleibt deaktiviert.`);
-    }
-  } else if (hashFormat === 'sha256') {
-    warnings.push(
-      'DASHBOARD_PASSWORD_HASH nutzt das ungesalzene Legacy-SHA-256-Format – bitte per `npm run hash-dashboard-password` auf scrypt umstellen.',
-    );
   }
 
   for (const w of warnings) console.warn(`[config] ${w}`);

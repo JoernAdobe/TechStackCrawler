@@ -29,7 +29,7 @@ Enter any URL, and the tool renders the site with Scrapling, detects its tech st
 | Frontend | React 19, Vite, TypeScript, Tailwind CSS, Recharts, GSAP, Radix UI |
 | Backend | Node.js 20, Express, Python Scrapling, Chromium, AWS Bedrock SDK, MCP SDK |
 | Database | SQLite for local development; MariaDB 11 for Docker/production |
-| Auth | Okta OIDC SSO, break-glass dashboard login, MCP bearer tokens |
+| Auth | Okta OIDC SSO (only login path), admin list maintained in the dashboard, MCP bearer tokens |
 | Infrastructure | Docker, Docker Compose, Caddy reverse proxy, Makefile deployment scripts |
 
 ## Architecture
@@ -78,7 +78,6 @@ In development, the Vite dev server runs on port `5173` and proxies `/api` reque
     │   ├── deploy-restore-if-empty.sh
     │   ├── export-local-analyses.ts
     │   ├── rotate-bedrock-key.ts
-    │   ├── hash-dashboard-password.ts
     │   └── test-bedrock-key.ts
     ├── client/                       # React/Vite application
     └── server/                       # Express API, DB, services, MCP, auth
@@ -245,11 +244,9 @@ The server loads the first available `.env` file from the compiled server-relati
 | `OKTA_CLIENT_SECRET` | server/Docker | OIDC client secret | Empty; SSO disabled when incomplete |
 | `OKTA_REDIRECT_URI` | server/Docker | OIDC callback URL | Empty; SSO disabled when incomplete |
 | `OKTA_SCOPES` | server/Docker | OIDC scopes | `openid profile email` |
-| `ADMIN_EMAILS` | server/Docker | Comma-separated admin allow-list for dashboard access | Code/Compose include a maintainer fallback; set explicitly during handover |
+| `ADMIN_EMAILS` | server/Docker | Comma-separated fixed admins (cannot be removed in the UI); `daudert@adobe.com` is always a fixed owner admin. Further admins are maintained in the dashboard (`admins` table) | Owner only |
 | `ADMIN_EMAIL` | server | Legacy single-email admin fallback | Used only when `ADMIN_EMAILS` is unset |
 | `RETENTION_LOG_DAYS` | server/Docker | Days after which `usage_events` and `analysis_runs` are purged (daily); anonymous weekly aggregates go to `usage_weekly` first | `30` (minimum `7`) |
-| `DASHBOARD_EMAIL` | server/Docker | Break-glass dashboard login email | Empty; break-glass login disabled unless both dashboard variables are set |
-| `DASHBOARD_PASSWORD_HASH` | server/Docker | scrypt hash for the break-glass password (`npm run hash-dashboard-password -- '<pw>'`) | Empty; legacy 64-char SHA-256 hex is still accepted but logs a warning |
 | `HOST_BIND` | Docker | Host interface for the app port | `0.0.0.0`; set `172.17.0.1` to expose the port only to the hub proxy (see `docs/deployment.md`) |
 | `HOST_PORT` | Docker/Makefile | Host port exposed by Caddy for app deployment | `8516` in Compose/Makefile defaults |
 | `HOST_PORT_HTTP` | Makefile deploy/restart | Secondary deploy-time port variable passed to Compose commands | `HOST_PORT + 1`; currently not consumed by `project/docker-compose.yml` |
@@ -280,15 +277,9 @@ The server loads the first available `.env` file from the compiled server-relati
 - `GET /auth/login` starts an OIDC Authorization Code flow.
 - `GET /auth/callback` validates `state`, `nonce`, issuer, audience, and the returned `id_token`.
 - A successful login creates an in-memory `ts_session` cookie valid for 24 hours.
-- Dashboard access requires the authenticated email to be present in `ADMIN_EMAILS`/`ADMIN_EMAIL`.
+- Okta is the only login path (the former break-glass password login was removed).
+- Dashboard access requires the authenticated email to be a fixed admin (owner `daudert@adobe.com` + `ADMIN_EMAILS`/`ADMIN_EMAIL`) or a managed admin from the dashboard's **Admins** section. Admin status is checked live on every request, so removals apply immediately.
 - `GET /api/dashboard/session` is intentionally public and only reports whether the current cookie maps to an authenticated/admin session.
-
-### Break-glass dashboard login
-
-- `POST /api/dashboard/login` is a fallback for dashboard access when Okta is unavailable.
-- It is disabled unless both `DASHBOARD_EMAIL` and `DASHBOARD_PASSWORD_HASH` are set.
-- The password hash should be a salted scrypt hash (`scrypt$<salt>$<hash>`), generated with `cd project && npm run hash-dashboard-password -- '<password>'`. Legacy unsalted SHA-256 hashes still work but trigger a startup warning; never store the clear-text password.
-- Successful login returns a bearer session token that can also authorize dashboard-protected endpoints.
 
 ### MCP authentication
 
@@ -311,8 +302,10 @@ The server loads the first available `.env` file from the compiled server-relati
 | `GET` | `/auth/callback` | Public | 100/15 minutes on `/auth/*` | Okta callback; sets `ts_session` cookie. |
 | `GET` | `/auth/logout` | Public | 100/15 minutes on `/auth/*` | Destroy current session cookie if present. |
 | `GET` | `/api/dashboard/session` | Public | None | Report current dashboard session state. |
-| `POST` | `/api/dashboard/login` | Public | 5 failed attempts/15 minutes | Break-glass login; returns a dashboard session bearer token. |
 | `GET` | `/api/dashboard/stats` | Dashboard admin | None | Return dashboard metrics and aggregates. |
+| `GET` | `/api/dashboard/admins` | Dashboard admin | 30/minute | List fixed and managed admins. |
+| `POST` | `/api/dashboard/admins` | Dashboard admin | 30/minute | Add a managed admin. Body: `{ "email": "..." }`. |
+| `DELETE` | `/api/dashboard/admins/:email` | Dashboard admin | 30/minute | Remove a managed admin (not fixed admins, not yourself). |
 | `POST` | `/api/tokens` | Dashboard admin | None | Create MCP API token. Body: `{ "name": "...", "expiresAt"?: "YYYY-MM-DD" }`. |
 | `GET` | `/api/tokens` | Dashboard admin | None | List MCP API tokens metadata. |
 | `DELETE` | `/api/tokens/:id` | Dashboard admin | None | Revoke an MCP API token by numeric ID. |

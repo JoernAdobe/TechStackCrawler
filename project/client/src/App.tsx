@@ -49,18 +49,14 @@ function useHashRoute(): string {
 
 function App() {
   const hash = useHashRoute();
-  const [dashboardToken, setDashboardToken] = useState<string | null>(
-    () => sessionStorage.getItem('dashboard_token'),
-  );
-  // Okta-Session-Status (Cookie-basiert, ohne sessionStorage-Token).
+  // Okta-Session-Status (Cookie-basiert; Okta ist der einzige Login-Weg).
   const [oktaSession, setOktaSession] = useState<
     { authenticated: boolean; isAdmin: boolean } | null
   >(null);
 
   const isDashboard = hash === '#/dashboard';
 
-  // Beim Betreten des Dashboards die Cookie-Session prüfen (Okta-Login liefert
-  // keinen sessionStorage-Token, nur ein httpOnly-Cookie).
+  // Beim Betreten des Dashboards die Cookie-Session prüfen (httpOnly-Cookie).
   useEffect(() => {
     if (!isDashboard) return;
     const controller = new AbortController();
@@ -85,24 +81,13 @@ function App() {
     return () => controller.abort();
   }, [isDashboard]);
 
-  const handleDashboardLogin = useCallback((token: string) => {
-    sessionStorage.setItem('dashboard_token', token);
-    setDashboardToken(token);
-  }, []);
-
   const handleDashboardLogout = useCallback(() => {
-    sessionStorage.removeItem('dashboard_token');
-    setDashboardToken(null);
     setOktaSession({ authenticated: false, isAdmin: false });
     // Okta-/Server-Session + Cookie serverseitig aufräumen (Fehler ignorieren).
     void apiRequest('/auth/logout').catch(() => {});
   }, []);
 
   if (isDashboard) {
-    // Break-Glass-Token vorhanden → direkt ins Dashboard.
-    if (dashboardToken) {
-      return <Dashboard token={dashboardToken} onLogout={handleDashboardLogout} />;
-    }
     // Cookie-Session-Check läuft noch.
     if (oktaSession === null) {
       return (
@@ -111,9 +96,9 @@ function App() {
         </div>
       );
     }
-    // Per Okta angemeldet und Admin → Dashboard (ohne sessionStorage-Token).
+    // Per Okta angemeldet und Admin → Dashboard.
     if (oktaSession.authenticated && oktaSession.isAdmin) {
-      return <Dashboard token="" onLogout={handleDashboardLogout} />;
+      return <Dashboard onLogout={handleDashboardLogout} />;
     }
     // Angemeldet, aber nicht als Admin freigeschaltet.
     if (oktaSession.authenticated && !oktaSession.isAdmin) {
@@ -134,7 +119,7 @@ function App() {
         </div>
       );
     }
-    return <DashboardLogin onLogin={handleDashboardLogin} />;
+    return <DashboardLogin />;
   }
 
   return (

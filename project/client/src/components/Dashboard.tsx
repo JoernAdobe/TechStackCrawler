@@ -13,6 +13,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import AdminManager from './AdminManager';
 import ApiTokenManager from './ApiTokenManager';
 import FeedbackList from './FeedbackList';
 import UsageSections, { type UsageStats } from './UsageSections';
@@ -48,7 +49,6 @@ interface Stats {
 }
 
 interface Props {
-  token: string;
   onLogout: () => void;
 }
 
@@ -68,7 +68,7 @@ function formatWeekLabel(week: string): string {
   return `W${parts[1]}`;
 }
 
-export default function Dashboard({ token, onLogout }: Props) {
+export default function Dashboard({ onLogout }: Props) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -85,7 +85,7 @@ export default function Dashboard({ token, onLogout }: Props) {
 
     try {
       setStats(
-        await apiRequest<Stats>('/api/dashboard/stats', { token, signal: controller.signal }),
+        await apiRequest<Stats>('/api/dashboard/stats', { signal: controller.signal }),
       );
     } catch (err) {
       if (isAbortError(err)) return;
@@ -100,7 +100,7 @@ export default function Dashboard({ token, onLogout }: Props) {
         setLoading(false);
       }
     }
-  }, [token, onLogout]);
+  }, [onLogout]);
 
   useEffect(() => {
     fetchStats();
@@ -357,10 +357,13 @@ export default function Dashboard({ token, onLogout }: Props) {
         </section>
 
         {/* API Token Management */}
-        <ApiTokenManager token={token} onUnauthorized={onLogout} />
+        {/* Admin-Pflege (Okta-E-Mails mit Zugriff auf diesen View) */}
+        <AdminManager onUnauthorized={onLogout} />
+
+        <ApiTokenManager onUnauthorized={onLogout} />
 
         {/* EAA-Parität: Nutzer-Feedback */}
-        <FeedbackList token={token} />
+        <FeedbackList />
 
         {/* Footer info */}
         <p className="text-center text-xs text-ts-text-secondary pb-4">

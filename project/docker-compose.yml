@@ -57,9 +57,6 @@ services:
       - OKTA_ISSUER=${OKTA_ISSUER:-https://adobe.okta.com}
       - OKTA_SCOPES=${OKTA_SCOPES:-openid profile email}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-daudert@adobe.com}
-      # Break-Glass-Login: nur aktiv, wenn beide Werte gesetzt sind.
-      - DASHBOARD_EMAIL=${DASHBOARD_EMAIL:-}
-      - DASHBOARD_PASSWORD_HASH=${DASHBOARD_PASSWORD_HASH:-}
       # CORS: leer = nur Same-Origin (Standard); sonst komma-getrennte Origin-Liste.
       - CORS_ORIGIN=${CORS_ORIGIN:-}
       # EAA-Paritätsfeatures (alle optional).
