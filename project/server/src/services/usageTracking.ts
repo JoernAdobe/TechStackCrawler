@@ -26,6 +26,7 @@ const RULES: Rule[] = [
   ['POST', /^\/api\/analyses\/(\d+)\/enrich\/geo$/, 'geo_score'],
   ['POST', /^\/api\/analyses\/(\d+)\/enrich\/observepoint$/, 'observepoint'],
   ['GET', /^\/api\/analyses\/(\d+)\/report\.pdf$/, 'export_pdf'],
+  ['POST', /^\/api\/analyses\/(\d+)\/report\.pdf$/, 'export_pdf'],
   ['GET', /^\/api\/briefings\/\d+\/report\.pdf$/, 'export_briefing_pdf'],
   ['GET', /^\/api\/briefings\/\d+\/report\.html$/, 'export_briefing_html'],
   ['GET', /^\/api\/analyses\/(\d+)\/deck\.pptx$/, 'export_deck'],

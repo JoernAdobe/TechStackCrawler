@@ -223,6 +223,7 @@ deploy-hub:
 		$$ROOT_DIR/$(HUB_DIR)/Caddyfile \
 		$$ROOT_DIR/$(HUB_DIR)/docker-compose.yml \
 		$$ROOT_DIR/$(HUB_DIR)/adobe-hero.png \
+		$$ROOT_DIR/$(HUB_DIR)/sales-velocity.png \
 		$$ROOT_DIR/$(HUB_DIR)/banner-inject.js \
 		$$ROOT_DIR/$(HUB_DIR)/banner.html \
 		"$$SSH_HOST:$(HUB_REMOTE_DIR)/"; \

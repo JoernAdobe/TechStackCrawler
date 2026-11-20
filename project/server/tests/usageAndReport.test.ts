@@ -8,6 +8,7 @@ import type { AnalysisResult } from '../src/types/analysis.js';
 
 test('matchUsageEvent maps tracked routes and extracts the analysis id', () => {
   assert.deepEqual(matchUsageEvent('GET', '/api/analyses/42/report.pdf'), { event: 'export_pdf', analysisId: 42 });
+  assert.deepEqual(matchUsageEvent('POST', '/api/analyses/42/report.pdf'), { event: 'export_pdf', analysisId: 42 });
   assert.deepEqual(matchUsageEvent('POST', '/api/analyses/7/briefing'), { event: 'briefing', analysisId: 7 });
   assert.equal(matchUsageEvent('GET', '/'), null); // visits come from the client beacon
   assert.equal(matchUsageEvent('GET', '/api/dashboard/stats'), null);
@@ -88,4 +89,13 @@ test('renderAnalysisSections includes deep-dive, GEO and client license sizing',
   assert.match(html, /&lt;do&gt;/);
   assert.match(html, /Adobe Analytics/);
   assert.match(html, /2\.0M/);
+});
+
+test('parseSizing accepts rows from the POST body and the legacy query string', async () => {
+  const { parseSizing } = await import('../src/routes/briefing.js');
+  const row = { product: 'AEP', metric: 'Profiles', unit: 'profiles', low: 1, mid: 2, high: 3, licenseUnit: 'Profiles', confidence: 'medium' };
+  assert.deepEqual(parseSizing([row]), [row]);
+  assert.deepEqual(parseSizing(JSON.stringify([row])), [row]);
+  assert.deepEqual(parseSizing('{broken'), []);
+  assert.deepEqual(parseSizing([{ product: 'x' }]), []);
 });

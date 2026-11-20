@@ -4,9 +4,10 @@ import { FileSpreadsheet, FileDown, FileText, Loader2, RotateCcw } from 'lucide-
 import type { AnalysisResult, UseCaseDiscoveryResult } from '../types/analysis';
 import { downloadMarkdown } from '../lib/markdown';
 import { downloadExcel } from '../lib/excel';
-import { hostnameOf, loadFullReportData, triggerDownload } from '../lib/fullReport';
+import { exportFilename, hostnameOf, loadFullReportData, triggerDownload } from '../lib/fullReport';
+import { apiErrorFromResponse, redirectToLogin, toErrorMessage, toNetworkError } from '../lib/apiClient';
 import { currentLicenseEstimates } from '../lib/licenseSizing';
-import { trackUsage } from '../lib/visitor';
+import { getVisitorId, trackUsage } from '../lib/visitor';
 import { useBriefingPending } from './briefing/briefingStore';
 
 interface DownloadButtonProps {
@@ -28,13 +29,42 @@ const ghost = `${base} font-medium text-ts-text-primary border border-ts-border 
 const primary = `${base} sm:px-5 font-semibold text-white bg-gradient-to-r from-adobe-red to-adobe-red-dark hover:from-adobe-red-dark hover:to-[#B03522] hover:shadow-glow-red active:scale-[0.98] disabled:hover:shadow-none disabled:active:scale-100`;
 
 /** Compact license-sizing rows for the server PDF (same numbers as the License Sizing tab). */
-function pdfUrl(results: AnalysisResult): string {
-  const rows = currentLicenseEstimates(results).estimates.map((e) => ({
+function sizingRows(results: AnalysisResult) {
+  return currentLicenseEstimates(results).estimates.map((e) => ({
     product: e.product, metric: e.metric, unit: e.unit, low: e.low, mid: e.mid, high: e.high,
     licenseUnit: e.licenseUnit, licenseUnits: e.licenseUnits, confidence: e.confidence, detected: e.detected,
   }));
-  const query = rows.length ? `?sizing=${encodeURIComponent(JSON.stringify(rows))}` : '';
-  return `/api/analyses/${results.id}/report.pdf${query}`;
+}
+
+function filenameFrom(res: Response, fallback: string): string {
+  const match = /filename="?([^";]+)"?/i.exec(res.headers.get('content-disposition') ?? '');
+  return match?.[1] || fallback;
+}
+
+/** Sizing goes in the POST body: as a query string it can exceed the server's 16 KB header limit (→ empty 431). */
+async function downloadPdf(results: AnalysisResult): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/analyses/${results.id}/report.pdf`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-Visitor-Id': getVisitorId() },
+      body: JSON.stringify({ sizing: sizingRows(results) }),
+    });
+  } catch (err) {
+    throw toNetworkError(err);
+  }
+  if (!res.ok) {
+    const error = await apiErrorFromResponse(res);
+    if (error.status === 401 && error.code === 'auth_required') redirectToLogin();
+    throw error;
+  }
+  if (!(res.headers.get('content-type') ?? '').includes('application/pdf')) {
+    throw new Error('Unexpected response from server (not a PDF).');
+  }
+  const url = URL.createObjectURL(await res.blob());
+  triggerDownload(url, filenameFrom(res, exportFilename(results, 'pdf')));
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export default function DownloadButton({
@@ -54,15 +84,15 @@ export default function DownloadButton({
     setFailed(null);
     try {
       if (format === 'pdf') {
-        triggerDownload(pdfUrl(results), '');
+        await downloadPdf(results);
       } else {
         const data = await loadFullReportData(results, useCases);
         if (format === 'markdown') downloadMarkdown(data);
         else downloadExcel(data);
         trackUsage(format === 'markdown' ? 'export_markdown' : 'export_excel', results.id);
       }
-    } catch {
-      setFailed('Export failed – please try again.');
+    } catch (err) {
+      setFailed(`Export failed – ${toErrorMessage(err, 'please try again.')}`);
     } finally {
       setBusy(null);
     }

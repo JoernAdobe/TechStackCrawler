@@ -40,15 +40,22 @@ const sizingRowsSchema = z.array(z.object({
   licenseUnit: str(200), licenseUnits: num.optional(), confidence: str(20), detected: z.array(str(120)).max(10).optional(),
 })).max(20);
 
-/** License-Sizing-Zeilen aus ?sizing= (vom Client berechnet); ungültige Eingaben werden ignoriert. */
-function parseSizing(raw: unknown): LicenseSizingRow[] {
-  if (typeof raw !== 'string' || !raw || raw.length > 20_000) return [];
-  try {
-    const parsed = sizingRowsSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : [];
-  } catch {
-    return [];
+/**
+ * License-Sizing-Zeilen (vom Client berechnet): POST-Body `{ sizing: [...] }` oder Legacy-?sizing=<JSON>.
+ * Ungültige Eingaben werden ignoriert.
+ */
+export function parseSizing(raw: unknown): LicenseSizingRow[] {
+  let value = raw;
+  if (typeof raw === 'string') {
+    if (!raw || raw.length > 20_000) return [];
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      return [];
+    }
   }
+  const parsed = sizingRowsSchema.safeParse(value);
+  return parsed.success ? parsed.data : [];
 }
 const jobIdSchema = z.object({ jobId: z.coerce.number().int().positive() });
 /** Bekannte IDs prüft normalizeBriefingSections (→ 400 mit Liste der erlaubten IDs). */
@@ -207,26 +214,26 @@ export function createBriefingRoutes(opts: { startLimiter?: RequestHandler; read
     }),
   );
 
-  // Komplettreport der Analyse (Pre-Briefing, falls vorhanden, + alle Tabs; ?sizing= = License Sizing aus dem Client).
-  router.get(
-    '/api/analyses/:id(\\d+)/report.pdf',
-    ...read,
-    asyncHandler(async (req, res) => {
-      const { id } = parseParams(analysisIdSchema, req.params);
-      requireDb();
-      const pool = getPool()!;
-      const analysis = await getAnalysisById(pool, id);
-      if (!analysis) throw new NotFoundError('Analysis not found');
-      const briefing = await getLatestDoneBriefingResult(pool, id);
-      const sizing = parseSizing(req.query.sizing);
-      const pdf = await renderPdf(buildAnalysisReportHtml(analysis, briefing ? renderBriefingHtml(briefing) : null, sizing));
-      const host = analysisHost(analysis).toLowerCase().replace(/[^a-z0-9.-]+/g, '-').slice(0, 60) || `analysis-${id}`;
-      res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Disposition', `attachment; filename="${host}-account-radar.pdf"`);
-      res.type('application/pdf').send(pdf);
-    }),
-  );
+  // Komplettreport der Analyse (Pre-Briefing, falls vorhanden, + alle Tabs) inkl. License Sizing aus dem Client.
+  // POST mit Body `{ sizing }`, weil das Sizing als Query (?sizing=) bei vielen Produkten das 16-KB-Header-Limit
+  // von Node sprengt (→ leere 431-Antwort). GET bleibt für Links/Integrationen ohne bzw. mit kleinem Sizing.
+  const analysisReportPdf: RequestHandler = asyncHandler(async (req, res) => {
+    const { id } = parseParams(analysisIdSchema, req.params);
+    requireDb();
+    const pool = getPool()!;
+    const analysis = await getAnalysisById(pool, id);
+    if (!analysis) throw new NotFoundError('Analysis not found');
+    const briefing = await getLatestDoneBriefingResult(pool, id);
+    const sizing = parseSizing(req.method === 'POST' ? (req.body as { sizing?: unknown } | undefined)?.sizing : req.query.sizing);
+    const pdf = await renderPdf(buildAnalysisReportHtml(analysis, briefing ? renderBriefingHtml(briefing) : null, sizing));
+    const host = analysisHost(analysis).toLowerCase().replace(/[^a-z0-9.-]+/g, '-').slice(0, 60) || `analysis-${id}`;
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', `attachment; filename="${host}-account-radar.pdf"`);
+    res.type('application/pdf').send(pdf);
+  });
+  router.get('/api/analyses/:id(\\d+)/report.pdf', ...read, analysisReportPdf);
+  router.post('/api/analyses/:id(\\d+)/report.pdf', ...read, analysisReportPdf);
 
   return router;
 }

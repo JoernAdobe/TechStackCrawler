@@ -14,6 +14,7 @@ services:
       - ./hero-bg.jpg:/srv/hero-bg.jpg:ro
       - ./adobe-a.png:/srv/adobe-a.png:ro
       - ./shot-techstack.webp:/srv/shot-techstack.webp:ro
+      - ./sales-velocity.png:/srv/sales-velocity.png:ro
       - ./shot-rfp.webp:/srv/shot-rfp.webp:ro
       - ./shot-battlemind.webp:/srv/shot-battlemind.webp:ro
       - ./shot-digest.webp:/srv/shot-digest.webp:ro
