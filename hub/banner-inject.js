@@ -7,10 +7,12 @@
     { id: "techstack", label: "Account Radar", href: "https://techstack.corp.adobe.com/" },
     { id: "rfp", label: "RFP Suite", href: "https://rfp.corp.adobe.com/" },
     { id: "battlemind", label: "BattleMind", href: "https://battlemind.corp.adobe.com/" },
-    { id: "digest", label: "Digest Studio", href: "https://saleshub.corp.adobe.com/digest/" }
+    { id: "digest", label: "Digest Studio", href: "https://saleshub.corp.adobe.com/digest/" },
+    { id: "tra", label: "Tech Risk Assessment", href: "https://saleshub.corp.adobe.com/tra/" }
   ];
   var host = location.hostname.split(".")[0];
-  var current = host === "saleshub" && location.pathname.indexOf("/digest") === 0 ? "digest" : host;
+  var path = location.pathname;
+  var current = host !== "saleshub" ? host : path.indexOf("/digest") === 0 ? "digest" : path.indexOf("/story") === 0 ? "story" : path.indexOf("/tra") === 0 ? "tra" : host;
 
   var css =
     ":host{all:initial;position:fixed;top:0;left:0;right:0;z-index:2147483000;display:block}" +

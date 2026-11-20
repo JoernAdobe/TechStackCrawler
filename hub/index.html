@@ -383,6 +383,37 @@
       .pillar, .pillar--lead { padding: 26px 22px 22px; }
       .footer { flex-direction: column; align-items: flex-start; }
     }
+    /* Full-width tile, screenshot left / text right (Experience Story Studio) */
+    .pillar--split {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      grid-template-rows: 1fr auto auto auto 1fr;
+      column-gap: 36px;
+      align-content: center;
+      background:
+        radial-gradient(70% 120% at 100% 0%, rgba(var(--red-rgb), 0.14), transparent 60%),
+        var(--glass);
+    }
+    .pillar--split > * { grid-column: 2; align-self: start; }
+    .pillar--split > h2, .pillar--split > .open { align-self: end; }
+    .pillar--split > .shot { grid-column: 1; grid-row: 1 / span 5; margin: -6px 0 -6px -6px; align-self: center; }
+    @media (max-width: 900px) {
+      .pillar--split { display: flex; }
+      .pillar--split .shot { margin: -6px -6px 24px; }
+    }
+    /* Story Studio parked (pillar--soon) */
+    .pillar--soon, .pillar--soon:hover { cursor: default; background: var(--glass); }
+    .pillar--soon > * { filter: grayscale(1); opacity: 0.45; }
+    .pillar--soon > .open { filter: none; opacity: 1; }
+    .pillar--soon:hover { transform: none; border-color: var(--line); }
+    .pillar--soon:hover::before { opacity: 0; }
+    .pillar--soon:hover::after { opacity: 0.35; }
+    .pillar--soon:hover .shot img { transform: none; }
+    .pillar--soon .soon {
+      padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line);
+      font-size: 0.82rem; font-weight: 600; color: var(--ink-3); background: rgba(255,255,255,0.03);
+    }
   </style>
 </head>
 <body>
@@ -400,7 +431,7 @@
     <section class="hero">
       <div class="eyebrow reveal" style="--i:0">Sales Hub</div>
       <h1 class="reveal" style="--i:1">AI tools for <em>Adobe sales</em> teams.</h1>
-      <p class="reveal" style="--i:2">Analyse tech stacks, answer RFPs and sharpen competitive positioning. Stay current on releases. One place, four tools.</p>
+      <p class="reveal" style="--i:2">Analyse tech stacks, answer RFPs, sharpen competitive positioning and get deals tech-approved. Stay current on releases. One place, five tools.</p>
     </section>
 
     <section class="pillars" id="tools" aria-label="Tools">
@@ -440,6 +471,21 @@
         <p class="credit">Based on the original digest by <strong>Koen Van Eeghem</strong></p>
         <span class="open"><span class="arrow"><svg stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg></span>Open<span class="host">saleshub.corp.adobe.com/digest</span></span>
       </a>
+      <a href="https://saleshub.corp.adobe.com/tra/" class="pillar pillar--split reveal" style="--i:7">
+        <figure class="shot shot--art"><img src="https://saleshub.corp.adobe.com/tra/hub-shot.webp?v=2" alt="Tech Risk Assessment Studio: a stack of deal documents with a glowing approval shield" width="1200" height="675" decoding="async" /></figure>
+        <h2>Tech Risk Assessment Studio</h2>
+        <p>Drop in the order form, quote and SOW. The AI reads the deal, you confirm the facts, and it decides: TECH APPROVED arrives as a branded PDF by email, NOT APPROVED comes with the blockers to fix.</p>
+        <ul class="tags"><li>Self-Service</li><li>Risk Assessment</li><li>PDF by Email</li></ul>
+        <span class="open"><span class="arrow"><svg stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg></span>Open<span class="host">saleshub.corp.adobe.com/tra</span></span>
+      </a>
+      <div class="pillar pillar--split pillar--soon reveal" style="--i:8" aria-disabled="true">
+        <figure class="shot shot--art"><img src="shot-story.webp" alt="Experience Story Studio: storyboard review and an animated customer experience story" width="1200" height="675" decoding="async" /></figure>
+        <h2>Experience Story Studio</h2>
+        <p>Turn a brief into an animated, on-brand customer experience story: AI storyboard, scene-by-scene build, review loop, then share it or export it as PDF.</p>
+        <ul class="tags"><li>Storyboards</li><li>Animated Stories</li><li>Customer Branding</li></ul>
+        <p class="credit">Based on the <strong>Experience Story Builder</strong> plugin for GitHub Copilot</p>
+        <span class="open"><span class="soon">Coming soon</span></span>
+      </div>
     </section>
   </main>
 

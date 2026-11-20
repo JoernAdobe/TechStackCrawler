@@ -1,17 +1,66 @@
+(access_log) {
+	log {
+		output file /var/log/caddy/access-{args[0]}.log {
+			roll_size 20MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		# no client IPs, no request headers, no tokens/emails in query strings
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>client_ip delete
+				request>headers delete
+				request>uri query {
+					replace token REDACTED
+					replace email REDACTED
+				}
+			}
+		}
+	}
+}
+
 saleshub.corp.adobe.com {
+	import access_log saleshub
 	tls /etc/ssl/saleshub.crt /etc/ssl/saleshub.key
+	redir /digest /digest/
+	handle_path /digest/* {
+		reverse_proxy 172.17.0.1:8521
+	}
+	# Tech Risk Assessment Studio (/opt/tra, tra-api on the docker0 bridge)
+	redir /tra /tra/
+	handle_path /tra/* {
+		reverse_proxy 172.17.0.1:8527 {
+			# SSE progress stream without buffering
+			flush_interval -1
+		}
+	}
+	# Experience Story Studio (/opt/story-studio, story-api on the docker0 bridge)
+	redir /story /story/
+	handle_path /story/* {
+		reverse_proxy 172.17.0.1:8523 {
+			# stream SSE progress events (/api/stories/{uid}/events) without buffering
+			flush_interval -1
+		}
+	}
 	root * /srv
 	file_server
 	header /banner-inject.js Access-Control-Allow-Origin "*"
 	header /banner.html Access-Control-Allow-Origin "*"
+	# always revalidate (ETag) so nav/tile changes reach everyone at once
+	header /banner-inject.js Cache-Control "no-cache"
+	header / Cache-Control "no-cache"
 }
 
 battlemind.corp.adobe.com {
+	import access_log battlemind
 	tls /etc/ssl/battlemind.crt /etc/ssl/battlemind.key
 	reverse_proxy 172.17.0.1:8519
 }
 
 techstack.corp.adobe.com {
+	import access_log techstack
 	tls /etc/ssl/techstack.crt /etc/ssl/techstack.key
 	header Strict-Transport-Security "max-age=31536000"
 	reverse_proxy 172.17.0.1:8516 {
@@ -20,10 +69,18 @@ techstack.corp.adobe.com {
 }
 
 rfp.corp.adobe.com {
+	import access_log rfp
 	tls /etc/ssl/rfp.crt /etc/ssl/rfp.key
 	reverse_proxy 172.17.0.1:8513
 }
 
 :80 {
+	import access_log http
 	redir https://saleshub.corp.adobe.com{uri} permanent
+}
+
+salesperformance.corp.adobe.com {
+    import access_log salesperformance
+    tls /etc/ssl/salesperformance.crt /etc/ssl/salesperformance.key
+    reverse_proxy 172.17.0.1:8525
 }

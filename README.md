@@ -159,7 +159,7 @@ The **account view** (dashboard in the batch result, CSV/XLSX/Markdown exports) 
 
 ## Deployment
 
-The main application uses `make deploy`, Docker Compose, and Caddy. The `hub/` landing page is separate and uses `make deploy-hub`.
+The main application uses `make deploy`, Docker Compose, and Caddy. The `hub/` landing page (shared Caddy for all tools) is separate and uses `make deploy-hub`; `hub/` is the single source of truth, see `hub/README.md`.
 
 ### Prerequisites
 
@@ -413,7 +413,8 @@ To test the IMS passthrough path, use an IMS user access token instead of `tsa_â
 | `make docker-down` | Stop Docker Compose containers. |
 | `make docker-build` | Build the Docker Compose image. |
 | `make deploy` | Build, transfer, deploy, restore-if-empty, and health-check the main app remotely. |
-| `make deploy-hub` | Deploy the separate `hub/` landing page. |
+| `make deploy-hub` | Deploy `hub/` (drift guard, backup, health check, rollback). |
+| `make hub-check` / `make hub-pull` | Detect manual server edits of the hub / pull server state into `hub/`. |
 | `make status` | Show remote container status and selected deployment diagnostics. Requires `SSH_HOST`. |
 | `make logs` | Show remote Docker logs. Optional `SERVICE=<service>` and `LINES=<n>`. |
 | `make restart` | Restart remote main app containers and show health status. Requires `SSH_HOST`. |

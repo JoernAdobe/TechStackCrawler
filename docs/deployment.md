@@ -5,9 +5,13 @@
 ```
 Browser ──HTTPS──▶ Hub-Caddy (hub/, Ports 80/443)
                      ├─ saleshub.corp.adobe.com   → statische Hub-Seite
+                     │    ├─ /digest/ → 172.17.0.1:8521 (Sales Digest)
+                     │    ├─ /tra/    → 172.17.0.1:8527 (Tech Approval)
+                     │    └─ /story/  → 172.17.0.1:8523 (Experience Story Studio)
                      ├─ techstack.corp.adobe.com  → 172.17.0.1:8516 (dieses Projekt)
                      ├─ rfp.corp.adobe.com        → 172.17.0.1:8513
-                     └─ battlemind.corp.adobe.com → 172.17.0.1:8519
+                     ├─ battlemind.corp.adobe.com → 172.17.0.1:8519
+                     └─ salesperformance.corp.adobe.com → 172.17.0.1:8525
 techstack-caddy (:8516 → :80) ──▶ techstack-techstack (:3001) ──▶ techstack-mariadb
 ```
 
@@ -15,6 +19,11 @@ TLS terminiert ausschließlich im Hub-Caddy. Die Zertifikate liegen auf dem Serv
 `/opt/ssl/*.crt|*.key` und werden nur per Volume eingebunden – sie sind **nicht** im Repo.
 Der Hub liefert außerdem `banner-inject.js`/`banner.html` aus (Navigationsleiste, die in die
 Tools eingebunden wird); beide werden von `make deploy-hub` mit übertragen.
+
+> **Single Source of Truth: `hub/` in diesem Repo.** Der Hub wird von mehreren Tools genutzt
+> (Digest, TRA, Story Studio, Sales Performance). Änderungen daran – auch aus anderen Repos –
+> laufen **nur** über `hub/` + `make deploy-hub`. Details, Drift-Guard und Notfall-Workflow:
+> [`hub/README.md`](../hub/README.md).
 
 ## Port-Matrix (Server)
 
@@ -24,13 +33,16 @@ Tools eingebunden wird); beide werden von `make deploy-hub` mit übertragen.
 | 8513 | RFP Tool | `/opt/rfp-tool` |
 | **8516** | **TechStackCrawler** | `/opt/techstack-crawler` |
 | 8519 | BattleMind | – |
+| 8521 / 8523 / 8525 / 8527 | Digest / Story Studio / Sales Performance / TRA | eigene Repos |
 
 ## Deployment
 
 ```bash
 cp .env.deploy.example .env.deploy   # SSH_HOST, REMOTE_DIR, HOST_PORT anpassen
 make deploy                          # App
-make deploy-hub                      # Hub (nur bei Änderungen in hub/)
+make deploy-hub                      # Hub (nur bei Änderungen in hub/; Drift-Guard + Rollback)
+make hub-check                       # Wurde der Hub auf dem Server von Hand geändert?
+make hub-pull                        # Server-Stand nach hub/ holen (nach Notfall-Hotfix)
 ```
 
 `make deploy` erstellt vorher ein DB-Backup, baut das Image lokal (`linux/amd64`),
