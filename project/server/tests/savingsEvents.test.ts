@@ -88,12 +88,10 @@ test('savings-events: mappt Capabilities, schließt Admin/System aus, filtert Ze
 
   assert.deepEqual(byId.get('ue:1'), {
     external_id: 'ue:1', capability: 'tech_stack_analysis', occurred_at: iso(0),
-    user_hash: hashId('jane@adobe.com'), user_email: 'jane@adobe.com', units: 1, dedupe_key: 'ue:1', meta: {},
+    user_hash: hashId('jane@adobe.com'), units: 1, dedupe_key: 'ue:1', meta: {},
   });
   assert.equal(byId.get('ue:2')!.capability, 'use_case_discovery');
   assert.equal(byId.get('ue:2')!.user_hash, `v:${hashId('b'.repeat(32))}`);
-  assert.equal(byId.get('ue:2')!.user_email, null);
-  assert.equal(byId.get('briefing:1')!.user_email, 'jane@adobe.com');
   assert.equal(byId.get('ue:3')!.capability, 'export');
   assert.deepEqual(byId.get('ue:3')!.meta, { kind: 'export_pdf', analysis_id: 7 });
   assert.equal(byId.get('briefing:1')!.capability, 'account_briefing');
@@ -101,9 +99,10 @@ test('savings-events: mappt Capabilities, schließt Admin/System aus, filtert Ze
   assert.equal(byId.get('briefing:1')!.dedupe_key, 'analysis:7');
   assert.equal(byId.get('batchitem:1')!.capability, 'batch_assessment');
   assert.equal(byId.get('batchitem:1')!.user_hash, '');
-  assert.equal(byId.get('batchitem:1')!.user_email, null);
   assert.equal(byId.get('batchitem:1')!.dedupe_key, 'analysis:11');
   assert.ok(!JSON.stringify(body).includes('boss@adobe.com'), 'keine Admin-E-Mails im Payload');
+  assert.ok(!JSON.stringify(body).includes('@'), 'keine E-Mail-Adressen im Payload (PIA)');
+  assert.ok(body.events.every((e) => !('user_email' in e)), 'kein user_email-Feld');
 
   const windowed = (await (await get(`?since=${iso(1)}&until=${iso(20)}`, 'secret')).json()) as { events: Array<{ external_id: string }> };
   assert.deepEqual(windowed.events.map((e) => e.external_id), ['ue:2', 'ue:3']); // until exklusiv

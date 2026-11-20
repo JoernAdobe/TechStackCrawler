@@ -82,6 +82,8 @@ export const config = {
       .map((c) => c.trim())
       .filter(Boolean),
   },
+  /** Aufbewahrung für Nutzungs-/Audit-/LLM-Logs in Tagen (OneTrust-PIA); täglicher Purge, min. 7 (Wochen-Aggregate). */
+  retentionLogDays: Math.max(7, Number.parseInt(process.env.RETENTION_LOG_DAYS || '', 10) || 30),
   /** E-Mail-Whitelist für Admin-/Dashboard-Zugriff (case-insensitive). */
   adminEmails: (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || 'daudert@adobe.com')
     .split(',')

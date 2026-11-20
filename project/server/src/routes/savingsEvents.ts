@@ -2,13 +2,14 @@
  * Server-zu-Server-Endpunkt für Digest Studio: normalisierte Nutzungs-Events zur
  * Berechnung eingesparter Stunden. Read-only, geschützt per Bearer-Token
  * (Env SAVINGS_EVENTS_TOKEN); ohne gesetztes Secret deaktiviert (503).
+ * Datenschutz (OneTrust-PIA): Antwort enthält nur pseudonyme user_hash-Werte, keine E-Mails.
  */
 import { timingSafeEqual } from 'crypto';
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import { getPool } from '../db/index.js';
 import { config } from '../config.js';
 import { asyncHandler } from '../utils/http.js';
-import { collectSavingsEvents } from '../services/savingsEvents.js';
+import { collectSavingsEvents, type SavingsEvent } from '../services/savingsEvents.js';
 
 function tokenMatches(given: string, expected: string): boolean {
   const a = Buffer.from(given);
@@ -29,6 +30,19 @@ export function requireSavingsToken(req: Request, res: Response, next: NextFunct
     return;
   }
   next();
+}
+
+/** Feste Feld-Whitelist: neue Felder im Service landen nicht ungeprüft im Export. */
+export function toPublicEvent(e: SavingsEvent): SavingsEvent {
+  return {
+    external_id: e.external_id,
+    capability: e.capability,
+    occurred_at: e.occurred_at,
+    user_hash: e.user_hash,
+    units: e.units,
+    dedupe_key: e.dedupe_key,
+    meta: e.meta,
+  };
 }
 
 function parseTime(value: unknown, fallback: number): number | null {
@@ -59,7 +73,7 @@ export function createSavingsEventsRoutes(opts: { limiter?: (req: Request, res: 
         return;
       }
       const events = untilMs > sinceMs ? await collectSavingsEvents(pool, { sinceMs, untilMs, adminEmails: config.adminEmails }) : [];
-      res.json({ tool: 'radar', generated_at: new Date(now).toISOString(), events });
+      res.json({ tool: 'radar', generated_at: new Date(now).toISOString(), events: events.map(toPublicEvent) });
     }),
   );
   return router;

@@ -46,6 +46,75 @@ export async function initUsageEventsTable(p: DbHandle): Promise<void> {
   }
 }
 
+/**
+ * Anonyme Wochen-Aggregate (nur Zählwerte, keine Besucher-IDs/E-Mails). Werden vom
+ * Log-Purge geschrieben, bevor alte usage_events gelöscht werden (RETENTION_LOG_DAYS).
+ */
+export interface UsageWeeklyRow {
+  week: string;
+  first_ts_ms: number;
+  active_users: number;
+  new_users: number;
+  returning_users: number;
+  visits: number;
+  /** Event-Name → Anzahl erfolgreicher Aktionen in der Woche. */
+  features: Record<string, number>;
+}
+
+export async function initUsageWeeklyTable(p: DbHandle): Promise<void> {
+  const int = p.dialect === 'sqlite' ? 'INTEGER' : 'INT';
+  await p.execute(`
+    CREATE TABLE IF NOT EXISTS usage_weekly (
+      week VARCHAR(10) NOT NULL PRIMARY KEY,
+      first_ts_ms BIGINT NOT NULL,
+      active_users ${int} NOT NULL,
+      new_users ${int} NOT NULL,
+      returning_users ${int} NOT NULL,
+      visits ${int} NOT NULL,
+      features_json TEXT NOT NULL,
+      archived_ms BIGINT NOT NULL
+    )
+  `);
+}
+
+/** Schreibt eine Woche nur, wenn sie noch nicht archiviert ist (erste Berechnung hat noch alle Events). */
+export async function insertUsageWeeklyIfAbsent(db: DbHandle, w: UsageWeeklyRow, archivedMs = Date.now()): Promise<boolean> {
+  const verb = db.dialect === 'sqlite' ? 'INSERT OR IGNORE' : 'INSERT IGNORE';
+  const { affectedRows } = await db.execute(
+    `${verb} INTO usage_weekly (week, first_ts_ms, active_users, new_users, returning_users, visits, features_json, archived_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [w.week, w.first_ts_ms, w.active_users, w.new_users, w.returning_users, w.visits, JSON.stringify(w.features), archivedMs],
+  );
+  return Number(affectedRows ?? 0) > 0;
+}
+
+export async function listUsageWeekly(db: DbHandle): Promise<UsageWeeklyRow[]> {
+  const { rows } = await db.execute(
+    `SELECT week, first_ts_ms, active_users, new_users, returning_users, visits, features_json FROM usage_weekly ORDER BY week ASC`,
+  );
+  return (rows as Array<Record<string, unknown>>).map((r) => {
+    let features: Record<string, number> = {};
+    try {
+      features = JSON.parse(String(r.features_json ?? '{}'));
+    } catch {
+      // defekte Zeile → ohne Feature-Zahlen
+    }
+    return {
+      week: String(r.week),
+      first_ts_ms: Number(r.first_ts_ms),
+      active_users: Number(r.active_users),
+      new_users: Number(r.new_users),
+      returning_users: Number(r.returning_users),
+      visits: Number(r.visits),
+      features,
+    };
+  });
+}
+
+export async function deleteUsageEventsBefore(db: DbHandle, cutoffMs: number): Promise<number> {
+  const { affectedRows } = await db.execute(`DELETE FROM usage_events WHERE ts_ms < ?`, [cutoffMs]);
+  return Number(affectedRows ?? 0);
+}
+
 export async function insertUsageEvent(db: DbHandle, e: UsageEvent): Promise<void> {
   await db.execute(
     `INSERT INTO usage_events (ts_ms, visitor_id, email, event, analysis_id, status) VALUES (?, ?, ?, ?, ?, ?)`,

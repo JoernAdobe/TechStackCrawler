@@ -80,6 +80,8 @@ services:
       - INTEGRATION_TOKEN=${INTEGRATION_TOKEN:-}
       # Digest Studio (/api/internal/savings-events, Bearer); leer = deaktiviert (503).
       - SAVINGS_EVENTS_TOKEN=${SAVINGS_EVENTS_TOKEN:-}
+      # Täglicher Purge von usage_events/analysis_runs (Tage, Default 30).
+      - RETENTION_LOG_DAYS=${RETENTION_LOG_DAYS:-30}
       - NODE_ENV=production
       - PORT=3001
       - DB_HOST=mariadb

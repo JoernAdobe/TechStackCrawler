@@ -4,6 +4,7 @@
  * Pre-Briefings) und batch_items (fertige Assessment-Items). Admin- und
  * System-Besucher werden wie in usageStats.ts ausgeschlossen; mcp_call und
  * rfp_context werden bewusst nicht ausgegeben (keine Doppelzählung).
+ * Datenschutz (OneTrust-PIA): keine Klar-E-Mails im Export, nur pseudonymer user_hash.
  */
 import { createHash } from 'crypto';
 import type { DbHandle } from '../db/types.js';
@@ -27,9 +28,8 @@ export interface SavingsEvent {
   external_id: string;
   capability: string;
   occurred_at: string;
+  /** Pseudonym (gekürzter SHA-256 der E-Mail bzw. `v:`-Hash der Besucher-ID); nie die E-Mail selbst. */
   user_hash: string;
-  /** Kleingeschriebene E-Mail derselben Person wie user_hash, sonst null (nur Admin-Ansicht in Digest). */
-  user_email: string | null;
   units: number;
   dedupe_key: string;
   meta: Record<string, string | number | boolean>;
@@ -54,10 +54,6 @@ function userHash(email: string | null | undefined, visitorId?: string | null): 
   if (isEmail(email)) return hashId(email);
   if (visitorId) return `v:${hashId(visitorId)}`;
   return '';
-}
-
-function userEmail(email: string | null | undefined): string | null {
-  return isEmail(email) ? email.trim().toLowerCase() : null;
 }
 
 function isoOf(v: unknown): string | null {
@@ -119,7 +115,6 @@ export async function collectSavingsEvents(db: DbHandle, opts: SavingsEventsOpti
       capability,
       occurred_at: new Date(Number(r.ts_ms)).toISOString(),
       user_hash: userHash(r.email, r.visitor_id),
-      user_email: userEmail(r.email),
       units: 1,
       dedupe_key: capability !== 'export' && analysisId != null ? `analysis:${analysisId}` : externalId,
       meta,
@@ -144,7 +139,6 @@ export async function collectSavingsEvents(db: DbHandle, opts: SavingsEventsOpti
       capability: 'account_briefing',
       occurred_at: occurredAt,
       user_hash: userHash(r.created_by),
-      user_email: userEmail(r.created_by),
       units: 1,
       dedupe_key: `analysis:${Number(r.analysis_id)}`,
       meta,
@@ -171,7 +165,6 @@ export async function collectSavingsEvents(db: DbHandle, opts: SavingsEventsOpti
       capability: 'batch_assessment',
       occurred_at: occurredAt,
       user_hash: userHash(r.created_by),
-      user_email: userEmail(r.created_by),
       units: 1,
       dedupe_key: r.analysis_id != null ? `analysis:${Number(r.analysis_id)}` : externalId,
       meta,

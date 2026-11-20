@@ -17,11 +17,12 @@ export function createMysqlHandle(config: {
 
   return {
     dialect: 'mysql',
-    async execute(sql: string, params: unknown[] = []): Promise<{ rows: unknown[]; insertId?: number }> {
+    async execute(sql: string, params: unknown[] = []): Promise<{ rows: unknown[]; insertId?: number; affectedRows?: number }> {
       const [result] = await pool.execute(sql, params as (string | number | Buffer | null)[]);
       const rows = Array.isArray(result) ? result : [];
       const insertId = (result as { insertId?: number })?.insertId;
-      return { rows, insertId };
+      const affectedRows = (result as { affectedRows?: number })?.affectedRows;
+      return { rows, insertId, affectedRows };
     },
     async close() {
       await pool.end();

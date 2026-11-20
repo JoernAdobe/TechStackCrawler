@@ -3,7 +3,7 @@
  * (usage_events), Pre-Briefings, Batches, Feedback, Zuverlässigkeit, Funnel.
  */
 import type { DbHandle } from '../db/types.js';
-import { listUsageEvents, type UsageEventRow } from '../db/usageEvents.js';
+import { listUsageEvents, listUsageWeekly, type UsageEventRow, type UsageWeeklyRow } from '../db/usageEvents.js';
 import { SYSTEM_VISITORS } from './usageTracking.js';
 
 const DAY_MS = 86_400_000;
@@ -86,12 +86,62 @@ export function toMs(v: unknown): number | null {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-/** Reine Aggregation über die Events (testbar ohne DB). Admin-Besucher werden ausgeschlossen. */
-export function aggregateUsage(events: UsageEventRow[], now: number, adminEmails: string[] = []) {
+/** tracked = ohne Admin-Besucher; humans = zusätzlich ohne System-Besucher und Fehler-Status. */
+function filterEvents(events: UsageEventRow[], adminEmails: string[]) {
   const admins = new Set(adminEmails.map((e) => e.toLowerCase()));
   const adminVisitors = new Set(events.filter((e) => e.email && admins.has(e.email.toLowerCase())).map((e) => e.visitor_id));
   const tracked = events.filter((e) => !adminVisitors.has(e.visitor_id) && !(e.email && admins.has(e.email.toLowerCase())));
   const humans = tracked.filter((e) => !SYSTEM_VISITORS.has(e.visitor_id) && e.status < 400);
+  return { tracked, humans };
+}
+
+/** Montag 00:00 UTC der ISO-Woche, in die ms fällt. */
+export function weekStartMs(ms: number): number {
+  const d = new Date(ms);
+  const day = d.getUTCDay() || 7;
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - (day - 1) * DAY_MS;
+}
+
+/**
+ * Anonyme Wochen-Aggregate (Basis für usage_weekly). „Neu“ bezieht sich auf alle übergebenen
+ * Events – daher vor dem Löschen über den vollständigen Bestand berechnen.
+ */
+export function weeklyUsageRows(events: UsageEventRow[], adminEmails: string[] = []): UsageWeeklyRow[] {
+  const { tracked, humans } = filterEvents(events, adminEmails);
+  const weeks = new Map<string, UsageWeeklyRow & { users: Set<string> }>();
+  const week = (ms: number) => {
+    const key = weekKey(ms);
+    let w = weeks.get(key);
+    if (!w) {
+      w = { week: key, first_ts_ms: ms, active_users: 0, new_users: 0, returning_users: 0, visits: 0, features: {}, users: new Set() };
+      weeks.set(key, w);
+    }
+    w.first_ts_ms = Math.min(w.first_ts_ms, ms);
+    return w;
+  };
+  const seen = new Set<string>();
+  for (const e of humans) {
+    const w = week(e.ts_ms);
+    w.users.add(e.visitor_id);
+    if (!seen.has(e.visitor_id)) {
+      seen.add(e.visitor_id);
+      w.new_users++;
+    }
+    if (e.event === 'visit') w.visits++;
+  }
+  for (const e of tracked) {
+    if (e.status >= 400 || e.event === 'visit') continue;
+    const w = week(e.ts_ms);
+    w.features[e.event] = (w.features[e.event] ?? 0) + 1;
+  }
+  return [...weeks.values()]
+    .sort((a, b) => a.week.localeCompare(b.week))
+    .map(({ users, ...w }) => ({ ...w, active_users: users.size, returning_users: users.size - w.new_users }));
+}
+
+/** Reine Aggregation über die Events (testbar ohne DB). Admin-Besucher werden ausgeschlossen. */
+export function aggregateUsage(events: UsageEventRow[], now: number, adminEmails: string[] = []) {
+  const { tracked, humans } = filterEvents(events, adminEmails);
 
   const firstSeen = new Map<string, number>();
   const lastSeen = new Map<string, number>();
@@ -223,6 +273,43 @@ export function aggregateUsage(events: UsageEventRow[], now: number, adminEmails
   };
 }
 
+type AggregatedUsage = Omit<ReturnType<typeof aggregateUsage>, 'exportedAnalysisIds'>;
+
+/**
+ * Ergänzt die Live-Aggregation um archivierte Wochen (usage_weekly). Archivierte Wochen ersetzen
+ * die (nach dem Purge unvollständigen) Live-Werte derselben Woche. Kennzahlen unter `users`
+ * und `topUsers` sowie „neu“ in Live-Wochen beziehen sich danach nur noch auf das
+ * Aufbewahrungsfenster (RETENTION_LOG_DAYS) – bewusst, damit keine IDs länger gespeichert werden.
+ */
+export function mergeUsageArchive(usage: AggregatedUsage, live: UsageWeeklyRow[], archive: UsageWeeklyRow[]): AggregatedUsage {
+  if (!archive.length) return usage;
+  const archived = new Map(archive.map((w) => [w.week, w]));
+  const totals = new Map(usage.featureUsage.map((f) => [f.name, { ...f }]));
+  const add = (name: string, n: number) => {
+    const f = totals.get(name) ?? { name, total: 0, last30d: 0 };
+    f.total = Math.max(0, f.total + n);
+    totals.set(name, f);
+  };
+  for (const w of live) if (archived.has(w.week)) for (const [name, n] of Object.entries(w.features)) add(name, -n);
+  for (const w of archive) for (const [name, n] of Object.entries(w.features)) add(name, n);
+  const featureUsage = [...totals.values()].filter((f) => f.total > 0 || f.last30d > 0).sort((a, b) => b.total - a.total);
+  const count = (pred: (name: string) => boolean) => featureUsage.filter((f) => pred(f.name)).reduce((a, f) => a + f.total, 0);
+
+  const weeks = new Map<string, UserWeek>(usage.usersPerWeek.map((w) => [w.week, w]));
+  for (const w of archive) weeks.set(w.week, { week: w.week, activeUsers: w.active_users, newUsers: w.new_users, returningUsers: w.returning_users });
+  const firstArchived = Math.min(...archive.map((w) => w.first_ts_ms));
+  const liveSince = usage.trackingSince ? Date.parse(usage.trackingSince) : Infinity;
+
+  return {
+    ...usage,
+    trackingSince: new Date(Math.min(firstArchived, liveSince)).toISOString(),
+    usersPerWeek: [...weeks.values()].sort((a, b) => a.week.localeCompare(b.week)),
+    featureUsage,
+    exports: { total: count((n) => EXPORT_EVENTS.has(n)), last30d: usage.exports.last30d },
+    integrations: { rfpContext: count((n) => n === 'rfp_context'), mcpCalls: count((n) => n === 'mcp_call') },
+  };
+}
+
 async function rows<T>(db: DbHandle, sql: string, params: unknown[] = []): Promise<T[]> {
   try {
     const { rows: r } = await db.execute(sql, params);
@@ -234,7 +321,9 @@ async function rows<T>(db: DbHandle, sql: string, params: unknown[] = []): Promi
 
 export async function computeUsageStats(db: DbHandle, funnelInput: FunnelInput[], adminEmails: string[] = [], now = Date.now()): Promise<UsageStats> {
   const events = await listUsageEvents(db, now - 400 * DAY_MS).catch(() => [] as UsageEventRow[]);
-  const { exportedAnalysisIds, ...usage } = aggregateUsage(events, now, adminEmails);
+  const { exportedAnalysisIds, ...liveUsage } = aggregateUsage(events, now, adminEmails);
+  const archive = await listUsageWeekly(db).catch(() => [] as UsageWeeklyRow[]);
+  const usage = mergeUsageArchive(liveUsage, weeklyUsageRows(events, adminEmails), archive);
 
   const jobs = await rows<{ analysis_id: number; status: string; created_by: string | null; created_at: unknown; started_at: unknown; finished_at: unknown }>(
     db, 'SELECT analysis_id, status, created_by, created_at, started_at, finished_at FROM briefing_jobs',

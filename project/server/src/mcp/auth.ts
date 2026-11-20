@@ -9,7 +9,8 @@ const API_TOKEN_PREFIX = 'tsa_';
 
 function clientInfo(req: Request): string {
   const ua = String(req.headers['user-agent'] ?? '-').slice(0, 120);
-  return `${req.method} ip=${req.ip ?? '-'} ua="${ua}"`;
+  // Bewusst ohne IP-Adresse (OneTrust-PIA): Methode + User-Agent reichen zur Diagnose.
+  return `${req.method} ua="${ua}"`;
 }
 
 /** Protokolliert abgelehnte /mcp-Zugriffe (ohne Token-Inhalt), damit Client-Probleme diagnostizierbar sind. */

@@ -47,6 +47,7 @@ import { createDeckRoutes } from './routes/deck.js';
 import { createFeedbackRoutes } from './routes/feedback.js';
 import { createIntegrationRoutes } from './routes/integration.js';
 import { createSavingsEventsRoutes } from './routes/savingsEvents.js';
+import { startLogRetention } from './services/logRetention.js';
 import { startBatchWorker } from './services/batchRunner.js';
 import { startBriefingWorker } from './services/briefing/queue.js';
 
@@ -146,6 +147,8 @@ if (getPool()) {
   startBatchWorker().catch((err) => console.error('Batch worker start failed:', err));
   startBriefingWorker().catch((err) => console.error('Briefing worker start failed:', err));
   resumeAutoScans(getPool()!).catch((err) => console.error('ObservePoint auto-scan resume failed:', err));
+  // Datenschutz: Nutzungs-/Lauf-Logs nach RETENTION_LOG_DAYS löschen (Wochen-Aggregate bleiben).
+  startLogRetention(getPool, { retentionDays: config.retentionLogDays, adminEmails: config.adminEmails });
   // Wiederaufnahme nach Neustart: unterbrochene Analysen, GEO- und Use-Case-Läufe fortsetzen.
   resumeAnalysisRuns()
     .then((n) => n && console.log(`Resumed ${n} interrupted analysis run(s)`))

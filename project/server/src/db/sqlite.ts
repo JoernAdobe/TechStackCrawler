@@ -20,7 +20,7 @@ export function createSqliteHandle(dbPath: string): DbHandle {
   const database = getSqliteDb(dbPath);
   return {
     dialect: 'sqlite',
-    async execute(sql: string, params: unknown[] = []): Promise<{ rows: unknown[]; insertId?: number }> {
+    async execute(sql: string, params: unknown[] = []): Promise<{ rows: unknown[]; insertId?: number; affectedRows?: number }> {
       const stmt = database.prepare(sql);
       const upper = sql.trim().toUpperCase();
       if (upper.startsWith('SELECT') || upper.startsWith('WITH')) {
@@ -28,7 +28,7 @@ export function createSqliteHandle(dbPath: string): DbHandle {
         return { rows: rows as unknown[] };
       }
       const result = stmt.run(...params);
-      return { rows: [], insertId: Number((result as { lastInsertRowid: bigint }).lastInsertRowid) };
+      return { rows: [], insertId: Number(result.lastInsertRowid), affectedRows: result.changes };
     },
     async close() {
       database.close();
